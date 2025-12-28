@@ -1,0 +1,319 @@
+.organigramme-section {
+    padding: 60px 0;
+    background: #f5f7fa;
+}
+
+/* Titres */
+.section-title {
+    text-align: center;
+    font-size: 2.1rem;
+    color: #2d3748;
+    margin-bottom: 8px;
+}
+
+.section-subtitle {
+    text-align: center;
+    color: #718096;
+    font-size: 1rem;
+    margin-bottom: 40px;
+}
+
+/* Statistiques */
+.org-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 18px;
+    margin-bottom: 40px;
+}
+
+.org-stat-card {
+    background: #fff;
+    padding: 22px;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+}
+
+.org-icon {
+    font-size: 2.2rem;
+    margin-bottom: 8px;
+}
+
+.org-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #667eea;
+    margin-bottom: 4px;
+}
+
+.org-label {
+    color: #718096;
+    font-size: 0.95rem;
+}
+
+/* Conteneur organigramme */
+.org-tree-container {
+    background: #fff;
+    padding: 30px;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    overflow-x: auto;
+    min-height: 320px;
+}
+
+/* Arbre */
+.tree {
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    min-width: 100%;
+}
+
+.tree ul {
+    position: relative;
+    padding-top: 30px;
+    display: flex;
+    justify-content: center;
+    gap: 22px;
+    list-style: none;
+    margin: 0;
+}
+
+.tree > ul {
+    padding-top: 0;
+}
+
+.tree li {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 10px;
+}
+
+/* Lignes (épaissseur réduite) */
+.tree li::before {
+    content: '';
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    border-left: 2px solid #667eea;
+    width: 0;
+    height: 28px;
+}
+
+.tree li::after {
+    content: '';
+    position: absolute;
+    top: -28px;
+    right: 50%;
+    border-top: 2px solid #667eea;
+    width: 50%;
+    height: 16px;
+}
+
+.tree li:first-child::after {
+    left: 50%;
+    right: auto;
+    border-left: 2px solid #667eea;
+}
+
+.tree li:last-child::after {
+    border-right: 2px solid #667eea;
+}
+
+.tree li:only-child::after {
+    display: none;
+}
+
+.tree li:only-child::before {
+    left: 50%;
+}
+
+.tree li:first-child::before,
+.tree li:last-child::before {
+    border: 0;
+}
+
+.tree li:last-child::before {
+    border-right: 2px solid #667eea;
+    left: 50%;
+}
+
+.tree > ul > li::before,
+.tree > ul > li::after {
+    display: none;
+}
+
+/* Noeuds */
+.tree-node {
+    position: relative;
+    display: inline-block;
+    background: #667eea;
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+    min-width: 180px;
+    color: #fff;
+    border: 2px solid #fff;
+}
+
+/* Variantes par niveau */
+.tree-node.level-1 {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    min-width: 240px;
+    padding: 20px;
+    border-width: 3px;
+}
+
+.tree-node.level-2 {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    min-width: 220px;
+    padding: 18px;
+}
+
+.tree-node.level-3 {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    min-width: 200px;
+}
+
+.tree-node.level-4 {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    min-width: 190px;
+}
+
+.tree-node.level-5 {
+    background: #667eea;
+    min-width: 180px;
+}
+
+/* Photos */
+.tree-node-photo {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #fff;
+    margin: 0 auto 8px;
+    display: block;
+}
+
+.tree-node.level-1 .tree-node-photo {
+    width: 85px;
+    height: 85px;
+    border-width: 4px;
+}
+
+.tree-node.level-2 .tree-node-photo {
+    width: 72px;
+    height: 72px;
+}
+
+/* Textes */
+.tree-node h4 {
+    margin: 0 0 4px 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.tree-node.level-1 h4 {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.tree-node.level-2 h4 {
+    font-size: 1.1rem;
+}
+
+.tree-node-poste {
+    margin: 0;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.tree-node.level-1 .tree-node-poste {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.tree-node-grade {
+    margin: 5px 0 0 0;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-style: italic;
+}
+
+/* Badge niveau (simple) */
+.tree-node-level-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #fff;
+    color: #667eea;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.8rem;
+    border: 2px solid #667eea;
+}
+
+.tree-node.level-1 .tree-node-level-badge {
+    width: 30px;
+    height: 30px;
+    font-size: 0.9rem;
+}
+
+/* Bloc pas d'organigramme */
+.no-org-container {
+    text-align: center;
+    padding: 40px 20px;
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+}
+
+.no-org-icon {
+    font-size: 3.5rem;
+    margin-bottom: 14px;
+    opacity: 0.5;
+}
+
+.no-org {
+    color: #718096;
+    font-size: 1.15rem;
+    margin-bottom: 6px;
+}
+
+.no-org-hint {
+    color: #a0aec0;
+    font-size: 0.95rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .tree {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .tree ul {
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .tree li::after {
+        width: 0;
+    }
+
+    .tree-node {
+        min-width: 170px;
+    }
+
+    .tree-node.level-1 {
+        min-width: 210px;
+    }
+}

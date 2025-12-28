@@ -1,0 +1,21 @@
+  textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .btn-view {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-view:hover {
+            background: #138496;
+        }
+
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
