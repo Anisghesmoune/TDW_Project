@@ -19,7 +19,7 @@ $data = $controller->index();
 $projects = $data['data'] ?? [];
 
 $eventController = new EventController();
-$eventData = $eventController->getEvents();
+$eventData = $eventController->getAll();
 $publicationController = new PublicationController();
 $publicationData = $publicationController->stats();
 

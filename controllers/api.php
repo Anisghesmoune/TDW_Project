@@ -9,6 +9,10 @@ require_once '../models/equipementModel.php';
 require_once '../models/equipementType.php';
 require_once '../models/Publications.php';
 require_once '../controllers/PublicationController.php';
+require_once '../controllers/EventController.php';
+require_once '../models/Event.php';
+require_once '../controllers/EventTypeController.php';
+require_once '../models/EventType.php';
 
 // ============================================
 // FONCTIONS HELPERS ULTRA-GÉNÉRIQUES
@@ -100,13 +104,31 @@ function requireAdmin() {
 /**
  * Vérifier qu'un ID est fourni et valide
  */
-function requireId($name = 'id', $source = 'GET') {
-    $id = getParam($name, $source, null, true);
+function requireId($name = 'id') {
+
+    if (isset($_GET[$name])) {
+        $id = $_GET[$name];
+    }
+
+    elseif (isset($_POST[$name])) {
+        $id = $_POST[$name];
+    }
+
+    else {
+        static $json = null;
+        if ($json === null) {
+            $json = json_decode(file_get_contents('php://input'), true);
+        }
+        $id = $json[$name] ?? null;
+    }
+
     if (!is_numeric($id) || $id <= 0) {
         sendError("$name invalide");
     }
+
     return (int)$id;
 }
+
 
 /**
  * Valider des données selon des règles
@@ -215,7 +237,10 @@ $controllers = [
     'team' => new TeamController(),
     'project' => new ProjectController(),
     'equipment' => new EquipmentController(),
-    'publication' => new PublicationController()
+    'publication' => new PublicationController(),
+    'event' => new EventController(),
+    'eventType' => new EventTypeController(),
+    'team' => new TeamController()
 ];
 
 $models = [
@@ -272,7 +297,10 @@ elseif ($action === 'deleteTeam' && $teamid) {
     $controllers['team']->delete($teamid);
 } 
 elseif ($action === 'addMember' && $teamid) {
-    $controllers['team']->addMember($teamid);
+    $executeController(function() use ($controllers, $teamid) {
+        $user_id = requireId('user_id');
+        return $controllers['team']->addMember($teamid, $user_id);
+    });
 }
 elseif ($action === 'getTeamWithDetails' && $teamid) {
     executeController(function() use ($controllers, $teamid) {
@@ -450,7 +478,7 @@ elseif ($action === 'getEquipmentsPaginated') {
 }
 elseif ($action === 'updateEquipmentStatus') {
     $data = getJsonInput();
-    $equipmentId = getParam('id', 'POST', null, true);
+    $equipmentId = requireId('id');
     $etat = $data['etat'] ?? null;
     
     if (!$etat || !in_array($etat, ['libre', 'réserve', 'en_maintenance'])) {
@@ -644,20 +672,125 @@ elseif ($action === 'getPublicationsByType') {
     $limit = getParam('limit', 'GET', null);
     executeController(fn() => $controllers['publication']->apiGetPublicationsByType($type, $limit));
 }
-// Obtenir les publications par domaine
-// elseif ($action === 'getPublicationsByDomain') {
-//     $domaine = $_GET['domaine'] ?? null;
-//     $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : null;
+//Action pour les evenemt
+elseif ($action === 'getEvents') {
+    executeController(fn() => $controllers['event']->apiGetAll());
+}
+elseif ($action === 'getEvent') {
+    $id = requireId();
+    executeController(fn() => $controllers['event']->apiGetById($id));
+}
+elseif ($action === 'createEvent') {
+    requireAuth();
+    executeController(fn() => $controllers['event']->apiCreate($_POST, $_FILES));
+
+}elseif($action === 'updateEvent'){
+    requireAuth();
+    $id = requireId();
+    executeController(fn() => $controllers['event']->apiUpdate($id, $_POST, $_FILES));
+}elseif($action === 'deleteEvent'){
+    requireAdmin();     
+    $id = requireId();
+    executeController(fn() => $controllers['event']->apiDelete($id));
+}elseif($action ==='getEventStats'){
+    $limit = getParam('limit', 'GET', 5);
+    executeController(fn() => $controllers['event']->apiGetStatistics());
+}
+//pour les types d'evenements
+// Types d'événements
+elseif ($action === 'getEventTypes') {
+    executeController(fn() => $controllers['eventType']->index());
+}
+
+elseif ($action === 'createEventType') {
+    $data = getJsonInput();
+    executeController(fn() => $controllers['eventType']->create($data));
+}
+
+elseif ($action === 'deleteEventType') {
+    $id = requireId();
+    executeController(fn() => $controllers['eventType']->delete($id));
+}
+/// Action pour team detaill
+elseif ($action === 'getAvailaibleForTeam' && $teamid) {
+    executeController(function() use ($controllers, $teamid) {
+        return ['success' => true, 'equipments' => $controllers['team']->getAvailableForTeam($teamid)];
+    });
+}elseif($action==='assignEquipment'){
+    $team_id = requireId('team_id');
+    $equipment_id = requireId('equipment_id');
+    executeController(fn() => $controllers['team']->assignEquipment($team_id, $equipment_id));
+}elseif($action==='removeEquipment'){
+    $team_id = requireId('team_id');
+    $equipment_id = requireId('equipment_id');
+    executeController(fn() => $controllers['team']->removeEquipment($team_id,  $equipment_id));
+}elseif($action==='addMember'){
+    $team_id = requireId('team_id');
+    $user_id = requireId('user_id');
+    executeController(fn() => $controllers['team']->addMember($team_id, $user_id));
+}elseif($action==='removeMember'){
+    $team_id = requireId('team_id');
+    $user_id = requireId('user_id');
+    executeController(fn() => $controllers['team']->removeMember($team_id, $user_id));
+}elseif ($action === 'getAvailableUsersForProject' && isset($_GET['project_id'])) {
+    $project_id = requireId('project_id');
     
-//     if (!$domaine) {
-//         echo json_encode(['success' => false, 'message' => 'Domaine requis']);
-//         exit;
-//     }
+    try {
+        require_once '../models/UserModel.php';
+        $userModel = new UserModel();
+        
+        // Récupérer tous les utilisateurs actifs
+        $allUsers = $userModel->getAll();
+        
+        // Récupérer les membres actuels du projet
+        $membersData = $controllers['project']->getProjectUsers($project_id);
+        $currentMembers = $membersData['data'] ?? [];
+        $memberIds = array_column($currentMembers, 'id');
+        
+        // Filtrer les utilisateurs disponibles
+        $availableUsers = array_filter($allUsers, function($user) use ($memberIds) {
+            return !in_array($user['id'], $memberIds);
+        });
+        
+        sendJson([
+            'success' => true,
+            'users' => array_values($availableUsers)
+        ]);
+    } catch (Exception $e) {
+        error_log("Erreur getAvailableUsersForProject: " . $e->getMessage());
+        sendError('Erreur: ' . $e->getMessage(), 500);
+    }
+
+}elseif($action==="addUserToProject"&& isset($_GET['project_id'])){
+    $project_id = requireId('project_id');
+    $user_id = requireId('user_id');
+    executeController(fn() => $controllers['project']->addUser($project_id, $user_id));
+
+
+
+}elseif($action==="removeUserFromProject"&& isset($_GET['project_id'])){
+    $project_id = requireId('project_id');
+    $user_id = requireId('user_id');
+    executeController(fn() => $controllers['project']->removeUser($project_id, $user_id));
+
+
+
+}elseif ($action === 'generateProjectReport') {
+    // On récupère les paramètres via POST (car venant du formulaire)
+    $type = getParam('filter_type', 'POST', 'all'); 
+    $value = null;
+
+    if ($type === 'year') {
+        $value = getParam('year_val', 'POST', date('Y'));
+    } elseif ($type === 'responsable') {
+        $value = getParam('resp_val', 'POST', 0);
+    }elseif ($type === 'thematique') {
+        $value = getParam('them_val', 'POST', 0);
+    }
+
     
-//     $result = $controllerPublication->apiGetPublicationsByDomain($domaine, $limit);
-//     echo json_encode($result);
-//     exit;
-// }
+    $controllers['project']->generatePDF($type, $value);
+}
 
 // ============================================
 // ACTION INVALIDE

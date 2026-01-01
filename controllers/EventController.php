@@ -15,13 +15,22 @@ class EventController {
             
             $events = $this->eventModel->getAllEvents($orderBy, $order);
             
-            
-        } catch (Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => 'Erreur serveur: ' . $e->getMessage()]);
-            exit;
-        }
-    }  
+                return [
+            'total' => count($events),
+            'data' => $events
+        ];
+
+    } catch (Exception $e) {
+        // En cas d'erreur, retourner vide
+        return [
+            'total' => 0,
+            'data' => []
+        ];
+    }
+}
+public function getALL(){
+    return $this->eventModel->getAll();
+}
     public function store() {
         try {
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -572,6 +581,7 @@ class EventController {
         header('Location: /events');
         exit();
     }
+    
 }
 
 

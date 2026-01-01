@@ -733,7 +733,7 @@ function saveStatus() {
     const id = document.getElementById('statusEquipmentId').value;
     const etat = document.getElementById('newStatus').value;
     
-    fetch(`../controllers/api.php?action=updateEquipmentStatus`, {
+    fetch(`../controllers/api.php?action=updateEquipmentStatus&id=${id}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

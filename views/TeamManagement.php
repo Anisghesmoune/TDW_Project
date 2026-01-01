@@ -16,7 +16,8 @@ require_once '../views/Table.php';
 $controller = new ProjectController();
 $data = $controller->index(); 
 $eventController = new EventController();
-$eventData = $eventController->getEvents();
+$eventData = $eventController->index();
+echo('$eventData');
 $publicationController = new PublicationController();
 $publicationData = $publicationController->stats();
 
@@ -63,10 +64,7 @@ $users = $userModel->getAll(); // Pour le select du chef d'équipe
                 <div class="number"><?php echo count($teams); ?></div>
             </div>
             
-            <div class="stat-card">
-                <h3>Projets actifs</h3>
-                <div class="number"><?php echo $data['nbProjetsActifs']; ?></div>
-            </div>
+           
             
             <div class="stat-card">
                 <h3>Publications</h3>
@@ -93,10 +91,10 @@ $users = $userModel->getAll(); // Pour le select du chef d'équipe
                 'data' => $teams,
                 'columns' => [
                     ['key' => 'id'],
-                    ['key' => 'name'],
+                    ['key' => 'nom'],
                     ['key' => function($row) { 
                         if ($row['chef_nom']) {
-                            return $row['chef_prenom'] . ' ' . $row['chef_nom'];
+                            return $row['resp_name'] . ' ' . $row['chef_nom'];
                         }
                         return 'Non défini';
                     }],

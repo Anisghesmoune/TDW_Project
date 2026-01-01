@@ -685,6 +685,7 @@ public function apiDeletePublication($id) {
     }
 }
 
+
 /**
  * API: Obtenir les statistiques (DÉJÀ EXISTANTE - Version corrigée)
  */

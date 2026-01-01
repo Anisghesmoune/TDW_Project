@@ -105,7 +105,12 @@ class TeamController {
         $users = $this->getEligibleChefs();
         
         // Charger la vue
-        require_once 'views/teams/edit.php';
+    }
+    public function getTeamPublications($teamId) {
+        return $this->teamModel->getTeamPublications($teamId);
+    }
+    public function getTeamEquipement($team_id) {
+        return $this->teamModel->getTeamEquipments($team_id);
     }
     
     /**
@@ -156,38 +161,44 @@ class TeamController {
     /**
      * Ajouter un membre à une équipe
      */
-    public function addMember($team_id) {
-        $user_id = $_POST['user_id'] ?? null;
-        
-        if (!$user_id) {
-            $_SESSION['error'] = 'Utilisateur non spécifié.';
-            header('Location: /teams/' . $team_id);
-            exit;
-        }
-        
-        if ($this->teamModel->addMember($team_id, $user_id)) {
-            $_SESSION['success'] = 'Membre ajouté avec succès.';
-        } else {
-            $_SESSION['error'] = 'Erreur lors de l\'ajout du membre (déjà membre ?).';
-        }
-        
-        header('Location: /teams/' . $team_id);
-        exit;
+  public function addMember($team_id, $user_id, $role = 'membre') {
+    if (!$team_id || !$user_id) {
+        return [
+            'success' => false,
+            'message' => 'Données manquantes'
+        ];
     }
     
-    /**
-     * Retirer un membre d'une équipe
-     */
-    public function removeMember($team_id, $user_id) {
-        if ($this->teamModel->removeMember($team_id, $user_id)) {
-            $_SESSION['success'] = 'Membre retiré avec succès.';
-        } else {
-            $_SESSION['error'] = 'Erreur lors du retrait du membre.';
-        }
-        
-        header('Location: /teams/' . $team_id);
-        exit;
+    $result = $this->teamModel->addMember($team_id, $user_id, $role);
+    
+    return [
+        'success' => $result,
+        'message' => $result 
+            ? 'Membre ajouté avec succès' 
+            : 'Impossible d\'ajouter le membre (peut-être déjà membre)'
+    ];
+}
+
+/**
+ * Retirer un membre d'une équipe
+ */
+public function removeMember($team_id, $user_id) {
+    if (!$team_id || !$user_id) {
+        return [
+            'success' => false,
+            'message' => 'Données manquantes'
+        ];
     }
+    
+    $result = $this->teamModel->removeMember($team_id, $user_id);
+    
+    return [
+        'success' => $result,
+        'message' => $result 
+            ? 'Membre retiré avec succès' 
+            : 'Erreur lors du retrait du membre'
+    ];
+}
     
     /**
      * Valider les données d'équipe
@@ -233,4 +244,21 @@ public function getall($id) {
         $teams = $this->teamModel->getAllTeamsWithDetails();
         return $teams;
     }
-}   
+    public function getTeamEquipments($team_id) {
+    return $this->teamModel->getTeamEquipments($team_id);
+}
+public function getAvailableForTeam($team_id){
+    return $this->teamModel->getAvailableForTeam($team_id);
+}
+public function getAvailableTeamEquipments($team_id) {
+    return $this->teamModel->getAvailableTeamEquipments($team_id);
+}
+public function assignEquipment($team_id, $equipment_id) {
+    return $this->teamModel->assignEquipment($team_id, $equipment_id);      
+}
+public function removeEquipment($team_id, $equipment_id) {
+    return $this->teamModel->unassignEquipment($team_id, $equipment_id);      
+
+}
+
+}

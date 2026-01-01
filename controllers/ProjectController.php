@@ -689,4 +689,96 @@ class ProjectController {
     public function getSuccessMessage() {
         return $this->successMessage;
     }
+    public function getAll(){
+        return $this->project->getAll();
+    }
+    // ... [Le reste de votre code Controller existant] ...
+
+    /**
+     * Récupérer les données filtrées pour le rapport
+     */
+  private function getProjectsForReport($filterType, $filterValue) {
+    $projects = [];
+    $allProjects = $this->project->getAll();
+    
+    switch ($filterType) {
+        case 'year':
+            foreach ($allProjects as $p) {
+                $year = date('Y', strtotime($p['date_debut']));
+                if ($year == $filterValue) {
+                    $projects[] = $p;
+                }
+            }
+            break;
+            
+        case 'responsable':
+            // Filter by responsable ID
+            if (is_numeric($filterValue)) {
+                foreach ($allProjects as $p) {
+                    if ($p['responsable_id'] == $filterValue) {
+                        $projects[] = $p;
+                    }
+                }
+            }
+            break;
+            
+        case 'thematique':
+            // Get projects for specific thematic
+            if (is_numeric($filterValue)) {
+                $projects = $this->project->getProjectsByThematicId($filterValue);
+            }
+            break;
+            
+        case 'all':
+        default:
+            $projects = $allProjects;
+            break;
+    }
+    
+    return $projects;
+}
+
+public function generatePDF($filterType, $filterValue = null) {
+    require_once '../libs/PDFReport.php';
+    
+    // 1. Get data
+    $data = $this->getProjectsForReport($filterType, $filterValue);
+    
+    if (empty($data)) {
+        // Better error handling
+        header('Content-Type: text/html; charset=UTF-8');
+        die("Aucun projet trouvé pour ces critères.");
+    }
+    
+    // 2. Define title
+    $title = "Liste complète des projets";
+    
+    if ($filterType === 'year') {
+        $title = "Rapport des projets - Année " . $filterValue;
+    }
+    
+    if ($filterType === 'responsable') {
+        $respName = $data[0]['responsable_name'] ?? 'Responsable #' . $filterValue;
+        $title = "Projets dirigés par : " . $respName;
+    }
+    
+    if ($filterType === 'thematique') {
+        $themName = $data[0]['thematic_name'] ?? 'Thématique #' . $filterValue;
+        $title = "Projets de la thématique : " . $themName;
+    }
+    
+    // 3. Create PDF
+    $pdf = new PDFReport();
+    $pdf->AliasNbPages();
+    $pdf->AddPage();
+    $pdf->setReportTitle($title);
+    
+    // 4. Generate table
+    $pdf->ProjectTable($data);
+    
+    // 5. Output
+    $filename = 'Rapport_Projets_' . date('Y-m-d') . '.pdf';
+    $pdf->Output('D', $filename);
+    exit;
+}
 }
