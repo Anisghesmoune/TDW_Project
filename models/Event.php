@@ -75,9 +75,7 @@ class Event extends Model {
     /**
      * Récupérer tous les événements
      */
-    public function getAllEvents($orderBy = 'date_debut', $order = 'DESC') {
-        return $this->getAll($orderBy, $order);
-    }
+    
 
     /**
      * Rechercher des événements par n'importe quelle colonne
@@ -353,5 +351,107 @@ class Event extends Model {
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+    public function addParticipant($eventId, $userId) {
+        // Vérifier capacité
+        $event = $this->getById($eventId);
+        $current = $this->countParticipants($eventId);
+        
+        if ($event['capacite_max'] > 0 && $current >= $event['capacite_max']) {
+            return ['success' => false, 'message' => 'Événement complet'];
+        }
+
+        try {
+            $query = "INSERT INTO event_participants (event_id, user_id) VALUES (:eid, :uid)";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':eid', $eventId);
+            $stmt->bindParam(':uid', $userId);
+            $stmt->execute();
+            return ['success' => true];
+        } catch (PDOException $e) {
+            // Code 23000 = Violation d'unicité (déjà inscrit)
+            if ($e->getCode() == 23000) {
+                return ['success' => false, 'message' => 'Utilisateur déjà inscrit'];
+            }
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    // Désinscrire un utilisateur
+    public function removeParticipant($eventId, $userId) {
+        $query = "DELETE FROM event_participants WHERE event_id = :eid AND user_id = :uid";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':eid', $eventId);
+        $stmt->bindParam(':uid', $userId);
+        return $stmt->execute();
+    }
+
+    // Liste des participants avec détails User
+    public function getParticipants($eventId) {
+        $query = "SELECT u.id, u.nom, u.prenom, u.email, ep.date_inscription, ep.statut 
+                  FROM event_participants ep
+                  JOIN users u ON ep.user_id = u.id
+                  WHERE ep.event_id = :eid
+                  ORDER BY ep.date_inscription DESC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':eid', $eventId);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Compter les participants
+    public function countParticipants($eventId) {
+        $query = "SELECT COUNT(*) as total FROM event_participants WHERE event_id = :eid";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':eid', $eventId);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row['total'];
+    }
+
+    // Récupérer les événements qui commencent bientôt (pour les rappels)
+    public function getEventsStartingSoon($hours = 24) {
+        $query = "SELECT * FROM " . $this->table . " 
+                  WHERE date_debut BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL :hours HOUR)
+                  AND statut = 'publié'"; // Seules les annonces publiées
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':hours', $hours, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    public function getAllEvents($orderBy = 'date_debut', $order = 'DESC') {
+        // Sécurisation du tri
+        $allowedColumns = ['date_debut', 'date_fin', 'titre', 'statut'];
+        if (!in_array($orderBy, $allowedColumns)) $orderBy = 'date_debut';
+        $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
+
+        // Requête avec JOINTURE sur event_types
+        $query = "SELECT e.*, t.nom as type_nom 
+                  FROM " . $this->table . " e
+                  LEFT JOIN event_types t ON e.id_type = t.id
+                  ORDER BY e." . $orderBy . " " . $order;
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Récupérer un événement par ID avec le nom du type
+     */
+    public function getById($id) {
+        $query = "SELECT e.*, t.nom as type_nom 
+                  FROM " . $this->table . " e
+                  LEFT JOIN event_types t ON e.id_type = t.id
+                  WHERE e.id = :id
+                  LIMIT 1";
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+        
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 }
+
 ?>

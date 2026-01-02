@@ -250,9 +250,9 @@ public function getall($id) {
 public function getAvailableForTeam($team_id){
     return $this->teamModel->getAvailableForTeam($team_id);
 }
-public function getAvailableTeamEquipments($team_id) {
-    return $this->teamModel->getAvailableTeamEquipments($team_id);
-}
+// public function getAvailableTeamEquipments($team_id) {
+//     return $this->teamModel->getAvailableTeamEquipments($team_id);
+// }
 public function assignEquipment($team_id, $equipment_id) {
     return $this->teamModel->assignEquipment($team_id, $equipment_id);      
 }

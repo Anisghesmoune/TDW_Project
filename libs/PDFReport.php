@@ -3,9 +3,13 @@ require_once 'fpdf/fpdf.php';
 
 class PDFReport extends FPDF {
     private $reportTitle;
+    private $filterInfo='';
     
     public function setReportTitle($t) {
         $this->reportTitle = $t;
+    }
+    public function setFilterInfo($info) {
+        $this->filterInfo = $info;
     }
     
     // Better UTF-8 conversion
@@ -98,6 +102,124 @@ class PDFReport extends FPDF {
             
             $fill = !$fill;
         }
+    }
+    // À ajouter dans la classe PDFReport
+
+    function EquipmentReportTable($header, $data, $colWidths) {
+        // Couleurs, épaisseur du trait et police grasse
+        $this->SetFillColor(78, 115, 223);
+        $this->SetTextColor(255);
+        $this->SetDrawColor(50, 50, 100);
+        $this->SetLineWidth(.3);
+        $this->SetFont('Arial', 'B', 10);
+
+        // En-tête
+        for($i=0; $i<count($header); $i++)
+            $this->Cell($colWidths[$i], 7, $this->convert($header[$i]), 1, 0, 'C', true);
+        $this->Ln();
+
+        // Restauration des couleurs et de la police
+        $this->SetFillColor(224, 235, 255);
+        $this->SetTextColor(0);
+        $this->SetFont('Arial', '', 9);
+        
+        $fill = false;
+        foreach($data as $row) {
+            $i = 0;
+            foreach($row as $col) {
+                // Alignement : Texte à gauche pour le nom, Centré pour les chiffres
+                $align = is_numeric(str_replace(['%', ' '], '', $col)) ? 'C' : 'L';
+                $this->Cell($colWidths[$i], 6, $this->convert($col), 'LR', 0, $align, $fill);
+                $i++;
+            }
+            $this->Ln();
+            $fill = !$fill;
+        }
+        $this->Cell(array_sum($colWidths), 0, '', 'T');
+        $this->Ln(10); // Espace après le tableau
+    }
+    // --- AJOUTS POUR LE RAPPORT DE PUBLICATIONS ---
+
+    /**
+     * Affiche un en-tête de catégorie (ex: "ARTICLES", "THÈSES")
+     */
+    function CategoryHeader($label) {
+        $this->Ln(6);
+        $this->SetFont('Arial', 'B', 11);
+        $this->SetFillColor(230, 230, 230); // Gris clair
+        $this->SetTextColor(50, 50, 50);
+        $this->Cell(0, 8, $this->convert(strtoupper($label)), 0, 1, 'L', true);
+        $this->Ln(2);
+    }
+
+    /**
+     * Méthode avancée pour dessiner une ligne de tableau avec hauteur dynamique
+     * Indispensable pour les titres longs et les listes d'auteurs
+     */
+    function PublicationRow($data, $widths) {
+        // Calcul de la hauteur maximale de la ligne
+        $nb = 0;
+        for($i=0;$i<count($data);$i++) {
+            $nb = max($nb, $this->NbLines($widths[$i], $this->convert($data[$i])));
+        }
+        $h = 6 * $nb; // 6 = hauteur d'une ligne de texte
+
+        // Vérification saut de page
+        if($this->GetY() + $h > 275) {
+            $this->AddPage();
+        }
+
+        // Dessin des cellules
+        for($i=0;$i<count($data);$i++) {
+            $w = $widths[$i];
+            $x = $this->GetX();
+            $y = $this->GetY();
+            
+            // Cadre
+            $this->Rect($x, $y, $w, $h);
+            
+            // Texte (MultiCell gère le retour à la ligne)
+            // Alignement : Centre (C) pour la date (colonne 2), Gauche (L) pour le reste
+            $align = ($i == 2) ? 'C' : 'L'; 
+            
+            $this->MultiCell($w, 6, $this->convert($data[$i]), 0, $align);
+            
+            // Repositionnement à droite pour la prochaine cellule
+            $this->SetXY($x + $w, $y);
+        }
+        $this->Ln($h);
+    }
+
+    /**
+     * Utilitaire : Calcule le nombre de lignes qu'un texte va prendre dans une colonne
+     */
+    function NbLines($w, $txt) {
+        $cw = &$this->CurrentFont['cw'];
+        if($w==0) $w = $this->w-$this->rMargin-$this->x;
+        $wmax = ($w-2*$this->cMargin)*1000/$this->FontSize;
+        $s = str_replace("\r", '', $txt);
+        $nb = strlen($s);
+        if($nb>0 && $s[$nb-1]=="\n") $nb--;
+        $sep = -1;
+        $i = 0;
+        $j = 0;
+        $l = 0;
+        $nl = 1;
+        while($i<$nb) {
+            $c = $s[$i];
+            if($c=="\n") {
+                $i++; $sep = -1; $j = $i; $l = 0; $nl++; continue;
+            }
+            if($c==' ') $sep = $i;
+            $l += $cw[$c];
+            if($l>$wmax) {
+                if($sep==-1) {
+                    if($i==$j) $i++;
+                } else $i = $sep+1;
+                $sep = -1; $j = $i; $l = 0; $nl++;
+            } else $i++;
+        }
+        return $nl;
     }
 }
 ?>

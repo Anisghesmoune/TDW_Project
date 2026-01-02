@@ -374,9 +374,9 @@ class PublicationController {
         return $errors;
     }
     
-    /**
-     * Upload d'un fichier de publication
-     */
+//     /**
+//      * Upload d'un fichier de publication
+//      */
     private function uploadFile($file) {
         // Définir le dossier d'upload
         $uploadDir = 'uploads/publications/';
@@ -414,29 +414,29 @@ class PublicationController {
     /**
      * Télécharger un fichier de publication
      */
-    public function download($id) {
-        $publication = $this->publicationModel->getById($id);
+    // public function download($id) {
+    //     $publication = $this->publicationModel->getById($id);
         
-        if (!$publication || !$publication['lien_telechargement']) {
-            $_SESSION['error'] = "Fichier introuvable.";
-            header('Location: /publications');
-            exit;
-        }
+    //     if (!$publication || !$publication['lien_telechargement']) {
+    //         $_SESSION['error'] = "Fichier introuvable.";
+    //         header('Location: /publications');
+    //         exit;
+    //     }
         
-        // Vérifier que le fichier existe
-        if (!file_exists($publication['lien_telechargement'])) {
-            $_SESSION['error'] = "Fichier introuvable sur le serveur.";
-            header('Location: /publications/' . $id);
-            exit;
-        }
+    //     // Vérifier que le fichier existe
+    //     if (!file_exists($publication['lien_telechargement'])) {
+    //         $_SESSION['error'] = "Fichier introuvable sur le serveur.";
+    //         header('Location: /publications/' . $id);
+    //         exit;
+    //     }
         
-        // Forcer le téléchargement
-        header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="' . basename($publication['lien_telechargement']) . '"');
-        header('Content-Length: ' . filesize($publication['lien_telechargement']));
-        readfile($publication['lien_telechargement']);
-        exit;
-    }
+    //     // Forcer le téléchargement
+    //     header('Content-Type: application/pdf');
+    //     header('Content-Disposition: attachment; filename="' . basename($publication['lien_telechargement']) . '"');
+    //     header('Content-Length: ' . filesize($publication['lien_telechargement']));
+    //     readfile($publication['lien_telechargement']);
+    //     exit;
+    // }
     
     /**
      * API: Obtenir les statistiques des publications
@@ -463,13 +463,13 @@ class PublicationController {
         exit;
     }
 
-// ============================================
-// MÉTHODES API À AJOUTER AU PublicationController
-// ============================================
+// // ============================================
+// // MÉTHODES API À AJOUTER AU PublicationController
+// // ============================================
 
-/**
- * API: Obtenir toutes les publications avec pagination et filtres
- */
+// /**
+//  * API: Obtenir toutes les publications avec pagination et filtres
+//  */
 public function apiGetPublications() {
     $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
     $perPage = isset($_GET['perPage']) ? (int)$_GET['perPage'] : 10;
@@ -807,14 +807,285 @@ public function apiGetPublicationsByType($type, $limit = null) {
 /**
  * API: Obtenir les publications par domaine
  */
-public function apiGetPublicationsByDomain($domaine, $limit = null) {
-    $publications = $this->publicationModel->getByDomain($domaine, $limit);
+// public function apiGetPublicationsByDomain($domaine, $limit = null) {
+//     $publications = $this->publicationModel->getByDomain($domaine, $limit);
     
-    return [
-        'success' => true,
-        'data' => $publications,
-        'total' => count($publications)
-    ];
-}
+//     return [
+//         'success' => true,
+//         'data' => $publications,
+//         'total' => count($publications)
+//     ];
+// }
+ /**
+     * API CREATE : Création d'une publication + Liaison Auteurs
+     */
+    // public function apiCreatePublication($postData, $filesData) {
+    //     $errors = [];
+    //     if (empty($postData['titre'])) $errors[] = 'Le titre est obligatoire';
+    //     if (empty($postData['type'])) $errors[] = 'Le type est obligatoire';
+        
+    //     if (!empty($errors)) return ['success' => false, 'errors' => $errors];
+        
+    //     // Upload du PDF
+    //     $lienTelechargement = null;
+    //     if (isset($filesData['fichier']) && $filesData['fichier']['error'] === UPLOAD_ERR_OK) {
+    //         $lienTelechargement = $this->uploadFile($filesData['fichier']);
+    //     }
+        
+    //     // 1. Initialisation de l'objet Publication
+    //     $this->publicationModel->titre = $postData['titre'];
+    //     $this->publicationModel->resume = $postData['resume'] ?? null;
+    //     $this->publicationModel->type = $postData['type'];
+    //     $this->publicationModel->date_publication = $postData['date_publication'] ?? null;
+    //     $this->publicationModel->doi = $postData['doi'] ?? null;
+    //     $this->publicationModel->lien_telechargement = $lienTelechargement;
+    //     $this->publicationModel->domaine = $postData['domaine'] ?? null;
+    //     $this->publicationModel->statut_validation = 'en_attente';
+    //     $this->publicationModel->soumis_par = $_SESSION['user_id'];
+        
+    //     // 2. Insertion en base
+    //     $newId = $this->publicationModel->create();
+        
+    //     if ($newId) {
+    //         // 3. Gestion des Auteurs (Tableau d'IDs reçu depuis le select multiple)
+    //         if (!empty($postData['auteurs']) && is_array($postData['auteurs'])) {
+    //             $this->publicationModel->addAuthors($newId, $postData['auteurs']);
+    //         }
+    //         return ['success' => true, 'message' => 'Publication soumise avec succès'];
+    //     }
+    //     return ['success' => false, 'message' => 'Erreur SQL lors de la création'];
+    // }
+
+    /**
+     * API UPDATE : Mise à jour + Gestion Auteurs
+     */
+    // public function apiUpdatePublication($id, $postData, $filesData) {
+    //     $existing = $this->publicationModel->getById($id);
+    //     if (!$existing) return ['success' => false, 'message' => 'Publication introuvable'];
+
+    //     // Upload nouveau fichier (remplacement)
+    //     $lienTelechargement = $existing['lien_telechargement'];
+    //     if (isset($filesData['fichier']) && $filesData['fichier']['error'] === UPLOAD_ERR_OK) {
+    //         $lienTelechargement = $this->uploadFile($filesData['fichier']);
+    //         // Supprimer l'ancien fichier
+    //         if($existing['lien_telechargement'] && file_exists($existing['lien_telechargement'])) {
+    //             unlink($existing['lien_telechargement']);
+    //         }
+    //     }
+
+    //     // Mise à jour des propriétés
+    //     $this->publicationModel->id = $id;
+    //     $this->publicationModel->titre = $postData['titre'];
+    //     $this->publicationModel->resume = $postData['resume'] ?? null;
+    //     $this->publicationModel->type = $postData['type'];
+    //     $this->publicationModel->date_publication = $postData['date_publication'] ?? null;
+    //     $this->publicationModel->doi = $postData['doi'] ?? null;
+    //     $this->publicationModel->lien_telechargement = $lienTelechargement;
+    //     $this->publicationModel->domaine = $postData['domaine'] ?? null;
+        
+    //     if ($this->publicationModel->update()) {
+    //         // Mise à jour des auteurs : On supprime tout et on recrée
+    //         $this->publicationModel->clearAuthors($id);
+    //         if (!empty($postData['auteurs']) && is_array($postData['auteurs'])) {
+    //             $this->publicationModel->addAuthors($id, $postData['auteurs']);
+    //         }
+    //         return ['success' => true, 'message' => 'Publication mise à jour'];
+    //     }
+    //     return ['success' => false, 'message' => 'Erreur SQL update'];
+    // }
+
+    /**
+     * GÉNÉRATION DE RAPPORT PDF
+     */
+    /**
+     * API : Récupérer les détails complets (utilisé par le JS si besoin)
+     */
+    public function apiGetPublicationDetails($id) {
+        $data = $this->publicationModel->getByIdWithDetails($id);
+        if ($data) {
+            return ['success' => true, 'data' => $data];
+        }
+        return ['success' => false, 'message' => 'Publication introuvable'];
+    }
+
+    /**
+     * Action : Télécharger le PDF
+     */
+    public function download($id) {
+        $pub = $this->publicationModel->getById($id);
+        
+        if ($pub && !empty($pub['lien_telechargement']) && file_exists($pub['lien_telechargement'])) {
+            // Nettoyage du buffer de sortie pour éviter la corruption du PDF
+            if (ob_get_length()) ob_clean();
+            
+            header('Content-Description: File Transfer');
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="'.basename($pub['lien_telechargement']).'"');
+            header('Expires: 0');
+            header('Cache-Control: must-revalidate');
+            header('Pragma: public');
+            header('Content-Length: ' . filesize($pub['lien_telechargement']));
+            readfile($pub['lien_telechargement']);
+            exit;
+        }
+        die("Erreur : Le fichier n'existe pas sur le serveur.");
+    }
+    public function generateReport() {
+        require_once '../libs/PDFReport.php';
+
+        $year = $_GET['year'] ?? null;
+        $domaine = $_GET['domaine'] ?? null;
+        
+        $filters = array_filter(['year' => $year, 'domaine' => $domaine]);
+        $publications = $this->publicationModel->getAllForReport($filters);
+
+        $pdf = new PDFReport();
+        $pdf->AliasNbPages();
+        $pdf->AddPage();
+        
+        $titre = "Rapport Bibliographique";
+        if ($year) $titre .= " - Année $year";
+        $pdf->setReportTitle($titre);
+        $pdf->setFilterInfo("Généré le " . date('d/m/Y'));
+
+        if (empty($publications)) {
+            $pdf->SetFont('Arial', 'I', 12);
+            $pdf->Cell(0, 10, $pdf->convert("Aucune publication trouvée pour ces critères."), 0, 1, 'C');
+            $pdf->Output('D', 'Rapport_Vide.pdf');
+            exit;
+        }
+
+        // Groupement par Type
+        $grouped = [];
+        foreach ($publications as $pub) {
+            $grouped[ucfirst($pub['type'])][] = $pub;
+        }
+
+        foreach ($grouped as $type => $pubs) {
+            $pdf->Ln(5);
+            
+            // En-tête de catégorie
+            $pdf->SetFont('Arial', 'B', 12);
+            $pdf->SetFillColor(230, 230, 230);
+            $pdf->Cell(0, 8, $pdf->convert(strtoupper($type)), 0, 1, 'L', true);
+            $pdf->Ln(2);
+
+            // En-têtes Tableau
+            $header = ['Titre', 'Auteurs', 'Date', 'Projet'];
+            $w = [80, 50, 25, 35]; // Total 190
+            
+            $pdf->SetFont('Arial', 'B', 9);
+            $pdf->SetFillColor(78, 115, 223);
+            $pdf->SetTextColor(255);
+            for($i=0; $i<count($header); $i++) 
+                $pdf->Cell($w[$i], 7, $pdf->convert($header[$i]), 1, 0, 'C', true);
+            $pdf->Ln();
+
+            // Données
+            $pdf->SetFont('Arial', '', 8);
+            $pdf->SetTextColor(0);
+            $pdf->SetFillColor(245, 245, 245);
+            $fill = false;
+
+            foreach ($pubs as $row) {
+                // 'auteurs_noms' vient du GROUP_CONCAT dans le modèle
+                $titre = substr($row['titre'], 0, 45) . (strlen($row['titre']) > 45 ? '...' : '');
+                $auteurs = substr($row['auteurs_noms'] ?? 'N/A', 0, 30) . '...';
+                $projet = substr($row['projet_titre'] ?? '-', 0, 18);
+
+                $pdf->Cell($w[0], 7, $pdf->convert($titre), 1, 0, 'L', $fill);
+                $pdf->Cell($w[1], 7, $pdf->convert($auteurs), 1, 0, 'L', $fill);
+                $pdf->Cell($w[2], 7, $row['date_publication'], 1, 0, 'C', $fill);
+                $pdf->Cell($w[3], 7, $pdf->convert($projet), 1, 0, 'C', $fill);
+                $pdf->Ln();
+                $fill = !$fill;
+            }
+        }
+
+        $pdf->Output('D', 'Rapport_Publications.pdf');
+        exit;
+    }
+
+    // --- Helpers et API standard ---
+
+    // private function uploadFile($file) {
+    //     $uploadDir = '../uploads/publications/';
+    //     if (!file_exists($uploadDir)) mkdir($uploadDir, 0755, true);
+        
+    //     $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+    //     if (strtolower($ext) !== 'pdf') return false;
+        
+    //     $filename = uniqid() . '.' . $ext;
+    //     move_uploaded_file($file['tmp_name'], $uploadDir . $filename);
+    //     return $uploadDir . $filename;
+    // }
+
+    // public function apiGetPublications() {
+    //     $page = $_GET['page'] ?? 1;
+    //     $filters = [
+    //         'type' => $_GET['type'] ?? null,
+    //         'statut' => $_GET['statut'] ?? null,
+    //         'domaine' => $_GET['domaine'] ?? null,
+    //         'year' => $_GET['year'] ?? null,
+    //         'q' => $_GET['q'] ?? null
+    //     ];
+    //     $filters = array_filter($filters);
+        
+    //     $data = $this->publicationModel->getFiltered($page, 10, $filters);
+    //     $total = $this->publicationModel->countFiltered($filters);
+        
+    //     return [
+    //         'success' => true,
+    //         'data' => $data,
+    //         'totalPages' => ceil($total / 10),
+    //         'total' => $total
+    //     ];
+    // }
+
+//     public function apiValidatePublication($id) {
+//         if($this->publicationModel->validate($id)) return ['success' => true];
+//         return ['success' => false, 'message' => 'Erreur validation'];
+//     }
+
+//     public function apiRejectPublication($id) {
+//         if($this->publicationModel->reject($id)) return ['success' => true];
+//         return ['success' => false, 'message' => 'Erreur rejet'];
+//     }
+    
+//     public function apiDeletePublication($id) {
+//         if($this->publicationModel->delete($id)) return ['success' => true];
+//         return ['success' => false, 'message' => 'Erreur suppression'];
+//     }
+
+//     public function apiGetPublicationById($id) {
+//         $data = $this->publicationModel->getById($id);
+//         return ['success' => true, 'data' => $data];
+//     }
+
+//     public function download($id) {
+//         $pub = $this->publicationModel->getById($id);
+//         if ($pub && file_exists($pub['lien_telechargement'])) {
+//             header('Content-Type: application/pdf');
+//             header('Content-Disposition: attachment; filename="doc_'.$id.'.pdf"');
+//             readfile($pub['lien_telechargement']);
+//             exit;
+//         }
+//         die('Fichier introuvable');
+//     }
+
+//     public function stats() {
+//         return [
+//             'total' => $this->publicationModel->count(),
+//             'valide' => $this->publicationModel->countValidated(),
+//             'en_attente' => $this->publicationModel->countPending(),
+//             'par_type' => $this->publicationModel->getStatsByType(),
+//             'par_domaine' => $this->publicationModel->getStatsByDomain()
+//         ];
+//     }
+    
+//     public function apiGetPublicationsByDomain() { return $this->publicationModel->getDistinctDomains(); }
+//     public function apiGetDistinctYears() { return $this->publicationModel->getDistinctYears(); }
+// }
 
 }
+

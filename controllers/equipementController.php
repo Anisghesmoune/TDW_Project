@@ -1,17 +1,23 @@
 <?php
+require_once "../models/reservationModel.php";
 class EquipmentController {
     private $equipmentModel;
     private $equipmentTypeModel;
+    private $reservationModel;
     
     public function __construct() {
         $this->equipmentModel = new Equipment();
         $this->equipmentTypeModel = new EquipmentType();
+        $this->reservationModel = new Reservation();
     }
     
     /**
      * Display equipment dashboard
      */
     public function index() {
+        // Auto-update reservation statuses
+        $this->reservationModel->autoUpdateStatuses();
+        
         // Get statistics
         $statusStats = $this->equipmentModel->getStatsByStatus();
         $typeStats = $this->equipmentModel->getStatsByType();
@@ -20,19 +26,23 @@ class EquipmentController {
         // Get recent equipment
         $recentEquipment = $this->equipmentModel->getAll('id', 'DESC', 10);
         
+        // Get reservation stats
+        $reservationStats = $this->reservationModel->getStats();
+        
         $data = [
             'title' => 'Tableau de Bord - Équipements',
             'statusStats' => $statusStats,
             'typeStats' => $typeStats,
             'maintenanceNeeded' => $maintenanceNeeded,
-            'recentEquipment' => $recentEquipment
+            'recentEquipment' => $recentEquipment,
+            'reservationStats' => $reservationStats
         ];
         
-      
+        return $data;
     }
     
     /**
-     * List all equipment
+     * List all equipment with reservation status
      */
     public function list() {
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -40,6 +50,7 @@ class EquipmentController {
         $search = isset($_GET['search']) ? trim($_GET['search']) : '';
         $filterType = isset($_GET['type']) ? trim($_GET['type']) : '';
         $filterStatus = isset($_GET['status']) ? trim($_GET['status']) : '';
+        $equipmentStatus=isset($_GET['equipment']) ? (int)$_GET['equipment'] : "";
         
         // Apply filters
         if (!empty($search)) {
@@ -51,9 +62,14 @@ class EquipmentController {
         } elseif (!empty($filterStatus)) {
             $equipment = $this->equipmentModel->getByStatus($filterStatus);
             $total = count($equipment);
-        } else {
-            $equipment = $this->equipmentModel->getPaginated($page, $perPage, 'id', 'DESC');
-            $total = $this->equipmentModel->count();
+        } 
+         else {
+            // Get equipment with reservation status
+            $equipment = $this->equipmentModel->getAllWithReservationStatus('id', 'DESC');
+            $total = count($equipment);
+            
+            // Apply pagination
+            $equipment = array_slice($equipment, ($page - 1) * $perPage, $perPage);
         }
         
         $types = $this->equipmentTypeModel->getAll('nom', 'ASC');
@@ -177,6 +193,24 @@ class EquipmentController {
             exit;
         }
         
+        // Check if equipment is reserved before changing status
+        if ($data['etat'] === 'en_maintenance') {
+            $activeReservations = $this->reservationModel->getByEquipment($id);
+            $hasActive = false;
+            foreach ($activeReservations as $res) {
+                if (in_array($res['statut'], ['confirmée', 'en_cours'])) {
+                    $hasActive = true;
+                    break;
+                }
+            }
+            
+            if ($hasActive) {
+                $_SESSION['error'] = 'Impossible de mettre en maintenance : équipement actuellement réservé.';
+                header('Location: /equipment/edit/' . $id);
+                exit;
+            }
+        }
+        
         if ($this->equipmentModel->update($id, $data)) {
             $_SESSION['success'] = 'Équipement modifié avec succès.';
             header('Location: /equipment/list');
@@ -192,10 +226,24 @@ class EquipmentController {
      * Delete equipment
      */
     public function delete($id) {
-        if ($this->equipmentModel->delete($id)) {
-            $_SESSION['success'] = 'Équipement supprimé avec succès.';
+        // Check if equipment has active reservations
+        $activeReservations = $this->reservationModel->getByEquipment($id);
+        $hasActive = false;
+        foreach ($activeReservations as $res) {
+            if (in_array($res['statut'], ['confirmée', 'en_cours', 'en_attente'])) {
+                $hasActive = true;
+                break;
+            }
+        }
+        
+        if ($hasActive) {
+            $_SESSION['error'] = 'Impossible de supprimer : équipement a des réservations actives.';
         } else {
-            $_SESSION['error'] = 'Erreur lors de la suppression de l\'équipement.';
+            if ($this->equipmentModel->delete($id)) {
+                $_SESSION['success'] = 'Équipement supprimé avec succès.';
+            } else {
+                $_SESSION['error'] = 'Erreur lors de la suppression de l\'équipement.';
+            }
         }
         
         header('Location: /equipment/list');
@@ -219,6 +267,20 @@ class EquipmentController {
         if (!in_array($etat, ['libre', 'réserve', 'en_maintenance'])) {
             echo json_encode(['success' => false, 'message' => 'État invalide']);
             exit;
+        }
+        
+        // Check if equipment has active reservations when trying to set to maintenance
+        if ($etat === 'en_maintenance') {
+            $activeReservations = $this->reservationModel->getByEquipment($id);
+            foreach ($activeReservations as $res) {
+                if (in_array($res['statut'], ['confirmée', 'en_cours'])) {
+                    echo json_encode([
+                        'success' => false, 
+                        'message' => 'Équipement actuellement réservé'
+                    ]);
+                    exit;
+                }
+            }
         }
         
         if ($this->equipmentModel->updateStatus($id, $etat)) {
@@ -270,10 +332,10 @@ class EquipmentController {
     }
     
     /**
-     * View equipment details
+     * View equipment details with reservations
      */
     public function view($id) {
-        $equipment = $this->equipmentModel->getById($id);
+        $equipment = $this->equipmentModel->getWithReservationStatus($id);
         
         if (!$equipment) {
             $_SESSION['error'] = 'Équipement introuvable.';
@@ -284,13 +346,78 @@ class EquipmentController {
         // Get type information
         $type = $this->equipmentTypeModel->getById($equipment['id_type']);
         
+        // Get all reservations for this equipment
+        $reservations = $this->reservationModel->getByEquipment($id);
+        
+        // Get upcoming reservations
+        $upcomingReservations = array_filter($reservations, function($res) {
+            return in_array($res['statut'], ['confirmée', 'en_attente']) && 
+                   $res['date_debut'] >= date('Y-m-d');
+        });
+        
         $data = [
             'title' => 'Détails de l\'Équipement',
             'equipment' => $equipment,
-            'type' => $type
+            'type' => $type,
+            'reservations' => $reservations,
+            'upcomingReservations' => $upcomingReservations
         ];
         
         require_once 'views/equipment/view.php';
+    }
+    
+    /**
+     * Check equipment availability for a period (AJAX)
+     */
+    public function checkAvailability() {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+            echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
+            exit;
+        }
+        
+        $id = (int)($_GET['id'] ?? 0);
+        $date_debut = $_GET['date_debut'] ?? '';
+        $date_fin = $_GET['date_fin'] ?? '';
+        
+        if (!$id || !$date_debut || !$date_fin) {
+            echo json_encode(['success' => false, 'message' => 'Paramètres manquants']);
+            exit;
+        }
+        
+        $result = $this->equipmentModel->isAvailableForPeriod($id, $date_debut, $date_fin);
+        
+        echo json_encode([
+            'success' => true,
+            'available' => $result['available'],
+            'conflicts' => $result['conflicts']
+        ]);
+        exit;
+    }
+    
+    /**
+     * Get equipment availability calendar (AJAX)
+     */
+    public function getAvailabilityCalendar() {
+        header('Content-Type: application/json');
+        
+        $id = (int)($_GET['id'] ?? 0);
+        $start_date = $_GET['start_date'] ?? date('Y-m-01');
+        $end_date = $_GET['end_date'] ?? date('Y-m-t');
+        
+        if (!$id) {
+            echo json_encode(['success' => false, 'message' => 'ID requis']);
+            exit;
+        }
+        
+        $calendar = $this->equipmentModel->getAvailabilityCalendar($id, $start_date, $end_date);
+        
+        echo json_encode([
+            'success' => true,
+            'data' => $calendar
+        ]);
+        exit;
     }
 }
 ?>

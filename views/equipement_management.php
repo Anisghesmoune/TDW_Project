@@ -3,10 +3,10 @@ require_once '../config/Database.php';
 require_once '../models/Model.php';
 require_once '../models/equipementModel.php';
 require_once '../models/equipementType.php';
+require_once '../models/reservationModel.php';
 require_once '../controllers/equipementController.php';
 require_once '../views/Sidebar.php';
 
-// Juste instancier le contrôleur et appeler index
 $controller = new EquipmentController();
 $controller->index();
 ?>
@@ -19,6 +19,43 @@ $controller->index();
     <link rel="stylesheet" href="admin_dashboard.css">
     <link rel="stylesheet" href="modelAddUser.css">
     <link rel="stylesheet" href="teamManagement.css">
+    <style>
+        .reservation-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            margin-left: 5px;
+        }
+        .reserved-equipment {
+            background-color: #fef3c7 !important;
+        }
+        .conflict-warning {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .tooltip-info {
+            position: relative;
+            cursor: help;
+        }
+        .tooltip-info:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            background: #1f2937;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            white-space: nowrap;
+            z-index: 1000;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.85em;
+        }
+    </style>
 </head>
 <body>
     <div class="sidebar">
@@ -91,12 +128,17 @@ $controller->index();
         <div class="content-section">
             <h2>
                 <span>Liste des Équipements</span>
-                <button class="btn btn-primary" onclick="openModal()">
-                    ➕ Ajouter un équipement
-                </button>
-                <button class="btn btn-primary" onclick="openTypeModal()">
-                    ➕ Ajouter un type
-                </button>
+                <div style="display: inline-flex; gap: 10px;">
+                    <button class="btn btn-primary" onclick="openModal()">
+                        ➕ Ajouter un équipement
+                    </button>
+                    <button class="btn btn-primary" onclick="openTypeModal()">
+                        ➕ Ajouter un type
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.location.href='reservation-history.php'">
+                        📜 Historique
+                    </button>
+                </div>
             </h2>
             
             <div id="loadingSpinner" style="text-align: center; padding: 40px;">
@@ -111,6 +153,7 @@ $controller->index();
                             <th>Nom</th>
                             <th>Type</th>
                             <th>Statut</th>
+                            <th>Réservation Actuelle</th>
                             <th>Localisation</th>
                             <th>Prochaine Maintenance</th>
                             <th>Actions</th>
@@ -241,6 +284,9 @@ $controller->index();
             </div>
             <div class="modal-body">
                 <input type="hidden" id="statusEquipmentId">
+                <div id="statusWarning" style="display: none;" class="conflict-warning">
+                    ⚠️ <strong>Attention :</strong> Cet équipement est actuellement réservé.
+                </div>
                 <div class="form-group">
                     <label for="newStatus">Nouveau statut <span class="required">*</span></label>
                     <select class="form-control" id="newStatus" required>
@@ -257,19 +303,211 @@ $controller->index();
         </div>
     </div>
 
+    <!-- Modal Réservation Rapide -->
+    <!-- Modal Réservation Rapide -->
+    <div id="reservationModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>📅 Réserver cet équipement</h2>
+                <button class="close-btn" onclick="closeReservationModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="reservationForm">
+                    <div id="reservationAlertContainer"></div>
+                    
+                    <input type="hidden" id="reservationEquipmentId">
+                    
+                    <!-- Info Équipement -->
+                    <div class="form-group" style="margin-bottom: 20px; background: #f3f4f6; padding: 10px; border-radius: 5px;">
+                        <label style="font-weight: bold; color: #4b5563;">Équipement concerné :</label>
+                        <div id="reservationEquipmentNameDisplay" style="font-size: 1.1em; color: #1f2937;"></div>
+                    </div>
+
+                    <!-- NOUVEAU : Sélection de l'utilisateur avec recherche -->
+                    <div class="form-group">
+                        <label for="reservationUserId">Utilisateur bénéficiaire <span class="required">*</span></label>
+                        <div style="display: flex; gap: 10px;">
+                            <!-- Barre de recherche pour filtrer le select -->
+                            <input type="text" id="userSearchFilter" placeholder="🔍 Filtrer par nom..." 
+                                   class="form-control" style="width: 40%;">
+                            
+                            <!-- Select contenant les utilisateurs -->
+                            <select id="reservationUserId" class="form-control" required style="width: 60%;">
+                                <option value="">-- Chargement... --</option>
+                            </select>
+                        </div>
+                        <small style="color: #666;">Sélectionnez la personne pour qui vous faites la réservation.</small>
+                    </div>
+
+                    <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group">
+                            <label for="reservation_date_debut">Date début <span class="required">*</span></label>
+                            <input type="date" class="form-control" id="reservation_date_debut" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="reservation_date_fin">Date fin <span class="required">*</span></label>
+                            <input type="date" class="form-control" id="reservation_date_fin" required>
+                        </div>
+                    </div>
+
+                    <div id="conflictInfo" style="display: none;" class="conflict-warning">
+                        <strong>⚠️ Conflit détecté</strong>
+                        <div id="conflictDetails"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reservation_notes">Notes</label>
+                        <textarea class="form-control" id="reservation_notes" rows="2" 
+                                  placeholder="Motif de la réservation..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeReservationModal()">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="saveReservation()">📅 Confirmer la réservation</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Voir Réservations -->
+    <div id="viewReservationsModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>📋 Réservations de l'équipement</h2>
+                <button class="close-btn" onclick="closeViewReservationsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="reservationsList"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeViewReservationsModal()">Fermer</button>
+            </div>
+        </div>
+    </div>
+
     <script>
 // ============================================
 // VARIABLES GLOBALES
 // ============================================
 let allEquipments = [];
 let allTypes = [];
+let currentEquipmentReservations = [];
+
 
 // ============================================
 // CHARGEMENT INITIAL
 // ============================================
-
+function setMinDates() {
+    const today = new Date().toISOString().split('T')[0];
+    const dateDebut = document.getElementById('reservation_date_debut');
+    const dateFin = document.getElementById('reservation_date_fin');
+    
+    if (dateDebut) dateDebut.min = today;
+    if (dateFin) dateFin.min = today;
+}
 document.addEventListener('DOMContentLoaded', () => {
     loadInitialData();
+    setMinDates();
+    loadUsersForReservation() ;
+});
+
+// Variable pour stocker les utilisateurs en cache
+let cachedUsers = [];
+
+
+
+// Fonction pour charger les utilisateurs
+async function loadUsersForReservation() {
+    const userSelect = document.getElementById('reservationUserId');
+    if (!userSelect) return;
+
+    // Si on a déjà chargé les utilisateurs, on ne refait pas l'appel
+    if (cachedUsers.length > 0) {
+        populateUserSelect(cachedUsers);
+        return;
+    }
+
+    try {
+        userSelect.innerHTML = '<option value="">Chargement...</option>';
+        
+        const response = await fetch('../controllers/api.php?action=getUsers');
+        const result = await response.json();
+
+        console.log("Réponse API Users :", result); // Regardez la console (F12) pour voir la structure !
+
+        // Logique pour trouver le tableau, peu importe la structure de l'API
+        let usersArray = [];
+
+        if (Array.isArray(result)) {
+            // Cas 1 : L'API renvoie directement [ {...}, {...} ]
+            usersArray = result;
+        } else if (result.data && Array.isArray(result.data)) {
+            // Cas 2 : L'API renvoie { success: true, data: [ ... ] }
+            usersArray = result.data;
+        } else if (result.users && Array.isArray(result.users)) {
+             // Cas 3 : L'API renvoie { success: true, users: [ ... ] }
+            usersArray = result.users;
+        }
+
+        // Vérification finale avant d'appeler populateUserSelect
+        if (Array.isArray(usersArray) && usersArray.length > 0) {
+            cachedUsers = usersArray;
+            populateUserSelect(cachedUsers);
+        } else {
+            console.warn("Aucun tableau d'utilisateurs trouvé dans la réponse API");
+            userSelect.innerHTML = '<option value="">Aucun utilisateur trouvé</option>';
+        }
+
+    } catch (error) {
+        console.error('Erreur chargement utilisateurs:', error);
+        userSelect.innerHTML = '<option value="">Erreur connexion</option>';
+    }
+}
+
+// Fonction pour remplir le select
+function populateUserSelect(users) {
+    const userSelect = document.getElementById('reservationUserId');
+    if (!userSelect) return;
+
+    userSelect.innerHTML = '<option value="">-- Sélectionner un utilisateur --</option>';
+    
+    users.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = `${user.nom.toUpperCase()} ${user.prenom} (${user.email})`;
+        option.dataset.search = `${user.nom} ${user.prenom} ${user.email}`.toLowerCase();
+        userSelect.appendChild(option);
+    });
+}
+
+// --- INITIALISATION SÉCURISÉE ---
+document.addEventListener('DOMContentLoaded', () => {
+    
+    // 1. Gestionnaire de recherche (Filtre)
+    const searchInput = document.getElementById('userSearchFilter');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const term = e.target.value.toLowerCase();
+            const options = document.querySelectorAll('#reservationUserId option');
+            
+            options.forEach(opt => {
+                if (opt.value === "") return;
+                const text = opt.dataset.search || "";
+                opt.style.display = text.includes(term) ? '' : 'none';
+            });
+            
+            // Sélection auto du premier élément visible
+            const select = document.getElementById('reservationUserId');
+            if (select.selectedOptions[0].style.display === 'none') {
+                select.value = "";
+            }
+        });
+    }
+
+    // 2. Initialiser les dates min
+    setMinDates();
 });
 
 async function loadInitialData() {
@@ -293,7 +531,6 @@ async function loadTypes() {
         if (result.success && result.data) {
             allTypes = result.data;
             
-            // Remplir le select de filtrage
             const filterSelect = document.getElementById('filterType');
             filterSelect.innerHTML = '<option value="">🏷️ Tous les types</option>';
             
@@ -304,7 +541,6 @@ async function loadTypes() {
                 filterSelect.appendChild(option);
             });
             
-            // Remplir le select du formulaire
             const formSelect = document.getElementById('id_type');
             formSelect.innerHTML = '<option value="">-- Sélectionner un type --</option>';
             
@@ -327,12 +563,11 @@ async function loadStats() {
         
         if (result.success) {
             const statusStats = result.statusStats || [];
-            const typeStats = result.typeStats || [];   
-            const maintenanceNeeded = await getMaintenanceNeeded();
             
             let total = 0;
             let available = 0;
             let reserved = 0;
+            let en_maintenance = 0;
             
             statusStats.forEach(stat => {
                 total += parseInt(stat.count) || 0;
@@ -341,11 +576,10 @@ async function loadStats() {
                     case 'libre':
                         available = parseInt(stat.count) || 0;
                         break;
-                    case 'réservé':
+                    case 'réserve':
                         reserved = parseInt(stat.count) || 0;
                         break;
-
-                     case 'en_maintenance':
+                    case 'en_maintenance':
                         en_maintenance = parseInt(stat.count) || 0;
                         break;
                 }
@@ -361,24 +595,12 @@ async function loadStats() {
     }
 }
 
-async function getMaintenanceNeeded() {
-    try {
-        const response = await fetch('../controllers/api.php?action=getMaintenanceNeeded&days=30');
-        const result = await response.json();
-        return result.success ? (result.data || []).length : 0;
-    } catch (error) {
-        return 0;
-    }
-}
-
 async function loadEquipments() {
     try {
         console.log('📥 Chargement des équipements');
         
         const response = await fetch('../controllers/api.php?action=getEquipments');
         const result = await response.json();
-        
-        console.log('📦 Résultat:', result);
 
         if (result.success && result.data) {
             allEquipments = result.data;
@@ -402,12 +624,17 @@ function renderEquipmentTable(equipments) {
     tbody.innerHTML = '';
     
     if (!equipments || equipments.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">Aucun équipement trouvé</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">Aucun équipement trouvé</td></tr>';
         return;
     }
     
     equipments.forEach(equipment => {
         const tr = document.createElement('tr');
+        
+        // Highlight if reserved
+        if (equipment.reservation_statut) {
+            tr.classList.add('reserved-equipment');
+        }
         
         // ID
         const tdId = document.createElement('td');
@@ -434,6 +661,21 @@ function renderEquipmentTable(equipments) {
         };
         tdStatus.innerHTML = statuts[equipment.etat] || equipment.etat;
         tr.appendChild(tdStatus);
+        
+        // Réservation actuelle
+        const tdReservation = document.createElement('td');
+        if (equipment.current_reservation_id) {
+            const debut = new Date(equipment.reservation_debut).toLocaleDateString('fr-FR');
+            const fin = new Date(equipment.reservation_fin).toLocaleDateString('fr-FR');
+            tdReservation.innerHTML = `
+                <div class="tooltip-info" data-tooltip="${equipment.reserved_by_nom} ${equipment.reserved_by_prenom}">
+                    <small>${debut} → ${fin}</small>
+                </div>
+            `;
+        } else {
+            tdReservation.innerHTML = '<span style="color: #9ca3af;">-</span>';
+        }
+        tr.appendChild(tdReservation);
         
         // Localisation
         const tdLoc = document.createElement('td');
@@ -466,6 +708,8 @@ function renderEquipmentTable(equipments) {
             <button class="btn-sm btn-view" onclick="viewEquipment(${equipment.id})" title="Voir">👁️</button>
             <button class="btn-sm btn-edit" onclick="editEquipment(${equipment.id})" title="Modifier">✏️</button>
             <button class="btn-sm btn-warning" onclick="updateStatus(${equipment.id})" title="Changer statut">🔧</button>
+            <button class="btn-sm btn-primary" onclick="openReservationModal(${equipment.id}, '${equipment.nom}')" title="Réserver">📅</button>
+            <button class="btn-sm btn-info" onclick="viewReservations(${equipment.id})" title="Voir réservations">📋</button>
             <button class="btn-sm btn-delete" onclick="deleteEquipment(${equipment.id})" title="Supprimer">🗑️</button>
         `;
         tr.appendChild(tdActions);
@@ -520,8 +764,19 @@ function closeTypeModal() {
     document.getElementById('typeEquipmentForm').reset();
 }
 
-function openStatusModal(equipmentId) {
+async function openStatusModal(equipmentId) {
     document.getElementById('statusEquipmentId').value = equipmentId;
+    
+    // Check if equipment has active reservations
+    const equipment = allEquipments.find(eq => eq.id == equipmentId);
+    const warning = document.getElementById('statusWarning');
+    
+    if (equipment && equipment.current_reservation_id) {
+        warning.style.display = 'block';
+    } else {
+        warning.style.display = 'none';
+    }
+    
     document.getElementById('statusModal').classList.add('active');
     document.body.style.overflow = 'hidden';
 }
@@ -531,139 +786,159 @@ function closeStatusModal() {
     document.body.style.overflow = 'auto';
 }
 
-document.querySelectorAll('.modal').forEach(modal => {
-    modal.addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeEquipmentModal();
-            closeTypeModal();
-            closeStatusModal();
-        }
-    });
-});
-
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeEquipmentModal();
-        closeTypeModal();
-        closeStatusModal();
-    }
-});
-
-// ============================================
-// CRUD ÉQUIPEMENTS
-// ============================================
-
-function saveEquipment() {
-    const form = document.getElementById('equipmentForm');
-    const formData = new FormData(form);
+function openReservationModal(equipmentId, equipmentName) {
+    // 1. Affectation des valeurs
+    const idInput = document.getElementById('reservationEquipmentId');
+    const nameDisplay = document.getElementById('reservationEquipmentNameDisplay');
     
-    if (!form.checkValidity()) {
-        form.reportValidity();
-        return;
+    if (idInput) idInput.value = equipmentId;
+    if (nameDisplay) nameDisplay.textContent = equipmentName; // Utilise textContent pour le div
+    
+    // 2. Réinitialisation
+    document.getElementById('conflictInfo').style.display = 'none';
+    document.getElementById('reservationForm').reset();
+    
+    // 3. Reset du filtre de recherche (C'est ici que votre erreur se produisait probablement)
+    const searchFilter = document.getElementById('userSearchFilter');
+    if (searchFilter) {
+        searchFilter.value = ''; 
     }
     
-    const data = Object.fromEntries(formData);
+    // 4. Chargement des utilisateurs
+    loadUsersForReservation();
     
-    if (data.description === '') data.description = null;
-    if (data.localisation === '') data.localisation = null;
-    if (data.derniere_maintenance === '') data.derniere_maintenance = null;
-    if (data.prochaine_maintenance === '') data.prochaine_maintenance = null;
-    
-    const equipmentId = document.getElementById('equipmentId').value;
-    const action = equipmentId ? 'updateEquipment' : 'createEquipment';
-    const url = equipmentId 
-        ? `../controllers/api.php?action=${action}&id=${equipmentId}`
-        : `../controllers/api.php?action=${action}`;
-    
-    const saveBtn = event.target;
-    saveBtn.disabled = true;
-    saveBtn.textContent = '⏳ Enregistrement...';
-    
-    fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(result => {
-        saveBtn.disabled = false;
-        saveBtn.textContent = '💾 Enregistrer';
-        
-        if (result.success) {
-            showAlert('✅ ' + result.message, 'success');
-            closeEquipmentModal();
-            setTimeout(() => {
-                loadEquipments();
-                loadStats();
-            }, 1200);
-        } else {
-            let errorMsg = '';
-            if (result.errors && Array.isArray(result.errors)) {
-                errorMsg = result.errors.join('<br>');
-            } else if (result.message) {
-                errorMsg = result.message;
-            } else {
-                errorMsg = 'Erreur inconnue';
-            }
-            showAlert('❌ ' + errorMsg, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('❌ Erreur:', error);
-        saveBtn.disabled = false;
-        saveBtn.textContent = '💾 Enregistrer';
-        showAlert('❌ Erreur de connexion au serveur', 'error');
-    });
+    // 5. Affichage
+    document.getElementById('reservationModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
 }
 
-function saveEquipmentType() {
-    const form = document.getElementById('typeEquipmentForm');
-    const formData = new FormData(form);
-    
+function closeReservationModal() {
+    document.getElementById('reservationModal').classList.remove('active');
+    document.body.style.overflow = 'auto';
+}
+
+async function viewReservations(equipmentId) {
+    try {
+        const response = await fetch(`../controllers/api.php?action=getEquipmentReservations&id=${equipmentId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            currentEquipmentReservations = result.data || [];
+            renderReservationsList(currentEquipmentReservations);
+            
+            document.getElementById('viewReservationsModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showAlert('Erreur lors du chargement des réservations', 'error');
+    }
+}
+
+function closeViewReservationsModal() {
+    document.getElementById('viewReservationsModal').classList.remove('active');
+    document.body.style.overflow = 'auto';
+}
+
+function renderReservationsList(reservations) {
+    const container = document.getElementById('reservationsList');
+    container.innerHTML = '';
+
+    if (!reservations || reservations.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">Aucune réservation pour cet équipement.</div>';
+        return;
+    }
+
+    const table = document.createElement('table');
+    table.className = 'data-table';
+    table.innerHTML = `
+        <thead>
+            <tr>
+                <th>Utilisateur</th>
+                <th>Début</th>
+                <th>Fin</th>
+                <th>Statut</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    `;
+
+    const tbody = table.querySelector('tbody');
+
+    reservations.forEach(res => {
+        const tr = document.createElement('tr');
+        
+        // Statut avec couleur
+        let statusBadge = '';
+        switch(res.statut) {
+            case 'confirmée': statusBadge = '<span class="badge badge-success">Confirmée</span>'; break;
+            case 'en_attente': statusBadge = '<span class="badge badge-warning">En attente</span>'; break;
+            case 'annulée': statusBadge = '<span class="badge badge-danger">Annulée</span>'; break;
+            case 'terminée': statusBadge = '<span class="badge badge-secondary">Terminée</span>'; break;
+            default: statusBadge = res.statut;
+        }
+
+        tr.innerHTML = `
+            <td>${res.user_nom || 'Inconnu'} ${res.user_prenom || ''}</td>
+            <td>${new Date(res.date_debut).toLocaleDateString('fr-FR')}</td>
+            <td>${new Date(res.date_fin).toLocaleDateString('fr-FR')}</td>
+            <td>${statusBadge}</td>
+            <td>
+                ${(res.statut === 'en_attente' || res.statut === 'confirmée') ? 
+                `<button class="btn-sm btn-delete" onclick="cancelReservation(${res.id})" title="Annuler">❌</button>` : 
+                '-'}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    container.appendChild(table);
+}
+
+// ============================================
+// ACTIONS CRUD ÉQUIPEMENT
+// ============================================
+
+async function saveEquipment() {
+    const form = document.getElementById('equipmentForm');
     if (!form.checkValidity()) {
         form.reportValidity();
         return;
     }
+
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    const id = document.getElementById('equipmentId').value;
     
-    const data = Object.fromEntries(formData);
+    // Déterminer l'action (création ou mise à jour)
+    const action = id ? 'updateEquipment' : 'createEquipment';
+    // Si update, ajouter l'ID à l'URL ou au body selon votre API (ici via URL param souvent ou body)
+    // Le contrôleur attend un JSON Input pour create/update
     
-    if (data.description === '') data.description = null;
-    
-    const saveBtn = event.target;
-    saveBtn.disabled = true;
-    saveBtn.textContent = '⏳ Enregistrement...';
-    
-    fetch('../controllers/api.php?action=createEquipmentType', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(result => {
-        saveBtn.disabled = false;
-        saveBtn.textContent = '💾 Enregistrer';
-        
+    // Ajustement pour correspondre à getJsonInput() du contrôleur
+    if(id) data.id = id;
+
+    try {
+        const response = await fetch(`../controllers/api.php?action=${action}${id ? '&id='+id : ''}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
         if (result.success) {
-            showAlert('✅ ' + result.message, 'success');
-            closeTypeModal();
-            setTimeout(() => {
-                loadTypes();
-                loadEquipments();
-            }, 1200);
+            closeEquipmentModal();
+            showAlert('✅ Équipement enregistré avec succès', 'success');
+            loadInitialData(); // Recharger la table
         } else {
-            showAlert('❌ ' + (result.message || 'Erreur lors de la création'), 'error');
+            showAlert(result.message || 'Erreur lors de l\'enregistrement', 'error', 'alertContainer');
         }
-    })
-    .catch(error => {
-        console.error('❌ Erreur:', error);
-        saveBtn.disabled = false;
-        saveBtn.textContent = '💾 Enregistrer';
-        showAlert('❌ Erreur de connexion au serveur', 'error');
-    });
+    } catch (error) {
+        console.error(error);
+        showAlert('Erreur serveur', 'error', 'alertContainer');
+    }
 }
 
 async function loadEquipmentData(id) {
@@ -672,128 +947,250 @@ async function loadEquipmentData(id) {
         const result = await response.json();
 
         if (result.success && result.data) {
-            const equipment = result.data;
-            
-            document.getElementById('equipmentId').value = equipment.id || '';
-            document.getElementById('nom').value = equipment.nom || '';
-            document.getElementById('id_type').value = equipment.id_type || '';
-            document.getElementById('etat').value = equipment.etat || 'libre';
-            document.getElementById('description').value = equipment.description || '';
-            document.getElementById('localisation').value = equipment.localisation || '';
-            document.getElementById('derniere_maintenance').value = equipment.derniere_maintenance || '';
-            document.getElementById('prochaine_maintenance').value = equipment.prochaine_maintenance || '';
-        } else {
-            showAlert('❌ ' + (result.message || 'Impossible de charger les données'), 'error');
+            const eq = result.data;
+            document.getElementById('equipmentId').value = eq.id;
+            document.getElementById('nom').value = eq.nom;
+            document.getElementById('id_type').value = eq.id_type;
+            document.getElementById('etat').value = eq.etat;
+            document.getElementById('description').value = eq.description || '';
+            document.getElementById('localisation').value = eq.localisation || '';
+            document.getElementById('derniere_maintenance').value = eq.derniere_maintenance || '';
+            document.getElementById('prochaine_maintenance').value = eq.prochaine_maintenance || '';
         }
     } catch (error) {
-        console.error('❌ Erreur:', error);
-        showAlert('❌ Impossible de charger les données', 'error');
+        console.error(error);
+        showAlert('Impossible de charger les données', 'error');
     }
 }
 
-function deleteEquipment(id) {
-    if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer cet équipement ?\n\nCette action est irréversible.')) {
+async function deleteEquipment(id) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet équipement ?')) return;
+
+    try {
+        const response = await fetch(`../controllers/api.php?action=deleteEquipment&id=${id}`, {
+            method: 'POST' // Ou DELETE selon votre routeur
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            showAlert('🗑️ Équipement supprimé', 'success');
+            loadInitialData();
+        } else {
+            showAlert(result.message || 'Impossible de supprimer', 'error');
+        }
+    } catch (error) {
+        console.error(error);
+        showAlert('Erreur serveur', 'error');
+    }
+}
+
+// ============================================
+// ACTIONS TYPE D'ÉQUIPEMENT
+// ============================================
+
+async function saveEquipmentType() {
+    const nom = document.getElementById('type_nom').value;
+    const icone = document.getElementById('type_icone').value;
+    const description = document.getElementById('type_description').value;
+
+    if (!nom || !icone) {
+        showAlert('Nom et icône requis', 'error', 'typeAlertContainer');
         return;
     }
-    
-    fetch(`../controllers/api.php?action=deleteEquipment&id=${id}`, {
-        method: 'POST'
-    })
-    .then(response => response.json())
-    .then(result => {
+
+    try {
+        const response = await fetch('../controllers/api.php?action=createEquipmentType', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nom, icone, description })
+        });
+
+        const result = await response.json();
+
         if (result.success) {
-            showAlert('✅ ' + result.message, 'success');
-            setTimeout(() => {
-                loadEquipments();
-                loadStats();
-            }, 1200);
+            closeTypeModal();
+            showAlert('✅ Type ajouté', 'success');
+            loadTypes(); // Recharger la liste des types
         } else {
-            showAlert('❌ ' + (result.message || 'Erreur lors de la suppression'), 'error');
+            showAlert(result.message, 'error', 'typeAlertContainer');
         }
-    })
-    .catch(error => {
-        console.error('❌ Erreur:', error);
-        showAlert('❌ Erreur de connexion', 'error');
-    });
+    } catch (error) {
+        console.error(error);
+        showAlert('Erreur serveur', 'error', 'typeAlertContainer');
+    }
 }
 
-function viewEquipment(id) {
-    window.location.href = `equipment-details.php?id=${id}`;
-}
-
-function editEquipment(id) {
-    openModal(true, id);
-}
+// ============================================
+// ACTIONS STATUT
+// ============================================
 
 function updateStatus(id) {
     openStatusModal(id);
 }
 
-function saveStatus() {
+async function saveStatus() {
     const id = document.getElementById('statusEquipmentId').value;
-    const etat = document.getElementById('newStatus').value;
-    
-    fetch(`../controllers/api.php?action=updateEquipmentStatus&id=${id}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id: id, etat: etat })
-    })
-    .then(response => response.json())
-    .then(result => {
+    const newStatus = document.getElementById('newStatus').value;
+
+    try {
+        // Route correspondante dans le controller: updateEquipmentStatus
+        const response = await fetch('../controllers/api.php?action=updateEquipmentStatus', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id, etat: newStatus })
+        });
+
+        const result = await response.json();
+
         if (result.success) {
-            showAlert('✅ Statut mis à jour', 'success');
             closeStatusModal();
-            setTimeout(() => {
-                loadEquipments();
-                loadStats();
-            }, 1200);
+            showAlert('✅ Statut mis à jour', 'success');
+            loadInitialData();
         } else {
-            showAlert('❌ ' + result.message, 'error');
+            alert(result.message);
         }
-    })
-    .catch(error => {
-        console.error('❌ Erreur:', error);
-        showAlert('❌ Erreur de connexion', 'error');
-    });
+    } catch (error) {
+        console.error(error);
+        alert('Erreur lors de la mise à jour');
+    }
 }
 
 // ============================================
-// RECHERCHE ET FILTRAGE
+// GESTION RÉSERVATIONS
 // ============================================
 
-document.getElementById('searchInput')?.addEventListener('input', function(e) {
-    const keyword = e.target.value.toLowerCase();
-    filterEquipments(keyword);
-});
+// Vérification des conflits lors du changement de date
+document.getElementById('reservation_date_debut').addEventListener('change', checkConflicts);
+document.getElementById('reservation_date_fin').addEventListener('change', checkConflicts);
 
-function filterEquipments(keyword) {
-    const filtered = allEquipments.filter(eq => {
-        return (eq.nom && eq.nom.toLowerCase().includes(keyword)) ||
-               (eq.type_nom && eq.type_nom.toLowerCase().includes(keyword)) ||
-               (eq.localisation && eq.localisation.toLowerCase().includes(keyword));
-    });
-    renderEquipmentTable(filtered);
-}
+async function checkConflicts() {
+    const id_equipement = document.getElementById('reservationEquipmentId').value;
+    const date_debut = document.getElementById('reservation_date_debut').value;
+    const date_fin = document.getElementById('reservation_date_fin').value;
+    const conflictDiv = document.getElementById('conflictInfo');
+    const conflictDetails = document.getElementById('conflictDetails');
 
-function filterByType(typeId) {
-    if (!typeId) {
-        renderEquipmentTable(allEquipments);
+    if (!id_equipement || !date_debut || !date_fin) return;
+
+    // Validation basique date
+    if (date_debut > date_fin) {
+        conflictDiv.style.display = 'block';
+        conflictDiv.innerHTML = 'La date de fin doit être après la date de début.';
         return;
     }
+
+    try {
+        const response = await fetch(`../controllers/api.php?action=checkConflicts&id_equipement=${id_equipement}&date_debut=${date_debut}&date_fin=${date_fin}`);
+        const result = await response.json();
+
+        if (result.success && result.hasConflict) {
+            conflictDiv.style.display = 'block';
+            conflictDetails.innerHTML = 'Cet équipement est déjà réservé sur cette période.';
+        } else {
+            conflictDiv.style.display = 'none';
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+async function saveReservation() {
+    const id_equipement = document.getElementById('reservationEquipmentId').value;
+    const date_debut = document.getElementById('reservation_date_debut').value;
+    const date_fin = document.getElementById('reservation_date_fin').value;
+    const notes = document.getElementById('reservation_notes').value;
     
-    const filtered = allEquipments.filter(eq => eq.id_type == typeId);
-    renderEquipmentTable(filtered);
+    // ID Utilisateur courant (injecté via PHP dans le footer ou disponible globalement)
+    const id_utilisateur = <?php echo isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 'null'; ?>;
+
+    if (!id_utilisateur) {
+        showAlert('Erreur session utilisateur', 'error', 'reservationAlertContainer');
+        return;
+    }
+
+    if (!date_debut || !date_fin) {
+        showAlert('Veuillez sélectionner les dates', 'error', 'reservationAlertContainer');
+        return;
+    }
+
+    try {
+        // Route du ReservationController
+        const response = await fetch('../controllers/api.php?action=createReservation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id_equipement,
+                id_utilisateur,
+                date_debut,
+                date_fin,
+                notes
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            closeReservationModal();
+            showAlert('📅 Réservation créée avec succès', 'success');
+            loadInitialData();
+        } else {
+            // Afficher les erreurs détaillées si présentes
+            const msg = result.errors ? result.errors.join(', ') : result.message;
+            showAlert(msg, 'error', 'reservationAlertContainer');
+        }
+    } catch (error) {
+        console.error(error);
+        showAlert('Erreur lors de la réservation', 'error', 'reservationAlertContainer');
+    }
+}
+
+async function cancelReservation(id) {
+    if(!confirm("Voulez-vous vraiment annuler cette réservation ?")) return;
+
+    try {
+        const response = await fetch(`../controllers/api.php?action=cancelReservation&id=${id}`, { method: 'POST' });
+        const result = await response.json();
+        
+        if (result.success) {
+            // Rafraîchir la liste des réservations dans le modal
+            const eqId = currentEquipmentReservations.length > 0 ? currentEquipmentReservations[0].id_equipement : null;
+            if(eqId) viewReservations(eqId);
+            loadInitialData(); // Mettre à jour le tableau principal
+        } else {
+            alert(result.message);
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// ============================================
+// FILTRES ET RECHERCHE
+// ============================================
+
+document.getElementById('searchInput').addEventListener('input', function(e) {
+    const term = e.target.value.toLowerCase();
+    filterData(term, document.getElementById('filterType').value, document.getElementById('filterStatus').value);
+});
+
+function filterByType(typeId) {
+    filterData(document.getElementById('searchInput').value.toLowerCase(), typeId, document.getElementById('filterStatus').value);
 }
 
 function filterByStatus(status) {
-    if (!status) {
-        renderEquipmentTable(allEquipments);
-        return;
-    }
+    filterData(document.getElementById('searchInput').value.toLowerCase(), document.getElementById('filterType').value, status);
+}
+
+function filterData(searchTerm, typeId, status) {
+    const filtered = allEquipments.filter(item => {
+        const matchesSearch = item.nom.toLowerCase().includes(searchTerm) || 
+                              (item.localisation && item.localisation.toLowerCase().includes(searchTerm));
+        const matchesType = typeId === '' || item.id_type == typeId;
+        const matchesStatus = status === '' || item.etat === status;
+        
+        return matchesSearch && matchesType && matchesStatus;
+    });
     
-    const filtered = allEquipments.filter(eq => eq.etat === status);
     renderEquipmentTable(filtered);
 }
 
@@ -805,51 +1202,46 @@ function resetFilters() {
 }
 
 // ============================================
-// ALERTES
+// UTILITAIRES
 // ============================================
 
-function showAlert(message, type = 'info') {
-    const container = document.getElementById('alertContainer');
+function showAlert(message, type = 'success', containerId = null) {
+    // Si un container spécifique est donné (ex: dans un modal), on l'utilise
+    // Sinon on crée une notification toast globale
     
-    if (!container) {
-        alert(message);
+    if (containerId) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        setTimeout(() => { container.innerHTML = ''; }, 5000);
         return;
     }
-    
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} show`;
-    alertDiv.innerHTML = message;
-    
-    container.appendChild(alertDiv);
-    
-    setTimeout(() => alertDiv.classList.add('visible'), 10);
-    
+
+    // Toast Notification logic (création dynamique)
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.style.position = 'fixed';
+    toast.style.bottom = '20px';
+    toast.style.right = '20px';
+    toast.style.padding = '15px 25px';
+    toast.style.borderRadius = '5px';
+    toast.style.color = 'white';
+    toast.style.zIndex = '9999';
+    toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+    toast.style.backgroundColor = type === 'success' ? '#10b981' : '#ef4444';
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
     setTimeout(() => {
-        alertDiv.classList.remove('visible');
-        setTimeout(() => alertDiv.remove(), 300);
-    }, 5000);
+        toast.remove();
+    }, 3000);
 }
 
 function clearAlerts() {
-    const container = document.getElementById('alertContainer');
-    if (container) {
-        container.innerHTML = '';
-    }
+    document.getElementById('alertContainer').innerHTML = '';
+    document.getElementById('typeAlertContainer').innerHTML = '';
+    document.getElementById('reservationAlertContainer').innerHTML = '';
 }
-
-// ============================================
-// VALIDATION
-// ============================================
-
-document.getElementById('prochaine_maintenance')?.addEventListener('change', function() {
-    const derniere = document.getElementById('derniere_maintenance').value;
-    const prochaine = this.value;
-    
-    if (derniere && prochaine && prochaine < derniere) {
-        showAlert('⚠️ La prochaine maintenance ne peut pas être avant la dernière', 'error');
-        this.value = '';
-    }
-});
     </script>
 </body>
 </html>

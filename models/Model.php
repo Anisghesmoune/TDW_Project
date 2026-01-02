@@ -1,4 +1,5 @@
 <?php
+require_once '../config/Database.php';
 abstract class Model {
     protected $conn;
     protected $table;

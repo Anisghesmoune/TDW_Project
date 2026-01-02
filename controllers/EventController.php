@@ -565,6 +565,68 @@ public function getALL(){
             throw new Exception(implode(', ', $errors));
         }
     }
+    public function apiRegisterParticipant() {
+        // JSON Input : { "event_id": 1, "user_id": 5 }
+        $data = json_decode(file_get_contents('php://input'), true);
+        
+        if (empty($data['event_id']) || empty($data['user_id'])) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'IDs manquants']);
+            return;
+        }
+
+        $result = $this->eventModel->addParticipant($data['event_id'], $data['user_id']);
+        echo json_encode($result);
+    }
+
+    /**
+     * API - Désinscrire un utilisateur
+     */
+    public function apiUnregisterParticipant() {
+        $data = json_decode(file_get_contents('php://input'), true);
+        
+        if ($this->eventModel->removeParticipant($data['event_id'], $data['user_id'])) {
+            echo json_encode(['success' => true, 'message' => 'Désinscription réussie']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Erreur lors de la désinscription']);
+        }
+    }
+
+    /**
+     * API - Liste des participants pour un événement
+     */
+    public function apiGetParticipants($eventId) {
+        $participants = $this->eventModel->getParticipants($eventId);
+        echo json_encode(['success' => true, 'data' => $participants]);
+    }
+
+    /**
+     * API - Envoyer les rappels (Simulation d'envoi d'email)
+     */
+    public function apiSendReminders() {
+        // Récupère les événements qui commencent dans 24h
+        $events = $this->eventModel->getEventsStartingSoon(24);
+        $log = [];
+
+        foreach ($events as $event) {
+            $participants = $this->eventModel->getParticipants($event['id']);
+            $count = 0;
+            
+            // Simulation d'envoi de mail
+            foreach ($participants as $p) {
+                // mail($p['email'], "Rappel : " . $event['titre'], "L'événement commence demain...");
+                $count++;
+            }
+            
+            $log[] = "Rappel envoyé pour '{$event['titre']}' à $count participant(s).";
+        }
+
+        if (empty($log)) {
+            $log[] = "Aucun événement ne nécessite de rappel immédiat.";
+        }
+
+        echo json_encode(['success' => true, 'message' => implode(" ", $log)]);
+    }
 
     /**
      * Sanitize input

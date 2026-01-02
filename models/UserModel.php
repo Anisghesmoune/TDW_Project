@@ -1,5 +1,5 @@
 <?php
-require_once '../config/Database.php'; // chemin correct vers ta classe Database
+require_once '../config/Database.php'; 
 class UserModel {
     private $db;
  private $table = 'users';

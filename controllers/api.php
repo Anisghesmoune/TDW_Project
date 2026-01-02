@@ -1,12 +1,21 @@
 <?php
 session_start();
 
+// Contrôleurs existants
 require_once 'UserController.php';
 require_once 'TeamController.php';
 require_once 'ProjectController.php';
 require_once 'equipementController.php';
 require_once '../models/equipementModel.php';
 require_once '../models/equipementType.php';
+require_once 'SettingsControllers.php';
+
+
+// NOUVEAU : Réservations
+require_once '../controllers/reservationController.php';
+require_once '../models/reservationModel.php';
+
+// Publications & Events
 require_once '../models/Publications.php';
 require_once '../controllers/PublicationController.php';
 require_once '../controllers/EventController.php';
@@ -18,9 +27,6 @@ require_once '../models/EventType.php';
 // FONCTIONS HELPERS ULTRA-GÉNÉRIQUES
 // ============================================
 
-/**
- * Envoyer une réponse JSON avec code HTTP
- */
 function sendJson($data, $statusCode = 200) {
     http_response_code($statusCode);
     header('Content-Type: application/json');
@@ -28,16 +34,10 @@ function sendJson($data, $statusCode = 200) {
     exit;
 }
 
-/**
- * Envoyer une réponse d'erreur
- */
 function sendError($message, $statusCode = 400) {
     sendJson(['success' => false, 'message' => $message], $statusCode);
 }
 
-/**
- * Envoyer une réponse de succès
- */
 function sendSuccess($data = null, $message = null) {
     $response = ['success' => true];
     if ($message) $response['message'] = $message;
@@ -45,21 +45,17 @@ function sendSuccess($data = null, $message = null) {
     sendJson($response);
 }
 
-/**
- * Récupérer les données JSON du body
- */
 function getJsonInput() {
     $jsonData = file_get_contents('php://input');
     $data = json_decode($jsonData, true);
     if (!$data) {
+        // Fallback si le body est vide mais qu'on a des données POST classiques
+        if (!empty($_POST)) return $_POST;
         sendError('Données JSON invalides');
     }
     return $data;
 }
 
-/**
- * Récupérer un paramètre (GET ou POST) avec valeur par défaut
- */
 function getParam($name, $source = 'GET', $default = null, $required = false) {
     $data = $source === 'GET' ? $_GET : $_POST;
     $value = $data[$name] ?? $default;
@@ -71,9 +67,6 @@ function getParam($name, $source = 'GET', $default = null, $required = false) {
     return $value;
 }
 
-/**
- * Vérifier plusieurs paramètres requis
- */
 function requireParams(array $params, $source = 'GET') {
     $values = [];
     foreach ($params as $param) {
@@ -82,18 +75,12 @@ function requireParams(array $params, $source = 'GET') {
     return $values;
 }
 
-/**
- * Vérifier l'authentification
- */
 function requireAuth() {
     if (!isset($_SESSION['user_id'])) {
         sendError('Non autorisé', 401);
     }
 }
 
-/**
- * Vérifier le rôle admin
- */
 function requireAdmin() {
     requireAuth();
     if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
@@ -101,20 +88,12 @@ function requireAdmin() {
     }
 }
 
-/**
- * Vérifier qu'un ID est fourni et valide
- */
 function requireId($name = 'id') {
-
     if (isset($_GET[$name])) {
         $id = $_GET[$name];
-    }
-
-    elseif (isset($_POST[$name])) {
+    } elseif (isset($_POST[$name])) {
         $id = $_POST[$name];
-    }
-
-    else {
+    } else {
         static $json = null;
         if ($json === null) {
             $json = json_decode(file_get_contents('php://input'), true);
@@ -123,73 +102,47 @@ function requireId($name = 'id') {
     }
 
     if (!is_numeric($id) || $id <= 0) {
-        sendError("$name invalide");
+        sendError("$name invalide ou manquant");
     }
 
     return (int)$id;
 }
 
-
-/**
- * Valider des données selon des règles
- */
 function validate($data, $rules) {
     $errors = [];
-    
     foreach ($rules as $field => $rule) {
         $value = $data[$field] ?? null;
-        
-        // Champ requis
         if (isset($rule['required']) && $rule['required'] && empty($value)) {
             $errors[] = ($rule['label'] ?? $field) . ' est requis';
             continue;
         }
-        
-        // Longueur minimale
         if (isset($rule['min']) && strlen($value) < $rule['min']) {
             $errors[] = ($rule['label'] ?? $field) . " doit contenir au moins {$rule['min']} caractères";
         }
-        
-        // Longueur maximale
         if (isset($rule['max']) && strlen($value) > $rule['max']) {
             $errors[] = ($rule['label'] ?? $field) . " ne peut pas dépasser {$rule['max']} caractères";
         }
-        
-        // Valeurs autorisées
         if (isset($rule['in']) && !in_array($value, $rule['in'])) {
             $errors[] = ($rule['label'] ?? $field) . ' invalide';
         }
-        
-        // Valeur numérique positive
         if (isset($rule['positive']) && $rule['positive'] && (!is_numeric($value) || $value <= 0)) {
             $errors[] = ($rule['label'] ?? $field) . ' doit être un nombre positif';
         }
     }
-    
     return empty($errors) ? true : $errors;
 }
 
-/**
- * Exécuter une action de contrôleur avec gestion d'erreurs
- */
 function executeController($callback) {
     try {
         $result = call_user_func($callback);
-        
-        // Si le callback retourne un tableau, l'envoyer en JSON
         if (is_array($result)) {
             sendJson($result);
         }
-        
-        // Sinon, le callback a déjà géré la réponse (exit, redirect, etc.)
     } catch (Exception $e) {
         sendError('Erreur serveur: ' . $e->getMessage(), 500);
     }
 }
 
-/**
- * Wrapper pour les actions simples avec ID
- */
 function simpleAction($controller, $method, $idParam = 'id') {
     $id = requireId($idParam);
     executeController(function() use ($controller, $method, $id) {
@@ -197,9 +150,6 @@ function simpleAction($controller, $method, $idParam = 'id') {
     });
 }
 
-/**
- * Wrapper pour les actions CRUD
- */
 function crudAction($action, $controller, $id = null) {
     switch ($action) {
         case 'get':
@@ -209,18 +159,15 @@ function crudAction($action, $controller, $id = null) {
                 executeController(fn() => $controller->index());
             }
             break;
-            
         case 'create':
             $data = getJsonInput();
             executeController(fn() => $controller->create($data));
             break;
-            
         case 'update':
             $id = requireId();
             $data = getJsonInput();
             executeController(fn() => $controller->update($id, $data));
             break;
-            
         case 'delete':
             $id = requireId();
             executeController(fn() => $controller->delete($id));
@@ -237,10 +184,11 @@ $controllers = [
     'team' => new TeamController(),
     'project' => new ProjectController(),
     'equipment' => new EquipmentController(),
+    'reservation' => new ReservationController(), // Ajouté
     'publication' => new PublicationController(),
     'event' => new EventController(),
     'eventType' => new EventTypeController(),
-    'team' => new TeamController()
+    'settings'=> new SettingsController(),
 ];
 
 $models = [
@@ -297,7 +245,7 @@ elseif ($action === 'deleteTeam' && $teamid) {
     $controllers['team']->delete($teamid);
 } 
 elseif ($action === 'addMember' && $teamid) {
-    $executeController(function() use ($controllers, $teamid) {
+    executeController(function() use ($controllers, $teamid) {
         $user_id = requireId('user_id');
         return $controllers['team']->addMember($teamid, $user_id);
     });
@@ -336,7 +284,7 @@ elseif ($action === 'removeMember' && $teamid) {
 } 
 
 // ============================================
-// ROUTES PROJETS (ULTRA-GÉNÉRIQUES)
+// ROUTES PROJETS
 // ============================================
 
 elseif ($action === 'createProject') {
@@ -376,11 +324,6 @@ elseif ($action === 'getProjectsByEquipe') {
     $id_equipe = requireId('id_equipe');
     executeController(fn() => $controllers['project']->getByEquipe($id_equipe));
 }
-
-// ============================================
-// GESTION DES UTILISATEURS D'UN PROJET
-// ============================================
-
 elseif ($action === 'addUserToProject') {
     $params = requireParams(['project_id', 'user_id']);
     executeController(fn() => $controllers['project']->addUser($params['project_id'], $params['user_id']));
@@ -393,40 +336,45 @@ elseif ($action === 'getProjectUsers') {
     $project_id = requireId('project_id');
     executeController(fn() => $controllers['project']->getProjectUsers($project_id));
 }
-
-// ============================================
-// GESTION DES PUBLICATIONS D'UN PROJET
-// ============================================
-
 elseif ($action === 'addPublicationToProject') {
     $params = requireParams(['project_id', 'publication_id']);
     executeController(fn() => $controllers['project']->addPublication($params['project_id'], $params['publication_id']));
 }
-
-// ============================================
-// GESTION DES THÉMATIQUES D'UN PROJET
-// ============================================
-
 elseif ($action === 'addThematicToProject') {
     $params = requireParams(['project_id', 'thematic_id']);
     executeController(fn() => $controllers['project']->addThematic($params['project_id'], $params['thematic_id']));
 }
+elseif ($action === 'generateProjectReport') {
+    $type = getParam('filter_type', 'POST', 'all'); 
+    $value = null;
+
+    if ($type === 'year') {
+        $value = getParam('year_val', 'POST', date('Y'));
+    } elseif ($type === 'responsable') {
+        $value = getParam('resp_val', 'POST', 0);
+    } elseif ($type === 'thematique') {
+        $value = getParam('them_val', 'POST', 0);
+    }
+    
+    $controllers['project']->generatePDF($type, $value);
+}
 
 // ============================================
-// ROUTES ÉQUIPEMENTS (ULTRA-GÉNÉRIQUES)
+// ROUTES ÉQUIPEMENTS
 // ============================================
 
 elseif ($action === 'createEquipment') {
     $data = getJsonInput();
+    // Validation déjà faite dans EquipmentController::store, mais pour l'API pure:
     $validation = validate($data, [
         'nom' => ['required' => true, 'label' => 'Le nom'],
         'id_type' => ['required' => true, 'positive' => true, 'label' => 'Le type']
     ]);
+    if ($validation !== true) sendJson(['success' => false, 'errors' => $validation]);
     
-    if ($validation !== true) {
-        sendJson(['success' => false, 'errors' => $validation]);
-    }
-    
+    // Si vous utilisez la méthode du contrôleur qui attend $_POST, assurez-vous de l'adapter.
+    // Ici on appelle le modèle directement pour l'API pure comme dans l'ancien code, 
+    // ou la méthode create du controller si elle est adaptée API.
     sendJson($models['equipment']->create($data)
         ? ['success' => true, 'message' => 'Équipement créé avec succès']
         : ['success' => false, 'message' => 'Erreur lors de la création']);
@@ -437,10 +385,7 @@ elseif ($action === 'updateEquipment' && $id) {
         'nom' => ['required' => true, 'label' => 'Le nom'],
         'id_type' => ['required' => true, 'positive' => true, 'label' => 'Le type']
     ]);
-    
-    if ($validation !== true) {
-        sendJson(['success' => false, 'errors' => $validation]);
-    }
+    if ($validation !== true) sendJson(['success' => false, 'errors' => $validation]);
     
     sendJson($models['equipment']->update($id, $data)
         ? ['success' => true, 'message' => 'Équipement mis à jour avec succès']
@@ -460,79 +405,29 @@ elseif ($action === 'getEquipment' && $id) {
 elseif ($action === 'getEquipments') {
     sendSuccess($models['equipment']->getAllWithTypes('id', 'DESC'));
 }
-elseif ($action === 'getEquipmentsPaginated') {
-    $page = getParam('page', 'GET', 1);
-    $perPage = getParam('perPage', 'GET', 20);
-    
-    $equipments = $models['equipment']->getPaginated($page, $perPage, 'id', 'DESC');
-    $total = $models['equipment']->count();
-    
-    sendJson([
-        'success' => true, 
-        'data' => $equipments,
-        'total' => $total,
-        'page' => $page,
-        'perPage' => $perPage,
-        'totalPages' => ceil($total / $perPage)
-    ]);
-}
 elseif ($action === 'updateEquipmentStatus') {
     $data = getJsonInput();
-    $equipmentId = requireId('id');
+    $equipmentId = $data['id'] ?? $id; // Peut venir du body ou de l'URL
     $etat = $data['etat'] ?? null;
     
     if (!$etat || !in_array($etat, ['libre', 'réserve', 'en_maintenance'])) {
         sendError('Statut invalide');
     }
     
-    sendJson($models['equipment']->updateStatus($equipmentId, $etat)
-        ? ['success' => true, 'message' => 'Statut mis à jour avec succès']
-        : ['success' => false, 'message' => 'Erreur lors de la mise à jour']);
+    // Appel via le controller pour gérer la logique métier (vérif réservations actives)
+    // Astuce : On simule les données POST pour le contrôleur s'il les lit via $_POST
+    $_POST['id'] = $equipmentId;
+    $_POST['etat'] = $etat;
+    executeController(fn() => $controllers['equipment']->updateStatus());
 }
 elseif ($action === 'searchEquipments') {
     $keyword = getParam('keyword', 'GET', '', true);
-    
-    if (strlen($keyword) < 2) {
-        sendError('Le mot-clé doit contenir au moins 2 caractères');
-    }
-    
+    if (strlen($keyword) < 2) sendError('Mot-clé trop court');
     sendSuccess($models['equipment']->search($keyword));
 }
 elseif ($action === 'getEquipmentsByType') {
     $typeId = requireId('type_id');
     sendSuccess($models['equipment']->getByType($typeId));
-}
-elseif ($action === 'getEquipmentsByStatus') {
-    $status = getParam('status', 'GET', '', true);
-    
-    if (!in_array($status, ['libre', 'réserve', 'en_maintenance'])) {
-        sendError('Statut invalide');
-    }
-    
-    sendSuccess($models['equipment']->getByStatus($status));
-}
-elseif ($action === 'getAvailableEquipments') {
-    sendSuccess($models['equipment']->getAvailable('nom', 'ASC'));
-}
-elseif ($action === 'getMaintenanceNeeded') {
-    $daysAhead = getParam('days', 'GET', 30);
-    sendSuccess($models['equipment']->getMaintenanceNeeded($daysAhead));
-}
-elseif ($action === 'updateEquipmentMaintenance') {
-    $data = getJsonInput();
-    $equipmentId = $data['id'] ?? null;
-    
-    if (!$equipmentId) {
-        sendError('ID équipement manquant');
-    }
-    
-    sendJson($models['equipment']->updateMaintenance(
-        $equipmentId, 
-        $data['derniere_maintenance'] ?? null, 
-        $data['prochaine_maintenance'] ?? null
-    )
-        ? ['success' => true, 'message' => 'Maintenance mise à jour avec succès']
-        : ['success' => false, 'message' => 'Erreur lors de la mise à jour']);
 }
 elseif ($action === 'getEquipmentStats') {
     sendJson([
@@ -548,14 +443,8 @@ elseif ($action === 'getEquipmentStats') {
 
 elseif ($action === 'createEquipmentType') {
     $data = getJsonInput();
-    
-    if (empty($data['nom'])) {
-        sendError('Le nom est requis');
-    }
-    
-    if ($models['equipmentType']->nameExists($data['nom'])) {
-        sendError('Ce nom existe déjà', 409);
-    }
+    if (empty($data['nom'])) sendError('Le nom est requis');
+    if ($models['equipmentType']->nameExists($data['nom'])) sendError('Ce nom existe déjà', 409);
     
     sendJson($models['equipmentType']->create($data)
         ? ['success' => true, 'message' => 'Type créé avec succès']
@@ -563,40 +452,67 @@ elseif ($action === 'createEquipmentType') {
 }
 elseif ($action === 'updateEquipmentType' && $id) {
     $data = getJsonInput();
-    
-    if (empty($data['nom'])) {
-        sendError('Le nom est requis');
-    }
-    
-    if ($models['equipmentType']->nameExists($data['nom'], $id)) {
-        sendError('Ce nom existe déjà', 409);
-    }
+    if (empty($data['nom'])) sendError('Le nom est requis');
     
     sendJson($models['equipmentType']->update($id, $data)
         ? ['success' => true, 'message' => 'Type mis à jour avec succès']
         : ['success' => false, 'message' => 'Erreur lors de la mise à jour']);
 }
 elseif ($action === 'deleteEquipmentType' && $id) {
-    if (!$models['equipmentType']->canDelete($id)) {
-        sendError('Impossible de supprimer : des équipements utilisent ce type', 409);
-    }
+    if (!$models['equipmentType']->canDelete($id)) sendError('Type utilisé par des équipements', 409);
     
     sendJson($models['equipmentType']->delete($id)
-        ? ['success' => true, 'message' => 'Type supprimé avec succès']
-        : ['success' => false, 'message' => 'Erreur lors de la suppression']);
-}
-elseif ($action === 'getEquipmentType' && $id) {
-    $type = $models['equipmentType']->getWithEquipmentCount($id);
-    sendJson($type 
-        ? ['success' => true, 'data' => $type]
-        : ['success' => false, 'message' => 'Type introuvable']);
+        ? ['success' => true, 'message' => 'Type supprimé']
+        : ['success' => false, 'message' => 'Erreur suppression']);
 }
 elseif ($action === 'getEquipmentTypes') {
     sendSuccess($models['equipmentType']->getAllWithCounts('nom', 'ASC'));
 }
 
 // ============================================
-// ROUTES PUBLICATIONS (ULTRA-GÉNÉRIQUES)
+// ROUTES RÉSERVATIONS (NOUVEAU)
+// ============================================
+
+elseif ($action === 'createReservation') {
+    requireAuth();
+    // Le contrôleur lit le JSON Input
+    executeController(fn() => $controllers['reservation']->store());
+}
+elseif ($action === 'cancelReservation' && $id) {
+    requireAuth();
+    executeController(fn() => $controllers['reservation']->cancel($id));
+}
+elseif ($action === 'confirmReservation' && $id) {
+   // requireAdmin();
+    executeController(fn() => $controllers['reservation']->confirm($id));
+}
+elseif ($action === 'updateReservation' && $id) {
+    requireAuth();
+    executeController(fn() => $controllers['reservation']->update($id));
+}
+elseif ($action === 'deleteReservation' && $id) {
+   // requireAdmin();
+    executeController(fn() => $controllers['reservation']->delete($id));
+}
+elseif ($action === 'getEquipmentReservations') {
+    // Le JS envoie ?action=getEquipmentReservations&id=XXX
+    executeController(fn() => $controllers['reservation']->getByEquipment());
+}
+elseif ($action === 'getUserReservations') {
+    executeController(fn() => $controllers['reservation']->getByUser());
+}
+elseif ($action === 'checkConflicts') {
+    executeController(fn() => $controllers['reservation']->checkConflicts());
+}
+elseif ($action === 'getReservationStats') {
+    executeController(fn() => $controllers['reservation']->getStats());
+}
+elseif ($action === 'getAllReservations') {
+    executeController(fn() => $controllers['reservation']->list());
+}
+
+// ============================================
+// ROUTES PUBLICATIONS
 // ============================================
 
 elseif ($action === 'getPublications') {
@@ -616,17 +532,17 @@ elseif ($action === 'updatePublication') {
     executeController(fn() => $controllers['publication']->apiUpdatePublication($id, $_POST, $_FILES));
 }
 elseif ($action === 'validatePublication') {
-    requireAdmin();
+   // requireAdmin();
     $id = requireId();
     executeController(fn() => $controllers['publication']->apiValidatePublication($id));
 }
 elseif ($action === 'rejectPublication') {
-    requireAdmin();
+   // requireAdmin();
     $id = requireId();
     executeController(fn() => $controllers['publication']->apiRejectPublication($id));
 }
 elseif ($action === 'deletePublication') {
-    requireAdmin();
+   // requireAdmin();
     $id = requireId();
     executeController(fn() => $controllers['publication']->apiDeletePublication($id));
 }
@@ -659,7 +575,7 @@ elseif ($action === 'getRecentPublications') {
     executeController(fn() => $controllers['publication']->apiGetRecentPublications($limit));
 }
 elseif ($action === 'getPendingPublications') {
-    requireAdmin();
+   // requireAdmin();
     executeController(fn() => $controllers['publication']->apiGetPendingPublications());
 }
 elseif ($action === 'downloadPublication') {
@@ -672,7 +588,11 @@ elseif ($action === 'getPublicationsByType') {
     $limit = getParam('limit', 'GET', null);
     executeController(fn() => $controllers['publication']->apiGetPublicationsByType($type, $limit));
 }
-//Action pour les evenemt
+
+// ============================================
+// ROUTES ÉVÉNEMENTS
+// ============================================
+
 elseif ($action === 'getEvents') {
     executeController(fn() => $controllers['event']->apiGetAll());
 }
@@ -681,119 +601,115 @@ elseif ($action === 'getEvent') {
     executeController(fn() => $controllers['event']->apiGetById($id));
 }
 elseif ($action === 'createEvent') {
-    requireAuth();
+    // requireAuth();
     executeController(fn() => $controllers['event']->apiCreate($_POST, $_FILES));
-
-}elseif($action === 'updateEvent'){
-    requireAuth();
+}
+elseif ($action === 'updateEvent') {
+    // requireAuth();
     $id = requireId();
     executeController(fn() => $controllers['event']->apiUpdate($id, $_POST, $_FILES));
-}elseif($action === 'deleteEvent'){
-    requireAdmin();     
+}
+elseif ($action === 'deleteEvent') {
+    //// requireAdmin();     
     $id = requireId();
     executeController(fn() => $controllers['event']->apiDelete($id));
-}elseif($action ==='getEventStats'){
+}
+elseif ($action ==='getEventStats') {
     $limit = getParam('limit', 'GET', 5);
     executeController(fn() => $controllers['event']->apiGetStatistics());
 }
-//pour les types d'evenements
-// Types d'événements
 elseif ($action === 'getEventTypes') {
     executeController(fn() => $controllers['eventType']->index());
 }
-
 elseif ($action === 'createEventType') {
     $data = getJsonInput();
     executeController(fn() => $controllers['eventType']->create($data));
 }
-
 elseif ($action === 'deleteEventType') {
     $id = requireId();
     executeController(fn() => $controllers['eventType']->delete($id));
+}elseif ($action === 'registerParticipant') {
+    // requireAuth();
+    executeController(fn() => $controllers['event']->apiRegisterParticipant());
 }
-/// Action pour team detaill
+elseif ($action === 'unregisterParticipant') {
+    // requireAuth();
+    executeController(fn() => $controllers['event']->apiUnregisterParticipant());
+}
+elseif ($action === 'getEventParticipants' && $id) {
+    executeController(fn() => $controllers['event']->apiGetParticipants($id));
+}
+// Système d'alerte
+elseif ($action === 'sendEventReminders') {
+    // Peut être appelé par un Cron Job ou manuellement par l'admin
+    executeController(fn() => $controllers['event']->apiSendReminders());
+}
+
+// ============================================
+// ROUTES ÉQUIPES DÉTAILS
+// ============================================
+
 elseif ($action === 'getAvailaibleForTeam' && $teamid) {
     executeController(function() use ($controllers, $teamid) {
         return ['success' => true, 'equipments' => $controllers['team']->getAvailableForTeam($teamid)];
     });
-}elseif($action==='assignEquipment'){
+}
+elseif ($action==='assignEquipment') {
     $team_id = requireId('team_id');
     $equipment_id = requireId('equipment_id');
     executeController(fn() => $controllers['team']->assignEquipment($team_id, $equipment_id));
-}elseif($action==='removeEquipment'){
+}
+elseif ($action==='removeEquipment') {
     $team_id = requireId('team_id');
     $equipment_id = requireId('equipment_id');
     executeController(fn() => $controllers['team']->removeEquipment($team_id,  $equipment_id));
-}elseif($action==='addMember'){
-    $team_id = requireId('team_id');
-    $user_id = requireId('user_id');
-    executeController(fn() => $controllers['team']->addMember($team_id, $user_id));
-}elseif($action==='removeMember'){
-    $team_id = requireId('team_id');
-    $user_id = requireId('user_id');
-    executeController(fn() => $controllers['team']->removeMember($team_id, $user_id));
-}elseif ($action === 'getAvailableUsersForProject' && isset($_GET['project_id'])) {
+}
+
+elseif ($action === 'getAvailableUsersForProject' && isset($_GET['project_id'])) {
     $project_id = requireId('project_id');
-    
     try {
         require_once '../models/UserModel.php';
         $userModel = new UserModel();
-        
-        // Récupérer tous les utilisateurs actifs
         $allUsers = $userModel->getAll();
-        
-        // Récupérer les membres actuels du projet
         $membersData = $controllers['project']->getProjectUsers($project_id);
         $currentMembers = $membersData['data'] ?? [];
         $memberIds = array_column($currentMembers, 'id');
-        
-        // Filtrer les utilisateurs disponibles
         $availableUsers = array_filter($allUsers, function($user) use ($memberIds) {
             return !in_array($user['id'], $memberIds);
         });
-        
         sendJson([
             'success' => true,
             'users' => array_values($availableUsers)
         ]);
     } catch (Exception $e) {
-        error_log("Erreur getAvailableUsersForProject: " . $e->getMessage());
         sendError('Erreur: ' . $e->getMessage(), 500);
     }
-
-}elseif($action==="addUserToProject"&& isset($_GET['project_id'])){
-    $project_id = requireId('project_id');
-    $user_id = requireId('user_id');
-    executeController(fn() => $controllers['project']->addUser($project_id, $user_id));
-
-
-
-}elseif($action==="removeUserFromProject"&& isset($_GET['project_id'])){
-    $project_id = requireId('project_id');
-    $user_id = requireId('user_id');
-    executeController(fn() => $controllers['project']->removeUser($project_id, $user_id));
-
-
-
-}elseif ($action === 'generateProjectReport') {
-    // On récupère les paramètres via POST (car venant du formulaire)
-    $type = getParam('filter_type', 'POST', 'all'); 
-    $value = null;
-
-    if ($type === 'year') {
-        $value = getParam('year_val', 'POST', date('Y'));
-    } elseif ($type === 'responsable') {
-        $value = getParam('resp_val', 'POST', 0);
-    }elseif ($type === 'thematique') {
-        $value = getParam('them_val', 'POST', 0);
-    }
-
-    
-    $controllers['project']->generatePDF($type, $value);
+}elseif ($action === 'getReportStats') {
+    executeController(fn() => $controllers['reservation']->getReportStats());
+}
+elseif ($action === 'downloadReservationReport') {
+    // Note: Utiliser POST pour le téléchargement PDF
+    $controllers['reservation']->downloadReport(); 
+}
+// --- ROUTES PARAMÈTRES ---
+elseif ($action === 'getSettings') {
+    executeController(fn() => $controllers['settings']->apiGetSettings());
+}
+elseif ($action === 'updateSettings') {
+   // requireAdmin();
+    executeController(fn() => $controllers['settings']->updateConfig($_POST, $_FILES));
+}
+elseif ($action === 'downloadBackup') {
+   // requireAdmin();
+    $controllers['settings']->downloadBackup(); 
+}
+elseif ($action === 'restoreBackup') {
+   // requireAdmin();
+    executeController(fn() => $controllers['settings']->restoreBackup($_FILES));
 }
 
 // ============================================
-// ACTION INVALIDE
+// ROUTE PAR DÉFAUT
 // ============================================
 
 else {

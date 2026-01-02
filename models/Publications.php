@@ -352,7 +352,55 @@ class Publication extends Model {
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row['total'] ?? 0;
     }
+     public function getAllForReport($filters = []) {
+        $conditions = ["p.statut_validation = 'valide'"];
+        $params = [];
+
+        if (!empty($filters['year'])) {
+            $conditions[] = "YEAR(p.date_publication) = :year";
+            $params[':year'] = $filters['year'];
+        }
+        if (!empty($filters['domaine'])) {
+            $conditions[] = "p.domaine = :domaine";
+            $params[':domaine'] = $filters['domaine'];
+        }
+
+        $sql = "SELECT p.*, 
+                       GROUP_CONCAT(CONCAT(u.nom, ' ', u.prenom) ORDER BY up.ordre_auteur SEPARATOR ', ') as auteurs_noms
+                FROM " . $this->table . " p
+                LEFT JOIN user_publication up ON p.id = up.id_publication
+                LEFT JOIN users u ON up.user_id = u.id
+                WHERE " . implode(' AND ', $conditions) . "
+                GROUP BY p.id
+                ORDER BY p.type, p.date_publication DESC";
+
+        $stmt = $this->conn->prepare($sql);
+        foreach ($params as $key => $value) $stmt->bindValue($key, $value);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    public function getByIdWithDetails($id) {
+        $query = "SELECT p.*, 
+                         CONCAT(u_submit.nom, ' ', u_submit.prenom) as soumis_par_nom,
+                         GROUP_CONCAT(CONCAT(u.nom, ' ', u.prenom) ORDER BY up.ordre_auteur SEPARATOR ', ') as auteurs_noms
+                  FROM " . $this->table . " p
+                  LEFT JOIN user_publication up ON p.id = up.id_publication
+                  LEFT JOIN users u ON up.user_id = u.id
+                  LEFT JOIN users u_submit ON p.soumis_par = u_submit.id
+                  WHERE p.id = :id
+                  GROUP BY p.id
+                  LIMIT 1";
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+        
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    
 }
+
 
 ?>
         
