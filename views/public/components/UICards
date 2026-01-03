@@ -1,0 +1,30 @@
+<?php
+class UICard extends Component {
+    private $title;
+    private $meta; // Date ou Type
+    private $description;
+    private $link;
+    private $icon;
+
+    public function __construct($title, $meta, $description, $link, $icon = 'far fa-file-alt') {
+        $this->title = htmlspecialchars($title);
+        $this->meta = htmlspecialchars($meta);
+        $this->description = htmlspecialchars(substr($description, 0, 100)) . '...';
+        $this->link = $link;
+        $this->icon = $icon;
+    }
+
+    public function render() {
+        return <<<HTML
+        <div class="card">
+            <div class="card-body">
+                <div class="card-date"><i class="{$this->icon}"></i> {$this->meta}</div>
+                <h3>{$this->title}</h3>
+                <p><small>{$this->description}</small></p>
+                <a href="{$this->link}" class="card-link">En savoir plus →</a>
+            </div>
+        </div>
+HTML;
+    }
+}
+?>
