@@ -47,6 +47,7 @@ class AuthController {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['email'] = $user['email'];
                 $_SESSION['role'] = $user['role'];
+                $_SESSION['is_admin'] = ($user['is_admin'] == 1); 
                 $_SESSION['nom_complet'] = $user['nom'] . ' ' . $user['prenom'];
                 $_SESSION['photo_profil'] = $user['photo_profil'];
                 $_SESSION['logged_in'] = true;
@@ -182,7 +183,7 @@ class AuthController {
             case 'doctorant':
             case 'etudiant':
             case 'invite':
-                return 'user/dashboard.php';
+                return '../views/public/dashboard.php';
             default:
                 return 'index.php';
         }
@@ -220,7 +221,7 @@ class AuthController {
     }
     
     // Validation des données
-    $requiredFields = ['nom', 'prenom', 'email', 'username', 'password', 'role'];
+    $requiredFields = ['nom', 'prenom', 'email', 'password', 'role'];
     foreach ($requiredFields as $field) {
         if (empty($_POST[$field])) {
             echo json_encode(['success' => false, 'message' => 'Tous les champs obligatoires doivent être remplis']);
@@ -251,7 +252,7 @@ class AuthController {
         'nom' => htmlspecialchars(trim($_POST['nom'])),
         'prenom' => htmlspecialchars(trim($_POST['prenom'])),
         'email' => htmlspecialchars(trim($_POST['email'])),
-        'username' => htmlspecialchars(trim($_POST['username'])),
+        // 'username' => htmlspecialchars(trim($_POST['username'])),
         'password' => $_POST['password'],
         'role' => $_POST['role'],
         'grade' => htmlspecialchars(trim($_POST['grade'] ?? '')),

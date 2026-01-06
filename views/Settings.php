@@ -1,6 +1,6 @@
 <?php
-// session_start();
-// // Seul l'admin a accès
+session_start();
+// Vérification admin
 // if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 //     header('Location: ../login.php');
 //     exit;
@@ -13,6 +13,7 @@ require_once __DIR__ . '/../views/Sidebar.php';
     <meta charset="UTF-8">
     <title>Paramètres Généraux</title>
     <link rel="stylesheet" href="admin_dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .settings-grid {
             display: grid;
@@ -24,6 +25,7 @@ require_once __DIR__ . '/../views/Sidebar.php';
             padding: 25px;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
         }
         h2 { border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 20px; color: #333; }
         
@@ -62,90 +64,179 @@ require_once __DIR__ . '/../views/Sidebar.php';
             <a href="../logout.php" class="logout-btn">Déconnexion</a>
         </div>
 
-        <div class="settings-grid">
-            
-            <!-- 1. APPARENCE -->
-            <div class="card">
-                <h2>🎨 Apparence & Graphisme</h2>
-                <form id="styleForm" enctype="multipart/form-data">
-                    
-                    <div class="form-group">
-                        <label>Nom du Site / Application</label>
-                        <input type="text" name="site_name" id="site_name" class="form-control">
-                    </div>
-
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                        <div class="form-group">
-                            <label>Couleur Principale</label>
-                            <input type="color" name="primary_color" id="primary_color" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label>Couleur Sidebar</label>
-                            <input type="color" name="sidebar_color" id="sidebar_color" class="form-control">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Logo de l'application</label>
-                        <input type="file" name="logo" id="logo" accept="image/*" class="form-control">
-                        <div class="preview-box">
-                            <img src="" id="logoPreview" class="preview-logo" alt="Aperçu logo">
-                            <p style="font-size:0.8em; color:#888;">Format recommandé : PNG transparent</p>
-                        </div>
-                    </div>
-
-                    <button type="button" onclick="saveAppearance()" class="btn btn-primary" style="width:100%;">
-                        💾 Enregistrer les modifications
-                    </button>
-                </form>
-            </div>
-
-            <!-- 2. BASE DE DONNÉES -->
-            <div class="card">
-                <h2>💾 Sauvegarde & Restauration</h2>
+        <form id="styleForm" enctype="multipart/form-data"> 
+            <div class="settings-grid">
                 
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <p style="color:#666; margin-bottom:15px;">
-                        Générez un fichier <code>.sql</code> complet contenant toutes les données et la structure.
-                    </p>
-                    <button onclick="downloadBackup()" class="btn-backup">
-                        📥 Télécharger une Sauvegarde
-                    </button>
-                </div>
+                <!-- COLONNE GAUCHE -->
+                <div>
+                    <!-- 1. APPARENCE -->
+                    <div class="card">
+                        <h2>🎨 Apparence & Graphisme</h2>
+                        
+                        <div class="form-group">
+                            <label>Nom du Site / Application</label>
+                            <input type="text" name="site_name" id="site_name" class="form-control">
+                        </div>
 
-                <div class="divider"></div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                            <div class="form-group">
+                                <label>Couleur Principale</label>
+                                <input type="color" name="primary_color" id="primary_color" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label>Couleur Sidebar</label>
+                                <input type="color" name="sidebar_color" id="sidebar_color" class="form-control">
+                            </div>
+                        </div>
 
-                <div style="background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
-                    <strong>⚠️ Zone de danger :</strong> La restauration écrasera toutes les données actuelles.
-                </div>
-
-                <form id="restoreForm">
-                    <div class="form-group">
-                        <label>Restaurer depuis un fichier (.sql)</label>
-                        <input type="file" name="backup_file" accept=".sql" class="form-control" required>
+                        <div class="form-group">
+                            <label>Logo de l'application</label>
+                            <input type="file" name="logo" id="logo" accept="image/*" class="form-control">
+                            <div class="preview-box">
+                                <img src="" id="logoPreview" class="preview-logo" alt="Aperçu logo">
+                            </div>
+                        </div>
                     </div>
-                    <button type="button" onclick="restoreBackup()" class="btn-restore">
-                        🔄 Restaurer la Base de Données
-                    </button>
-                </form>
-            </div>
 
+                    <!-- 3. INFORMATIONS DU LABO -->
+                    <div class="card">
+                        <h2>ℹ️ Informations & Contact</h2>
+                        
+                        <div class="form-group">
+                            <label>Description du Laboratoire</label>
+                            <textarea name="lab_description" id="lab_description" rows="4" class="form-control" placeholder="Présentation courte..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Adresse Email de Contact</label>
+                            <input type="email" name="lab_email" id="lab_email" class="form-control">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Numéro de Téléphone</label>
+                            <input type="text" name="lab_phone" id="lab_phone" class="form-control">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Adresse Physique</label>
+                            <input type="text" name="lab_address" id="lab_address" class="form-control">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COLONNE DROITE -->
+                <div>
+                    <!-- 4. RÉSEAUX SOCIAUX (AJOUTÉ ICI) -->
+                    <div class="card">
+                        <h2>🌐 Réseaux Sociaux & Liens</h2>
+                        
+                        <div class="form-group">
+                            <label><i class="fas fa-globe"></i> Site Web Université</label>
+                            <input type="url" id="univ_website" name="univ_website" class="form-control" placeholder="https://...">
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fab fa-facebook"></i> Facebook</label>
+                            <input type="url" id="social_facebook" name="social_facebook" class="form-control">
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fab fa-instagram"></i> Instagram</label>
+                            <input type="url" id="social_instagram" name="social_instagram" class="form-control">
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fab fa-linkedin"></i> LinkedIn</label>
+                            <input type="url" id="social_linkedin" name="social_linkedin" class="form-control">
+                        </div>
+                    </div>
+
+                    <!-- 2. BASE DE DONNÉES -->
+                    <div class="card">
+                        <h2>💾 Sauvegarde & Restauration</h2>
+                        
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <p style="color:#666; margin-bottom:15px;">
+                                Générez un fichier <code>.sql</code> complet contenant toutes les données et la structure.
+                            </p>
+                            <button type="button" onclick="downloadBackup()" class="btn-backup">
+                                📥 Télécharger une Sauvegarde
+                            </button>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div style="background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
+                            <strong>⚠️ Zone de danger :</strong> La restauration écrasera toutes les données actuelles.
+                        </div>
+                    </div>
+                    
+                    <!-- Formulaire séparé pour la restauration -->
+                    <div class="card">
+                        <h2>🔄 Restauration</h2>
+                        <!-- Attention : ne pas mettre un form dans un form -->
+                    </div>
+                </div>
+
+            </div>
+            
+            <!-- BOUTON SAUVEGARDE FLOTTANT OU FIXE EN BAS -->
+            <div style="grid-column: 1 / -1; margin-top: 20px;">
+                <button type="button" onclick="saveAppearance()" class="btn btn-primary" style="width:100%; padding: 15px; font-size: 1.2em;">
+                    💾 ENREGISTRER TOUS LES PARAMÈTRES
+                </button>
+            </div>
+        </form>
+
+        <!-- Formulaire Restauration (SORTI du form principal pour éviter les conflits) -->
+        <form id="restoreForm" style="display:none;">
+            <input type="file" name="backup_file" id="hiddenBackupFile" accept=".sql" onchange="triggerRestore()">
+        </form>
+        
+        <!-- Bouton visible pour déclencher le file input caché -->
+        <div class="card" style="margin-top:-20px;">
+             <div class="form-group">
+                <label>Fichier SQL (.sql)</label>
+                <input type="file" id="backupFileVisible" accept=".sql" class="form-control">
+            </div>
+            <button type="button" onclick="prepareRestore()" class="btn-restore" style="width:100%;">
+                Restaurer la Base de Données
+            </button>
         </div>
+
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', loadSettings);
 
         async function loadSettings() {
-            const res = await fetch('../controllers/api.php?action=getSettings');
-            const json = await res.json();
-            
-            if(json.success) {
-                const s = json.data;
-                if(s.site_name) document.getElementById('site_name').value = s.site_name;
-                if(s.primary_color) document.getElementById('primary_color').value = s.primary_color;
-                if(s.sidebar_color) document.getElementById('sidebar_color').value = s.sidebar_color;
-                if(s.logo_path) document.getElementById('logoPreview').src = '../' + s.logo_path;
+            try {
+                const res = await fetch('../controllers/api.php?action=getSettings');
+                const json = await res.json();
+                
+                if(json.success) {
+                    const s = json.data;
+                    
+                    // Apparence
+                    if(s.site_name) document.getElementById('site_name').value = s.site_name;
+                    if(s.primary_color) document.getElementById('primary_color').value = s.primary_color;
+                    if(s.sidebar_color) document.getElementById('sidebar_color').value = s.sidebar_color;
+                    if(s.logo_path) document.getElementById('logoPreview').src = '../' + s.logo_path;
+
+                    // Infos Labo
+                    if(s.lab_description) document.getElementById('lab_description').value = s.lab_description;
+                    if(s.lab_email) document.getElementById('lab_email').value = s.lab_email;
+                    if(s.lab_phone) document.getElementById('lab_phone').value = s.lab_phone;
+                    if(s.lab_address) document.getElementById('lab_address').value = s.lab_address;
+
+                    // Réseaux Sociaux (NOUVEAU)
+                    if(s.social_facebook) document.getElementById('social_facebook').value = s.social_facebook;
+                    if(s.social_instagram) document.getElementById('social_instagram').value = s.social_instagram;
+                    if(s.social_linkedin) document.getElementById('social_linkedin').value = s.social_linkedin;
+                    if(s.univ_website) document.getElementById('univ_website').value = s.univ_website;
+                }
+            } catch(e) {
+                console.error("Erreur chargement settings", e);
             }
         }
 
@@ -153,41 +244,47 @@ require_once __DIR__ . '/../views/Sidebar.php';
             const form = document.getElementById('styleForm');
             const formData = new FormData(form);
 
-            const res = await fetch('../controllers/api.php?action=updateSettings', {
-                method: 'POST',
-                body: formData
-            });
-            const json = await res.json();
-            
-            if(json.success) {
-                alert("Paramètres enregistrés ! Rechargez la page pour voir les changements.");
-                // Optionnel : Appliquer les couleurs en live
-                // document.documentElement.style.setProperty('--primary-color', document.getElementById('primary_color').value);
-                location.reload();
-            } else {
-                alert("Erreur : " + json.message);
+            try {
+                const res = await fetch('../controllers/api.php?action=updateSettings', {
+                    method: 'POST',
+                    body: formData
+                });
+                const json = await res.json();
+                
+                if(json.success) {
+                    alert("✅ Paramètres enregistrés avec succès !");
+                    location.reload(); 
+                } else {
+                    alert("❌ Erreur : " + json.message);
+                }
+            } catch(e) {
+                console.error(e);
+                alert("Erreur serveur lors de la sauvegarde.");
             }
         }
 
         function downloadBackup() {
-            // Redirection directe pour déclencher le téléchargement du fichier
             window.location.href = '../controllers/api.php?action=downloadBackup';
         }
 
-        async function restoreBackup() {
+        // Fonction intermédiaire pour la restauration
+        function prepareRestore() {
+            const fileInput = document.getElementById('backupFileVisible');
+            if(!fileInput.files.length) {
+                alert("Veuillez sélectionner un fichier SQL.");
+                return;
+            }
+            restoreBackup(fileInput.files[0]);
+        }
+
+        async function restoreBackup(file) {
             if(!confirm("⚠️ ATTENTION ⚠️\n\nVous êtes sur le point d'écraser toute la base de données !\nCette action est irréversible.\n\nVoulez-vous continuer ?")) {
                 return;
             }
 
-            const form = document.getElementById('restoreForm');
-            const formData = new FormData(form);
+            const formData = new FormData();
+            formData.append('backup_file', file);
 
-            if(!formData.get('backup_file').name) {
-                alert("Veuillez sélectionner un fichier SQL.");
-                return;
-            }
-
-            // Afficher un chargement
             const btn = document.querySelector('.btn-restore');
             const originalText = btn.textContent;
             btn.textContent = "⏳ Restauration en cours...";

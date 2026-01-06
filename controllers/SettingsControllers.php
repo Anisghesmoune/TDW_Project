@@ -15,34 +15,44 @@ class SettingsController {
     }
 
     // --- MISE À JOUR CONFIG ---
-    public function updateConfig($postData, $filesData) {
+   public function updateConfig($postData, $filesData) {
         try {
-            // 1. Sauvegarde des champs textes
-            if (isset($postData['site_name'])) 
-                $this->settingsModel->updateSetting('site_name', $postData['site_name']);
-            
-            if (isset($postData['primary_color'])) 
-                $this->settingsModel->updateSetting('primary_color', $postData['primary_color']);
-                
-            if (isset($postData['sidebar_color'])) 
-                $this->settingsModel->updateSetting('sidebar_color', $postData['sidebar_color']);
+            // Liste des champs autorisés à être sauvegardés
+           $fieldsToSave = [
+                'site_name', 'primary_color', 'sidebar_color', // Apparence
+                'lab_description', 'lab_email', 'lab_phone', 'lab_address', // Contact
+                'social_facebook', 'social_instagram', 'social_linkedin', 'univ_website' // Réseaux sociaux (Nouveaux)
+            ];
+
+            // 1. Sauvegarde des champs textes (Boucle automatique)
+            foreach ($fieldsToSave as $key) {
+                if (isset($postData[$key])) {
+                    $this->settingsModel->updateSetting($key, trim($postData[$key]));
+                }
+            }
 
             // 2. Gestion du Logo
             if (isset($filesData['logo']) && $filesData['logo']['error'] === UPLOAD_ERR_OK) {
-                $uploadDir = '../assets/img/';
-                if (!file_exists($uploadDir)) mkdir($uploadDir, 0755, true);
+                // Utilisation de __DIR__ pour sécuriser le chemin
+                $uploadDir = __DIR__ . '/../assets/img/';
+                
+                if (!file_exists($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
                 
                 $ext = pathinfo($filesData['logo']['name'], PATHINFO_EXTENSION);
-                $filename = 'logo_custom.' . $ext;
+                // On donne un nom unique pour éviter les problèmes de cache navigateur
+                $filename = 'logo_' . time() . '.' . $ext;
                 
                 if(move_uploaded_file($filesData['logo']['tmp_name'], $uploadDir . $filename)) {
+                    // On enregistre le chemin relatif pour la BDD
                     $this->settingsModel->updateSetting('logo_path', 'assets/img/' . $filename);
                 }
             }
 
-            return ['success' => true, 'message' => 'Paramètres mis à jour'];
+            return ['success' => true, 'message' => 'Paramètres mis à jour avec succès'];
         } catch (Exception $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
+            return ['success' => false, 'message' => 'Erreur : ' . $e->getMessage()];
         }
     }
 

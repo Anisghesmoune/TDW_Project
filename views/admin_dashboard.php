@@ -12,9 +12,9 @@ require_once __DIR__ . '/../views/Table.php';
 
 // AuthController::requireAdmin();
 $controller = new ProjectController();
-$data = $controller->index(); 
+// $data = $controller->index(); 
 $eventController = new EventController();
-$eventData = $eventController->getEvents();
+$eventData = $eventController->getALL();
 $publicationController = new PublicationController();
 $publicationData = $publicationController->stats();
 $userModel = new UserModel();
@@ -56,20 +56,14 @@ $users = $userModel->getAll();
                 <div class="number"><?php echo count($users); ?></div>
             </div>
             
-            <div class="stat-card">
-                <h3>Projets actifs</h3>
-                <div class="number"><?php echo $data['nbProjetsActifs']; ?></div>
-            </div>
+           
             
             <div class="stat-card">
                 <h3>Publications</h3>
                 <div class="number"><?php echo $publicationData['total']; ?></div>
             </div>
             
-            <div class="stat-card">
-                <h3>Événements à venir</h3>
-                <div class="number"><?php echo $eventData['total']; ?></div>
-            </div>
+          
         </div>
         
         <div class="content-section">
@@ -82,14 +76,19 @@ $users = $userModel->getAll();
             <?php
             $userTable = new Table([
                 'id' => 'usersTable',
-                'headers' => ['ID', 'Nom complet', 'Username', 'Email', 'Rôle', 'Statut'],
+                'headers' => ['ID', 'Nom complet', 'Admin', 'Email', 'Rôle', 'Statut'],
                 'data' => $users,
                 'columns' => [
                     ['key' => 'id'],
                     ['key' => function($row) { 
                         return $row['nom'] . ' ' . $row['prenom']; 
                     }],
-                    ['key' => 'username'],
+                   ['key' => function($row) {
+                // Si is_admin est 1 (vrai), on affiche un badge
+                return ($row['is_admin'] == 1) 
+                    ? '<span class="badge" style="background:#6f42c1; color:white;">OUI</span>' 
+                    : '<span style="color:#ccc;">Non</span>';
+            }],
                     ['key' => 'email'],
                     ['key' => 'role', 'format' => function($value) {
                         return ucfirst($value);
@@ -147,22 +146,7 @@ $users = $userModel->getAll();
             ?>
         </div>
         
-        <div class="content-section">
-            <h2>Activité récente</h2>
-            <ul style="list-style: none;">
-                <li style="padding: 10px; border-bottom: 1px solid #e0e0e0;">
-                    📝 <strong>Nouvelle publication</strong> soumise par Kamel Amrani - Il y a 2 heures
-                </li>
-                <li style="padding: 10px; border-bottom: 1px solid #e0e0e0;">
-                    👤 <strong>Nouvel utilisateur</strong> inscrit: Fatima Kaci - Il y a 5 heures
-                </li>
-                <li style="padding: 10px; border-bottom: 1px solid #e0e0e0;">
-                    🗓️ <strong>Réservation</strong> effectuée pour Salle A - Il y a 1 jour
-                </li>
-            </ul>
-        </div>
-    </div>
-    
+      
     <!-- Modal -->
     <div id="userModal" class="modal">
         <div class="modal-content">
@@ -187,10 +171,13 @@ $users = $userModel->getAll();
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="username">Username <span class="required">*</span></label>
-                        <input type="text" class="form-control" id="username" name="username" required>
+                 <div class="form-group" style="display:flex; align-items:center; padding-top:25px;">
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:10px;">
+                            <input type="checkbox" id="is_admin" name="is_admin" value="1" style="width:20px; height:20px;">
+                            <span style="font-weight:bold; color:#4e73df;">Accès Administrateur</span>
+                        </label>
                     </div>
+                </div>
 
                     <div class="form-group">
                         <label for="email">Email <span class="required">*</span></label>
@@ -207,7 +194,7 @@ $users = $userModel->getAll();
                             <label for="role">Rôle <span class="required">*</span></label>
                             <select class="form-control" id="role" name="role" required>
                                 <option value="">-- Sélectionner --</option>
-                                <option value="admin">Admin</option>
+                                <option value="invite">invite</option>
                                 <option value="enseignant">Enseignant</option>
                                 <option value="doctorant">Doctorant</option>
                                 <option value="etudiant">Étudiant</option>
@@ -409,6 +396,7 @@ $users = $userModel->getAll();
                 if (result.success) {
                     const user = result.user;
                     document.getElementById('userId').value = user.id;
+                    document.getElementById('is_admin').checked = (user.is_admin == 1);
                     document.getElementById('nom').value = user.nom;
                     document.getElementById('prenom').value = user.prenom;
                     document.getElementById('username').value = user.username;

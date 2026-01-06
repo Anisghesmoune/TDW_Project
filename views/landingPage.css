@@ -468,6 +468,271 @@ header {
     border-color: var(--primary-color);
 }
 
+footer {
+    background: var(--secondary-color);
+    color: var(--text-light);
+    padding: 50px 0 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Conteneur principal avec disposition en 3 colonnes */
+.footer-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Style pour toutes les colonnes */
+.footer-col-info,
+.footer-nav,
+.footer-auth {
+    width: 100%;
+}
+
+/* Titres des sections */
+.footer-grid h3 {
+    color: var(--text-light);
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(52, 152, 219, 0.3);
+    position: relative;
+}
+
+/* COLONNE GAUCHE - Informations & Réseaux Sociaux */
+.footer-col-info {
+    order: 1;
+}
+
+.footer-col-info p {
+    color: #bdc3c7;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+/* Informations de contact */
+.contact-info {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 20px;
+    border-radius: var(--radius);
+    margin-bottom: 25px;
+}
+
+.contact-info div {
+    margin-bottom: 15px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.contact-info i {
+    color: var(--primary-color);
+    min-width: 20px;
+    margin-top: 3px;
+}
+
+.contact-info span,
+.contact-info a {
+    color: var(--text-light);
+    text-decoration: none;
+    line-height: 1.5;
+}
+
+.contact-info a:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+/* Réseaux sociaux dans la colonne gauche */
+.social-links-footer {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
+.social-links-footer a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 45px;
+    height: 45px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    color: var(--text-light);
+    text-decoration: none;
+    transition: var(--transition);
+    font-size: 1.2em;
+}
+
+.social-links-footer a:hover {
+    background: var(--primary-color);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+}
+
+/* COLONNE DU MILIEU - Navigation Verticale */
+.footer-nav {
+    order: 2;
+}
+
+.footer-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.footer-nav li {
+    width: 100%;
+}
+
+.footer-nav a {
+    color: var(--text-light);
+    text-decoration: none;
+    display: block;
+    padding: 12px 15px;
+    transition: var(--transition);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius);
+    border-left: 4px solid transparent;
+}
+
+.footer-nav a:hover {
+    color: var(--text-light);
+    background: rgba(52, 152, 219, 0.2);
+    border-left-color: var(--primary-color);
+    transform: translateX(5px);
+}
+
+/* COLONNE DROITE - Boutons Espace Membre */
+.footer-auth {
+    order: 3;
+}
+
+.auth-links {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+}
+
+/* Style des boutons */
+.btn-login,
+.btn-register {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 25px;
+    border-radius: var(--radius);
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--transition);
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    font-size: 1rem;
+    text-align: center;
+}
+
+.btn-login {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-login:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(41, 128, 185, 0.3);
+}
+
+.btn-register {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-light);
+    border: 2px solid var(--primary-color);
+}
+
+.btn-register:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Barre du bas du footer */
+.footer-bottom {
+    text-align: center;
+    padding: 25px 20px;
+    margin-top: 50px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: #bdc3c7;
+    font-size: 0.9rem;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Design */
+@media (min-width: 768px) {
+    .footer-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 40px;
+    }
+    
+    .footer-col-info,
+    .footer-nav,
+    .footer-auth {
+        order: unset;
+    }
+    
+    .footer-nav ul {
+        min-height: 200px;
+    }
+}
+
+@media (max-width: 767px) {
+    .footer-grid {
+        gap: 30px;
+    }
+    
+    .social-links-footer {
+        justify-content: center;
+    }
+    
+    .auth-links {
+        max-width: 300px;
+        margin: 0 auto;
+    }
+    
+    .footer-nav a {
+        padding: 10px 15px;
+    }
+}
+
+/* Animation pour les boutons */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+.btn-login:active,
+.btn-register:active {
+    animation: pulse 0.3s ease;
+}
+
+/* Icônes */
+.fa-lg {
+    font-size: 1.2em;
+}
+
+.fa-sign-in-alt,
+.fa-user-plus {
+    font-size: 1.1em;
+}
 
 /* ===== RESPONSIVE AMÉLIORÉ ===== */
 @media (max-width: 992px) {

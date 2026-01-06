@@ -13,7 +13,7 @@ class UserModel {
  public function authentificate($email, $password){
 
     try{
-        $querry = "SELECT id ,username,password ,nom ,prenom ,email ,photo_profil,role,grade,domaine_recherche,statut FROM " . $this->table . " WHERE email = :email And statut = 'actif' limit 1 ";
+        $querry = "SELECT id ,password ,nom ,prenom ,email ,photo_profil,role,grade,domaine_recherche,statut FROM " . $this->table . " WHERE email = :email And statut = 'actif' limit 1 ";
     
     $stmt=$this->db->prepare($querry);
     $stmt->bindParam(':email', $email, PDO::PARAM_STR);
@@ -41,15 +41,17 @@ public function create($data){
 }
             $hashedPassword=password_hash($data['password'],PASSWORD_DEFAULT);
             $query = "INSERT INTO {$this->table} 
-            (username, password, nom, prenom, email, role, grade, domaine_recherche, statut) 
-             VALUES (:username, :password, :nom, :prenom, :email, :role, :grade, :domaine_recherche, 'actif')";
+            (password, nom, prenom, email, role,is_admin,grade, domaine_recherche, statut) 
+             VALUES (:password, :nom, :prenom, :email, :role, :is_admin, :grade, :domaine_recherche, 'actif')";
              $stmt = $this->db->prepare($query);
-            $stmt->bindParam(':username', $data['username']);
+            // $stmt->bindParam(':username', $data['username']);
             $stmt->bindParam(':password', $hashedPassword);
             $stmt->bindParam(':nom', $data['nom']);
             $stmt->bindParam(':prenom', $data['prenom']);
             $stmt->bindParam(':email', $data['email']);
             $stmt->bindParam(':role', $data['role']);
+             $isAdmin = !empty($data['is_admin']) ? 1 : 0;
+           $stmt->bindParam(':is_admin', $isAdmin, PDO::PARAM_INT);
             $stmt->bindParam(':grade', $data['grade']);
             $stmt->bindParam(':domaine_recherche', $data['domaine_recherche']);
             
@@ -67,7 +69,7 @@ public function create($data){
   
         public function getById($id) {
         try {
-            $query = "SELECT id, username, nom, prenom, email, photo_profil, role, grade, 
+            $query = "SELECT id,nom, prenom, email, photo_profil, role, grade, 
                             domaine_recherche, specialite, statut, date_creation, derniere_connexion
                      FROM {$this->table} 
                      WHERE id = :id LIMIT 1";
@@ -127,27 +129,65 @@ public function getAllWithPublicationCount($filters = []) {
     /**
      * Mettre à jour le profil utilisateur
      */
-    public function updateProfile($id, $data) {
+   public function updateProfile($id, $data) {
         try {
-            $query = "UPDATE {$this->table} 
-                     SET nom = :nom, 
-                         prenom = :prenom, 
-                         email = :email, 
-                         grade = :grade, 
-                         domaine_recherche = :domaine_recherche,
-                         specialite = :specialite
-                     WHERE id = :id";
+            // 1. Construction dynamique de la requête
+            // On ne met à jour que les champs qui sont envoyés
+            $fields = [];
+            $params = [':id' => $id];
+
+            // Champs standards
+            if (isset($data['nom'])) { 
+                $fields[] = "nom = :nom"; 
+                $params[':nom'] = $data['nom']; 
+            }
+            if (isset($data['prenom'])) { 
+                $fields[] = "prenom = :prenom"; 
+                $params[':prenom'] = $data['prenom']; 
+            }
+            if (isset($data['email'])) { 
+                $fields[] = "email = :email"; 
+                $params[':email'] = $data['email']; 
+            }
             
-            $stmt = $this->db->prepare($query);
-            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-            $stmt->bindParam(':nom', $data['nom']);
-            $stmt->bindParam(':prenom', $data['prenom']);
-            $stmt->bindParam(':email', $data['email']);
-            $stmt->bindParam(':grade', $data['grade']);
-            $stmt->bindParam(':domaine_recherche', $data['domaine_recherche']);
-            $stmt->bindParam(':specialite', $data['specialite']);
+            // --- LES NOUVEAUX CHAMPS ---
+            if (isset($data['telephone'])) { 
+                $fields[] = "telephone = :telephone"; 
+                $params[':telephone'] = $data['telephone']; 
+            }
+            if (isset($data['bio'])) { 
+                $fields[] = "bio = :bio"; 
+                $params[':bio'] = $data['bio']; 
+            }
+            if (isset($data['domaine_recherche'])) { 
+                $fields[] = "domaine_recherche = :domaine"; 
+                $params[':domaine'] = $data['domaine_recherche']; 
+            }
+            if (isset($data['photo_profil'])) { 
+                $fields[] = "photo_profil = :photo"; 
+                $params[':photo'] = $data['photo_profil']; 
+            }
+
+            // Gestion sécurisée du mot de passe
+            // On ne le met à jour QUE s'il n'est pas vide
+            if (!empty($data['password'])) {
+                $fields[] = "password = :password";
+                $params[':password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+            }
+
+            // Si aucun champ à mettre à jour, on arrête
+            if (empty($fields)) {
+                return true; 
+            }
+
+            // 2. Exécution de la requête
+            $query = "UPDATE {$this->table} SET " . implode(', ', $fields) . " WHERE id = :id";
             
-            return $stmt->execute();
+            // Attention : utilisez $this->conn ou $this->db selon votre classe Model parente
+            $stmt = $this->db->prepare($query); 
+            
+            return $stmt->execute($params);
+
         } catch(PDOException $e) {
             error_log("Erreur mise à jour profil : " . $e->getMessage());
             return false;

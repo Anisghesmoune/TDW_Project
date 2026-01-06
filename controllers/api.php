@@ -1,5 +1,5 @@
 <?php
-// session_start();
+session_start();
 
 // Contrôleurs existants
 require_once __DIR__ . '/UserController.php';
@@ -22,10 +22,11 @@ require_once __DIR__ . '/../controllers/EventController.php';
 require_once __DIR__ . '/../models/Event.php';
 require_once __DIR__ . '/../controllers/EventTypeController.php';
 require_once __DIR__ . '/../models/EventType.php';
-
+require_once __DIR__. '/../controllers/memberController.php';
 // ============================================
 // FONCTIONS HELPERS ULTRA-GÉNÉRIQUES
 // ============================================
+$memberController = new MemberController();
 
 function sendJson($data, $statusCode = 200) {
     http_response_code($statusCode);
@@ -82,12 +83,16 @@ function requireAuth() {
 }
 
 function requireAdmin() {
-    requireAuth();
-    if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-        sendError('Accès réservé aux administrateurs', 403);
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    
+    // On vérifie le flag booléen
+    if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
+        // Redirection ou Erreur JSON
+        header('HTTP/1.1 403 Forbidden');
+        echo json_encode(['success' => false, 'message' => 'Accès réservé aux administrateurs']);
+        exit;
     }
 }
-
 function requireId($name = 'id') {
     if (isset($_GET[$name])) {
         $id = $_GET[$name];
@@ -706,6 +711,9 @@ elseif ($action === 'downloadBackup') {
 elseif ($action === 'restoreBackup') {
    // requireAdmin();
     executeController(fn() => $controllers['settings']->restoreBackup($_FILES));
+}elseif ($action === 'updateProfile') {
+    requireAuth(); // Vérifie juste si connecté
+    executeController(fn() => $memberController->apiUpdateProfile($_POST, $_FILES));
 }
 
 // ============================================

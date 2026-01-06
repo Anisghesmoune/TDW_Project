@@ -1,0 +1,137 @@
+/* --- LAYOUT GLOBAL --- */
+.profile-container {
+    display: flex;
+    justify-content: center; /* Centre le contenu */
+    padding: 20px;
+}
+
+.profile-card {
+    background: white;
+    width: 100%;
+    max-width: 800px; /* Empêche le formulaire d'être trop large */
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); /* Ombre douce */
+    border: 1px solid #f0f0f0;
+}
+
+/* --- SECTION PHOTO / AVATAR --- */
+.avatar-preview {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    display: block;
+    margin: 0 auto 15px auto;
+    transition: transform 0.3s ease;
+}
+
+.avatar-preview:hover {
+    transform: scale(1.02); /* Petit effet de zoom au survol */
+}
+
+/* --- FORMULAIRES --- */
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #4b5563; /* Gris foncé moderne */
+    font-size: 0.95rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 1rem;
+    color: #1f2937;
+    background-color: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box; /* Important pour ne pas dépasser la largeur */
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #4e73df; /* Couleur primaire */
+    box-shadow: 0 0 0 3px rgba(78, 115, 223, 0.1);
+}
+
+/* Champs désactivés (Nom & Prénom) */
+.form-control:disabled {
+    background-color: #f3f4f6;
+    color: #6b7280;
+    cursor: not-allowed;
+    border-color: #e5e7eb;
+}
+
+/* Textarea */
+textarea.form-control {
+    resize: vertical; /* Permet le redimensionnement vertical uniquement */
+    min-height: 100px;
+}
+
+/* --- BOUTONS --- */
+.btn-primary {
+    background-color: #4e73df; /* Votre couleur primaire */
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.1s;
+    display: inline-block;
+}
+
+.btn-primary:hover {
+    background-color: #2e59d9;
+}
+
+.btn-primary:active {
+    transform: translateY(1px);
+}
+
+.btn-secondary {
+    background-color: #e2e6ea;
+    color: #333;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: #dbe0e5;
+    color: #000;
+}
+
+/* --- SÉPARATEURS --- */
+hr {
+    border: 0;
+    border-top: 1px solid #e5e7eb;
+    margin: 30px 0;
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 768px) {
+    .profile-card {
+        padding: 20px;
+    }
+    
+    .btn-primary {
+        width: 100%;
+    }
+}

@@ -646,6 +646,30 @@ public function getAllThematics() {
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-
-
+public function getProjectsByUserId($userId) {
+        // Cette version évite l'erreur "only_full_group_by"
+        // 1. On sélectionne les projets
+        // 2. On récupère le rôle via une sous-requête spécifique à l'utilisateur
+        // 3. On filtre via une clause WHERE claire
+        
+        $query = "SELECT p.*, 
+                         -- Sous-requête pour récupérer le rôle de l'utilisateur courant
+                         (SELECT role FROM user_project WHERE project_id = p.id AND user_id = :uid1 LIMIT 1) as role_dans_projet,
+                         -- Sous-requête pour compter le nombre total de membres
+                         (SELECT COUNT(*) FROM user_project WHERE project_id = p.id) as nb_membres
+                  FROM projects p
+                  WHERE p.responsable_id = :uid2
+                     OR p.id IN (SELECT project_id FROM user_project WHERE user_id = :uid3)
+                  ORDER BY p.date_debut DESC";
+        
+        $stmt = $this->conn->prepare($query);
+        
+        // On lie les paramètres (3 fois le même ID pour les 3 endroits où il est utilisé)
+        $stmt->bindValue(':uid1', $userId, PDO::PARAM_INT);
+        $stmt->bindValue(':uid2', $userId, PDO::PARAM_INT);
+        $stmt->bindValue(':uid3', $userId, PDO::PARAM_INT);
+        
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
