@@ -1,12 +1,11 @@
 <?php
-// admin/team-details.php
 
-require_once '../config/Database.php';
-require_once '../models/Model.php';
-require_once '../models/TeamsModel.php';
-require_once '../models/UserModel.php';
-require_once '../controllers/TeamController.php';
-require_once '../views/Sidebar.php';
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../models/Model.php';
+require_once __DIR__ . '/../models/TeamsModel.php';
+require_once __DIR__ . '/../models/UserModel.php';
+require_once __DIR__ . '/../controllers/TeamController.php';
+require_once __DIR__ . '/../views/Sidebar.php';
 
 // Vérification de l'ID
 if (!isset($_GET['id']) || empty($_GET['id'])) {
@@ -96,38 +95,62 @@ if (!$team) {
         </div>
 
         <!-- Membres de l'équipe -->
-        <div class="details-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3>👥 Membres de l'équipe (<?php echo count($members); ?>)</h3>
-                <button class="btn btn-primary" onclick="openAddMemberModal(<?php echo $teamId; ?>)">
-                    ➕ Ajouter un membre
-                </button>
-            </div>
-            
-            <?php if (empty($members)): ?>
-                <div style="text-align:center; padding:20px; background:white; border-radius:8px;">Aucun membre dans cette équipe.</div>
-            <?php else: ?>
-                <div class="grid-container" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap:20px;">
-                    <?php foreach ($members as $member): ?>
-                        <div class="card-item member-card" style="background:white; padding:15px; border-radius:8px; border:1px solid #eee; position:relative;">
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                <div style="width:40px; height:40px; background:#ddd; border-radius:50%; display:flex; align-items:center; justify-content:center;">
-                                    <?php echo strtoupper(substr($member['prenom'], 0, 1) . substr($member['nom'], 0, 1)); ?>
-                                </div>
-                                <div>
-                                    <h4 style="margin:0; font-size:1rem;"><?php echo htmlspecialchars($member['prenom'] . ' ' . $member['nom']); ?></h4>
-                                    <small style="color:#666;"><?php echo htmlspecialchars($member['role'] ?? 'Membre'); ?></small>
-                                </div>
-                            </div>
-                            <?php if(($member['role'] ?? '') !== 'Chef' && ($member['id'] != $team['chef_equipe_id'])): ?>
-                                <button onclick="removeMember(<?php echo $member['id']; ?>, <?php echo $teamId; ?>)" 
-                                        style="position:absolute; top:10px; right:10px; background:none; border:none; color:red; cursor:pointer; font-size:1.5rem;" title="Retirer">×</button>
+       <div class="details-section">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3>👥 Membres de l'équipe (<?php echo count($members); ?>)</h3>
+        <button class="btn btn-primary" onclick="openAddMemberModal(<?php echo $teamId; ?>)">
+            ➕ Ajouter un membre
+        </button>
+    </div>
+    
+    <?php if (empty($members)): ?>
+        <div style="text-align:center; padding:20px; background:white; border-radius:8px;">Aucun membre dans cette équipe.</div>
+    <?php else: ?>
+        <div class="grid-container" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap:20px;">
+            <?php foreach ($members as $member): ?>
+                <div class="card-item member-card" style="background:white; padding:15px; border-radius:8px; border:1px solid #eee; position:relative;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+
+                        <!-- Avatar -->
+                        <div style="width:40px; height:40px; background:#ddd; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; overflow:hidden;">
+                            <?php if (!empty($member['photo_profil'])): ?>
+                                <img src="/uploads/profiles/<?php echo htmlspecialchars($member['photo_profil']); ?>"
+                                     alt="Photo"
+                                     style="width:100%; height:100%; object-fit:cover;">
+                            <?php else: ?>
+                                <?php echo strtoupper(substr($member['prenom'], 0, 1) . substr($member['nom'], 0, 1)); ?>
                             <?php endif; ?>
                         </div>
-                    <?php endforeach; ?>
+
+                        <!-- Infos principales -->
+                        <div>
+                            <h4 style="margin:0; font-size:1rem;"><?php echo htmlspecialchars($member['prenom'] . ' ' . $member['nom']); ?></h4>
+                            <small style="color:#666;"><?php echo htmlspecialchars($member['role'] ?? 'Membre'); ?></small>
+                        </div>
+
+                        <!-- Grade (optionnel) -->
+                        <?php if (!empty($member['grade'])): ?>
+                            <div>
+                                <small style="color:#444;"><?php echo htmlspecialchars($member['grade']); ?></small>
+                            </div>
+                        <?php endif; ?>
+
+                    </div>
+
+                    <!-- Bouton supprimer -->
+                    <?php if (($member['role'] ?? '') !== 'Chef' && $member['id'] != $team['chef_equipe_id']): ?>
+                        <button onclick="removeMember(<?php echo $member['id']; ?>, <?php echo $teamId; ?>)"
+                                style="position:absolute; top:10px; right:10px; background:none; border:none; color:red; cursor:pointer; font-size:1.5rem;"
+                                title="Retirer">
+                            ×
+                        </button>
+                    <?php endif; ?>
                 </div>
-            <?php endif; ?>
+            <?php endforeach; ?>
         </div>
+    <?php endif; ?>
+</div>
+
 
         <br>
 

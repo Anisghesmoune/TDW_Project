@@ -1,5 +1,9 @@
 <?php
-require_once "../models/reservationModel.php";
+require_once __DIR__ . "/../models/reservationModel.php";
+require_once __DIR__ . "/../models/equipementModel.php";
+require_once __DIR__ . "/../models/equipementType.php";
+
+
 class EquipmentController {
     private $equipmentModel;
     private $equipmentTypeModel;
@@ -16,8 +20,7 @@ class EquipmentController {
      */
     public function index() {
         // Auto-update reservation statuses
-        $this->reservationModel->autoUpdateStatuses();
-        
+        $this->reservationModel->autoUpdateStatuses();         
         // Get statistics
         $statusStats = $this->equipmentModel->getStatsByStatus();
         $typeStats = $this->equipmentModel->getStatsByType();
@@ -38,7 +41,9 @@ class EquipmentController {
             'reservationStats' => $reservationStats
         ];
         
-        return $data;
+        
+        require_once __DIR__ . '/../views/public/EquipementView.php';
+return $data;
     }
     
     /**
@@ -98,7 +103,7 @@ class EquipmentController {
             'types' => $types
         ];
         
-        require_once 'views/equipment/create.php';
+        require_once __DIR__ . 'views/equipment/create.php';
     }
     
     /**
@@ -164,7 +169,7 @@ class EquipmentController {
             'types' => $types
         ];
         
-        require_once 'views/equipment/edit.php';
+        require_once __DIR__ . 'views/equipment/edit.php';
     }
     
     /**
@@ -253,7 +258,7 @@ class EquipmentController {
     /**
      * Update equipment status (AJAX)
      */
-    public function updateStatus() {
+   public function updateStatus() {
         header('Content-Type: application/json');
         
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -264,33 +269,49 @@ class EquipmentController {
         $id = (int)($_POST['id'] ?? 0);
         $etat = trim($_POST['etat'] ?? '');
         
-        if (!in_array($etat, ['libre', 'réserve', 'en_maintenance'])) {
-            echo json_encode(['success' => false, 'message' => 'État invalide']);
+        // 1. INTERDIRE LE PASSAGE MANUEL À "RÉSERVÉ"
+        if ($etat === 'réserve') {
+            echo json_encode([
+                'success' => false, 
+                'message' => "⛔ Action interdite : Le statut 'Réservé' est géré automatiquement. Veuillez créer une réservation officielle pour bloquer cet équipement."
+            ]);
             exit;
         }
         
-        // Check if equipment has active reservations when trying to set to maintenance
+        // 2. GESTION DE LA MAINTENANCE
         if ($etat === 'en_maintenance') {
-            $activeReservations = $this->reservationModel->getByEquipment($id);
-            foreach ($activeReservations as $res) {
-                if (in_array($res['statut'], ['confirmée', 'en_cours'])) {
-                    echo json_encode([
-                        'success' => false, 
-                        'message' => 'Équipement actuellement réservé'
-                    ]);
-                    exit;
-                }
+            // On vérifie s'il y a une réservation en cours
+            $activeRes = $this->reservationModel->getCurrentReservationForEquipment($id);
+            if ($activeRes) {
+                echo json_encode([
+                    'success' => false, 
+                    'message' => "Impossible de mettre en maintenance : Une réservation est en cours actuellement."
+                ]);
+                exit;
+            }
+        }
+
+        // 3. GESTION DU RETOUR À "LIBRE" (Fin de maintenance)
+        if ($etat === 'libre') {
+            // On revérifie au cas où une réservation aurait commencé entre temps
+            $activeRes = $this->reservationModel->getCurrentReservationForEquipment($id);
+            if ($activeRes) {
+                echo json_encode([
+                    'success' => false, 
+                    'message' => "Impossible de libérer : Une réservation a commencé automatiquement."
+                ]);
+                exit;
             }
         }
         
+        // Exécution de la mise à jour
         if ($this->equipmentModel->updateStatus($id, $etat)) {
-            echo json_encode(['success' => true, 'message' => 'Statut mis à jour']);
+            echo json_encode(['success' => true, 'message' => 'Statut mis à jour avec succès']);
         } else {
-            echo json_encode(['success' => false, 'message' => 'Erreur lors de la mise à jour']);
+            echo json_encode(['success' => false, 'message' => 'Erreur technique lors de la mise à jour']);
         }
         exit;
     }
-    
     /**
      * Maintenance page
      */
@@ -304,7 +325,7 @@ class EquipmentController {
             'inMaintenance' => $inMaintenance
         ];
         
-        require_once 'views/equipment/maintenance.php';
+        require_once __DIR__ . 'views/equipment/maintenance.php';
     }
     
     /**
@@ -363,7 +384,7 @@ class EquipmentController {
             'upcomingReservations' => $upcomingReservations
         ];
         
-        require_once 'views/equipment/view.php';
+        require_once __DIR__ . 'views/equipment/view.php';
     }
     
     /**

@@ -1,5 +1,5 @@
 <?php
-require_once 'fpdf/fpdf.php';
+require_once __DIR__ . 'fpdf/fpdf.php';
 
 class PDFReport extends FPDF {
     private $reportTitle;

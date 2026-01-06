@@ -102,7 +102,7 @@ class ReservationController {
             'selectedEquipment' => $selectedEquipment
         ];
         
-        require_once 'views/reservation/create.php';
+        require_once __DIR__ . 'views/reservation/create.php';
     }
     
     /**
@@ -216,7 +216,7 @@ class ReservationController {
             'reservation' => $reservation
         ];
         
-        require_once 'views/reservation/view.php';
+        require_once __DIR__ . 'views/reservation/view.php';
     }
     
     /**
@@ -248,7 +248,7 @@ class ReservationController {
             'users' => $users
         ];
         
-        require_once 'views/reservation/edit.php';
+        require_once __DIR__ . 'views/reservation/edit.php';
     }
     
     /**
@@ -648,7 +648,7 @@ class ReservationController {
      * Action : Générer le PDF
      */
     public function downloadReport() {
-        require_once '../libs/PDFReport.php';
+        require_once __DIR__ . '/../libs/PDFReport.php';
         
         $startDate = $_POST['date_debut'] ?? date('Y-m-01');
         $endDate = $_POST['date_fin'] ?? date('Y-m-t');

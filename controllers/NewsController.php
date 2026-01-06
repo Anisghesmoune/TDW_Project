@@ -1,5 +1,5 @@
 <?php
-require_once 'models/News.php';
+require_once __DIR__ . 'models/News.php';
 
 class NewsController {
     private $newsModel;

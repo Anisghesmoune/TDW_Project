@@ -1,5 +1,5 @@
 <?php
-require_once 'Model.php';
+require_once __DIR__ . '/Model.php';
 class Publication extends Model {
     public $id;
     public $titre;

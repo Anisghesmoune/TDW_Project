@@ -1,6 +1,6 @@
 <?php
 
-include_once '../models/Publications.php';
+require_once __DIR__ .  '/../models/Publications.php';
 class PublicationController {
     private $publicationModel;
     
@@ -34,10 +34,13 @@ class PublicationController {
         // Récupérer les statistiques pour les filtres
         $statsByType = $this->publicationModel->getStatsByType();
         $statsByDomain = $this->publicationModel->getStatsByDomain();
+         $isAdmin = false; 
+
+       
+
         
-        // Charger la vue
     
-        require_once 'views/publications/index.php';
+require_once __DIR__ .  '/../views/public/PublicationView.php';
     }
     
     /**
@@ -53,7 +56,7 @@ class PublicationController {
         }
         
         // Charger la vue
-        require_once 'views/publications/show.php';
+        require_once __DIR__ . 'views/publications/show.php';
     }
     
     /**
@@ -71,7 +74,7 @@ class PublicationController {
         }
         
         // Charger la vue du formulaire
-        require_once 'views/publications/create.php';
+        require_once __DIR__ . 'views/publications/create.php';
     }
     
     /**
@@ -154,7 +157,7 @@ class PublicationController {
         }
         
         // Charger la vue du formulaire
-        require_once 'views/publications/edit.php';
+        require_once __DIR__ . 'views/publications/edit.php';
     }
     
     /**
@@ -298,7 +301,7 @@ class PublicationController {
         }
         
         // Charger la vue
-        require_once 'views/publications/search.php';
+        require_once __DIR__ . 'views/publications/search.php';
     }
     
     /**
@@ -317,7 +320,7 @@ class PublicationController {
         $publications = $this->publicationModel->getByUser($_SESSION['user_id']);
         
         // Charger la vue
-        require_once 'views/publications/my-publications.php';
+        require_once __DIR__ . 'views/publications/my-publications.php';
     }
     
     /**
@@ -334,7 +337,7 @@ class PublicationController {
         $publications = $this->publicationModel->getByValidationStatus('en_attente');
         
         // Charger la vue
-        require_once 'views/admin/publications-pending.php';
+        require_once __DIR__ . 'views/admin/publications-pending.php';
     }
     
     /**
@@ -931,7 +934,7 @@ public function apiGetPublicationsByType($type, $limit = null) {
         die("Erreur : Le fichier n'existe pas sur le serveur.");
     }
     public function generateReport() {
-        require_once '../libs/PDFReport.php';
+        require_once __DIR__ . '/../libs/PDFReport.php';
 
         $year = $_GET['year'] ?? null;
         $domaine = $_GET['domaine'] ?? null;

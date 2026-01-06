@@ -1,10 +1,27 @@
 <?php
-require_once '../models/TeamsModel.php';
+require_once __DIR__ .  '/../models/Publications.php';
+require_once __DIR__ .  '/../models/ProjectModel.php';
+require_once __DIR__ .  '/../models/News.php';
+require_once __DIR__ .  '/../models/Event.php';
+require_once __DIR__ .  '/../models/Partner.php';
+require_once __DIR__ .  '/../models/organigrame.php'; 
+require_once __DIR__ .  '/../models/Menu.php';
+require_once __DIR__ . '/../models/Settings.php';
+require_once __DIR__ . '/../models/TeamsModel.php';
+
 class TeamController {
-    private $teamModel;
+   
+     private $teamModel;
+    private $orgModel;
+    private $settingsModel;
+    private $menuModel;
+
     
     public function __construct() {
         $this->teamModel = new TeamsModel();
+        $this->orgModel = new OrganigrammeModel();
+        $this->settingsModel = new Settings();
+        $this->menuModel = new Menu();
     }
     
     /**
@@ -13,9 +30,42 @@ class TeamController {
     public function index() {
         // Récupérer toutes les équipes avec détails
         $teams = $this->teamModel->getAllTeamsWithDetails();
+        $config = $this->settingsModel->getAllSettings();
+        $menu = $this->menuModel->getMenuTree();
+
+        // 2. Données Organigramme (Directeur + Arbre)
+        $organigramme = [
+            'director' => $this->orgModel->getDirector(),
+            'tree' => $this->orgModel->getHierarchyTree()
+        ];
+
+        // 3. Données Équipes (Structure complexe : Equipe -> Chef -> Membres)
+        $teamsList = $this->teamModel->getAllTeams();
+        $teamsData = [];
         
-        // Charger la vue
-        require_once 'views/teams/index.php';
+        foreach ($teamsList as $team) {
+            $teamsData[] = [
+                'info' => $team,
+                'leader' => $this->teamModel->getTeamLeader($team['id']),
+                'members' => $this->teamModel->getTeamMembers($team['id'])
+            ];
+        }
+
+        // 4. Tous les membres pour le filtre (Optionnel)
+        $allMembers = $this->teamModel->getAllMembersFlat();
+
+        $data = [
+            'config' => $config,
+            'menu' => $menu,
+            'organigramme' => $organigramme,
+            'teams' => $teamsData,
+            'allMembers' => $allMembers
+        ];
+
+        return $data;
+    
+        
+      
     }
     
     /**
@@ -30,7 +80,7 @@ class TeamController {
         $users = $this->getEligibleChefs();
         
         // Charger la vue
-        require_once 'views/teams/create.php';
+        require_once __DIR__ . 'views/teams/create.php';
     }
     
     /**
@@ -83,7 +133,7 @@ class TeamController {
         $availableUsers = $this->teamModel->getAvailableUsers($team_id);
         
         // Charger la vue
-        require_once 'views/teams/show.php';
+        require_once __DIR__ . 'views/teams/show.php';
     }
     
     /**

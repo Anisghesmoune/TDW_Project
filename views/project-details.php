@@ -1,8 +1,8 @@
 <?php
-require_once '../config/Database.php';
-require_once '../models/Model.php';
-require_once '../models/ProjectModel.php';
-require_once '../views/Sidebar.php';
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../models/Model.php';
+require_once __DIR__ . '/../models/ProjectModel.php';
+require_once __DIR__ . '/../views/Sidebar.php';
 
 // Initialisation
 $projectModel = new Project();

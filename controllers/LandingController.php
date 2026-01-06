@@ -1,9 +1,9 @@
 <?php
-require_once 'models/News.php';
-require_once 'models/Event.php';
-require_once 'models/Partner.php';
-require_once 'models/organigrame.php';
-require_once 'models/Menu.php';
+require_once __DIR__ . 'models/News.php';
+require_once __DIR__ . 'models/Event.php';
+require_once __DIR__ . 'models/Partner.php';
+require_once __DIR__ . 'models/organigrame.php';
+require_once __DIR__ . 'models/Menu.php';
 
 class LandingController {
     private $newsModel;
@@ -18,7 +18,7 @@ class LandingController {
         $this->partnerModel = new Partner();
         
         $this->organigrammeModel = new OrganigrammeModel();
-        $this->menuModel = new Menu(); // ✅ MODEL, pas controller
+        $this->menuModel = new Menu();
     }
     
     /**
@@ -67,7 +67,7 @@ class LandingController {
         ];
         
         // Charger la vue
-require_once 'views/landingPage.php';
+require_once __DIR__ . 'views/landingPage.php';
         $view = new LandingPageView($data);
         $view->render();
     }

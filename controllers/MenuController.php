@@ -1,5 +1,5 @@
 <?php
-require_once 'models/Menu.php';
+require_once __DIR__ . 'models/Menu.php';
 
 class MenuController {
     private $menuModel;

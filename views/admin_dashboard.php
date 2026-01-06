@@ -1,14 +1,14 @@
 <?php
-require_once '../config/Database.php';
-require_once '../models/UserModel.php';
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../models/UserModel.php';
 
-require_once '../controllers/AuthController.php';
-require_once '../controllers/ProjectController.php';
-require_once '../controllers/PublicationController.php';
-require_once '../controllers/EventController.php';
+require_once __DIR__ . '/../controllers/AuthController.php';
+require_once __DIR__ . '/../controllers/ProjectController.php';
+require_once __DIR__ . '/../controllers/PublicationController.php';
+require_once __DIR__ . '/../controllers/EventController.php';
 
-require_once '../views/Sidebar.php';
-require_once '../views/Table.php';
+require_once __DIR__ . '/../views/Sidebar.php';
+require_once __DIR__ . '/../views/Table.php';
 
 // AuthController::requireAdmin();
 $controller = new ProjectController();

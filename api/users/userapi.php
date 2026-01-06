@@ -1,5 +1,5 @@
 <?php
-require_once 'UserController.php';
+require_once __DIR__ . 'UserController.php';
 $controller = new UserController();
 
 $action = $_GET['action'] ?? '';

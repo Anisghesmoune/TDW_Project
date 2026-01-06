@@ -38,7 +38,7 @@
                 <button type="submit" class="btn">Se connecter</button>
                 
                 <div class="register-link">
-                    Pas encore de compte ? <a href="register.php">S'inscrire</a>
+                    Pas encore de compte ? <a href="register_process.php">S'inscrire</a>
                 </div>
             </form>
         </div>

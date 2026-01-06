@@ -1,7 +1,7 @@
 <?php
 // session_start();
 // if (!isset($_SESSION['user_id'])) header('Location: ../login.php');
-require_once 'Sidebar.php';
+require_once __DIR__ . 'Sidebar.php';
 ?>
 <!DOCTYPE html>
 <html lang="fr">

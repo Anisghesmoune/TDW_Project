@@ -1,7 +1,7 @@
 <?php
-require_once 'config/Database.php';
-require_once 'models/News.php';
-require_once 'controllers/NewsController.php';
+require_once __DIR__ . 'config/Database.php';
+require_once __DIR__ . 'models/News.php';
+require_once __DIR__ . 'controllers/NewsController.php';
 
 session_start();
 

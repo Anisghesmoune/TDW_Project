@@ -1,6 +1,6 @@
 <?php
 
-require_once '../models/UserModel.php';
+require_once __DIR__ . '/../models/UserModel.php';
 class UserController {
     private $userModel;
     
@@ -30,7 +30,7 @@ class UserController {
         // Utiliser directement la méthode du model
         $users = $this->userModel->getAll($filters);
         
-        require_once 'views/admin/users/index.php';
+        require_once __DIR__ . 'views/admin/users/index.php';
     }
     
     /**
@@ -47,7 +47,7 @@ class UserController {
             return $this->store();
         }
         
-        require_once 'views/admin/users/create.php';
+        require_once __DIR__ . 'views/admin/users/create.php';
     }
     
     /**
@@ -110,7 +110,7 @@ $data = [
             return $this->update($id);
         }
         
-        require_once 'views/admin/users/edit.php';
+        require_once __DIR__ . 'views/admin/users/edit.php';
     }
     
     /**
@@ -357,7 +357,7 @@ $data = [
         // Utiliser directement getAllWithPublicationCount du model
         $users = $this->userModel->getAllWithPublicationCount($filters);
         
-        require_once 'views/admin/users/publications.php';
+        require_once __DIR__ . 'views/admin/users/publications.php';
     }
     
     /**

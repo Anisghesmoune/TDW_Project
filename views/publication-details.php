@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once '../models/Publications.php';
+require_once __DIR__ . '/../models/Publications.php';
 
 // 1. Récupération sécurisée de l'ID
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -33,7 +33,7 @@ if (!$pub) {
     <!-- Sidebar (Masquée à l'impression) -->
     <div class="sidebar">
         <div class="sidebar-header"><h2>📚 Détails</h2></div>
-        <?php require_once '../views/Sidebar.php'; (new Sidebar("admin"))->render(); ?>
+        <?php require_once __DIR__ . '/../views/Sidebar.php'; (new Sidebar("admin"))->render(); ?>
     </div>
 
     <div class="main-content">

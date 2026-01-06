@@ -1,27 +1,27 @@
 <?php
-session_start();
+// session_start();
 
 // Contrôleurs existants
-require_once 'UserController.php';
-require_once 'TeamController.php';
-require_once 'ProjectController.php';
-require_once 'equipementController.php';
-require_once '../models/equipementModel.php';
-require_once '../models/equipementType.php';
-require_once 'SettingsControllers.php';
+require_once __DIR__ . '/UserController.php';
+require_once __DIR__ . '/TeamController.php';
+require_once __DIR__ . '/ProjectController.php';
+require_once __DIR__ . '/equipementController.php';
+require_once __DIR__ . '/../models/equipementModel.php';
+require_once __DIR__ . '/../models/equipementType.php';
+require_once __DIR__ . '/SettingsControllers.php';
 
 
 // NOUVEAU : Réservations
-require_once '../controllers/reservationController.php';
-require_once '../models/reservationModel.php';
+require_once __DIR__ . '/../controllers/reservationController.php';
+require_once __DIR__ . '/../models/reservationModel.php';
 
 // Publications & Events
-require_once '../models/Publications.php';
-require_once '../controllers/PublicationController.php';
-require_once '../controllers/EventController.php';
-require_once '../models/Event.php';
-require_once '../controllers/EventTypeController.php';
-require_once '../models/EventType.php';
+require_once __DIR__ . '/../models/Publications.php';
+require_once __DIR__ . '/../controllers/PublicationController.php';
+require_once __DIR__ . '/../controllers/EventController.php';
+require_once __DIR__ . '/../models/Event.php';
+require_once __DIR__ . '/../controllers/EventTypeController.php';
+require_once __DIR__ . '/../models/EventType.php';
 
 // ============================================
 // FONCTIONS HELPERS ULTRA-GÉNÉRIQUES
@@ -668,7 +668,7 @@ elseif ($action==='removeEquipment') {
 elseif ($action === 'getAvailableUsersForProject' && isset($_GET['project_id'])) {
     $project_id = requireId('project_id');
     try {
-        require_once '../models/UserModel.php';
+        require_once __DIR__ . '/../models/UserModel.php';
         $userModel = new UserModel();
         $allUsers = $userModel->getAll();
         $membersData = $controllers['project']->getProjectUsers($project_id);

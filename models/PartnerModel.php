@@ -1,5 +1,5 @@
 <?php
-require_once 'Model.php';
+require_once __DIR__ . '/Model.php';
 
 class ThematicModel extends Model {
     protected $table = 'thematics';

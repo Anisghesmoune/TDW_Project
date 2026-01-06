@@ -1,7 +1,7 @@
 <?php
-require_once '../config/Database.php';
-require_once '../models/UserModel.php';
-require_once '../controllers/AuthController.php';
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../models/UserModel.php';
+require_once __DIR__ . '/../controllers/AuthController.php';
 
 AuthController::requireAdmin();
 

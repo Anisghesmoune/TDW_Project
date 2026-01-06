@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/Model.php';  
+
 class Reservation extends Model {
     protected $table = 'reservations';
     
@@ -313,28 +315,28 @@ class Reservation extends Model {
      * Auto-update statuses based on dates
      * Call this periodically (e.g., via cron job or at page load)
      */
-    public function autoUpdateStatuses() {
-        // Start reservations that should be in progress
-        $query1 = "UPDATE " . $this->table . " 
-                   SET statut = 'en_cours' 
-                   WHERE statut = 'confirmée' 
-                   AND CURDATE() >= date_debut 
-                   AND CURDATE() <= date_fin";
+    // public function autoUpdateStatuses() {
+    //     // Start reservations that should be in progress
+    //     $query1 = "UPDATE " . $this->table . " 
+    //                SET statut = 'en_cours' 
+    //                WHERE statut = 'confirmée' 
+    //                AND CURDATE() >= date_debut 
+    //                AND CURDATE() <= date_fin";
         
-        $stmt1 = $this->conn->prepare($query1);
-        $stmt1->execute();
+    //     $stmt1 = $this->conn->prepare($query1);
+    //     $stmt1->execute();
         
-        // End reservations that are past their end date
-        $query2 = "UPDATE " . $this->table . " 
-                   SET statut = 'terminée' 
-                   WHERE statut = 'en_cours' 
-                   AND CURDATE() > date_fin";
+    //     // End reservations that are past their end date
+    //     $query2 = "UPDATE " . $this->table . " 
+    //                SET statut = 'terminée' 
+    //                WHERE statut = 'en_cours' 
+    //                AND CURDATE() > date_fin";
         
-        $stmt2 = $this->conn->prepare($query2);
-        $stmt2->execute();
+    //     $stmt2 = $this->conn->prepare($query2);
+    //     $stmt2->execute();
         
-        return true;
-    }
+    //     return true;
+    // }
     
     /**
      * Get reservation statistics
@@ -462,6 +464,73 @@ public function getEquipmentOccupancyStats($startDate, $endDate) {
         $stmt->execute();
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    /**
+     * Vérifie s'il y a une réservation active MAINTENANT pour un équipement
+     */
+    public function getCurrentReservationForEquipment($equipmentId) {
+        $now = date('Y-m-d H:i:s');
+        
+        $query = "SELECT * FROM " . $this->table . " 
+                  WHERE id_equipement = :eid 
+                  AND statut IN ('confirmée', 'en_cours')
+                  AND date_debut <= :now 
+                  AND date_fin >= :now 
+                  LIMIT 1";
+                  
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':eid', $equipmentId);
+        $stmt->bindParam(':now', $now);
+        $stmt->execute();
+        
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * NOUVEAU : Méthode magique pour mettre à jour automatiquement les statuts
+     * À appeler régulièrement (ex: au chargement du dashboard ou via Cron)
+     */
+    public function autoUpdateStatuses() {
+        $now = date('Y-m-d H:i:s');
+
+        // 1. Passer les réservations "confirmée" -> "en_cours"
+        // On utilise :now1 et :now2 pour éviter l'erreur de paramètre dupliqué
+        $sqlStart = "UPDATE " . $this->table . " SET statut = 'en_cours' 
+                     WHERE statut = 'confirmée' 
+                     AND date_debut <= :now1 
+                     AND date_fin > :now2";
+                     
+        $stmtStart = $this->conn->prepare($sqlStart);
+        $stmtStart->bindValue(':now1', $now);
+        $stmtStart->bindValue(':now2', $now);
+        $stmtStart->execute();
+
+        // 2. Mettre à jour les équipements correspondants -> "réserve"
+        // (Attention à bien utiliser le nom exact de votre table équipements, ici 'equipment' ou 'equipements')
+        $sqlEquipReserved = "UPDATE equipment e 
+                             JOIN reservations r ON e.id = r.id_equipement
+                             SET e.etat = 'réserve'
+                             WHERE r.statut = 'en_cours'";
+        $this->conn->query($sqlEquipReserved);
+
+        // 3. Passer les réservations "en_cours" -> "terminée"
+        $sqlEnd = "UPDATE " . $this->table . " SET statut = 'terminée' 
+                   WHERE statut = 'en_cours' AND date_fin <= :now";
+        
+        $stmtEnd = $this->conn->prepare($sqlEnd);
+        $stmtEnd->bindValue(':now', $now);
+        $stmtEnd->execute();
+
+        // 4. Libérer les équipements qui n'ont plus de réservation active
+        $sqlFree = "UPDATE equipment e 
+                    SET e.etat = 'libre' 
+                    WHERE e.etat = 'réserve' 
+                    AND NOT EXISTS (
+                        SELECT 1 FROM reservations r 
+                        WHERE r.id_equipement = e.id 
+                        AND r.statut = 'en_cours'
+                    )";
+        $this->conn->query($sqlFree);
     }
 }
 ?>

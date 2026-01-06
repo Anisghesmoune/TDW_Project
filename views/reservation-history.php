@@ -8,7 +8,7 @@
 //     exit;
 // }
 
-require_once '../views/Sidebar.php';
+require_once __DIR__ . '/../views/Sidebar.php';
 ?>
 <!DOCTYPE html>
 <html lang="fr">

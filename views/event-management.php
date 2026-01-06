@@ -3,7 +3,7 @@
 session_start();
 // Vérification session (décommentez si nécessaire)
 // if (!isset($_SESSION['user_id'])) header('Location: ../login.php');
-require_once '../views/Sidebar.php';
+require_once __DIR__ . '/../views/Sidebar.php';
 ?>
 <!DOCTYPE html>
 <html lang="fr">

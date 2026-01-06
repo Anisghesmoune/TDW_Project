@@ -1,5 +1,5 @@
 <?php
-require_once 'Model.php';  
+require_once __DIR__ . '/Model.php';  
 
 
 class Project extends Model {
@@ -502,7 +502,150 @@ public function getRecentProjects($days = 30) {
     $stmt->execute();
     return $stmt->fetch(PDO::FETCH_ASSOC);
 }
+public function getAllThematics() {
+        // Vérifiez que la table s'appelle bien 'thematiques' ou 'thematics'
+        try {
+            $stmt = $this->conn->query("SELECT * FROM thematiques ORDER BY nom");
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            return []; // Retourne vide si la table n'existe pas encore
+        }
+    }
+     public function getPublicProjects($filters = []) {
+        $params = [];
+        $conditions = ["1=1"]; // Condition de base toujours vraie
 
+        // --- FILTRES ---
+        
+        // 1. Statut (Enum: en_cours, termine, soumis)
+        if (!empty($filters['statut'])) {
+            $conditions[] = "p.statut = :statut";
+            $params[':statut'] = $filters['statut'];
+        }
+
+        // 2. Responsable
+        if (!empty($filters['responsable'])) {
+            $conditions[] = "p.responsable_id = :resp";
+            $params[':resp'] = $filters['responsable'];
+        }
+
+        // 3. Recherche (Titre ou Description)
+        if (!empty($filters['search'])) {
+            $conditions[] = "(p.titre LIKE :q OR p.description LIKE :q)";
+            $params[':q'] = '%' . $filters['search'] . '%';
+        }
+
+        // 4. Thématique (Via table de liaison project_thematique)
+        // Assurez-vous d'avoir la table 'thematiques' et 'project_thematique'
+        if (!empty($filters['thematique'])) {
+            $conditions[] = "p.id IN (SELECT project_id FROM project_thematique WHERE thematic_id = :them)";
+            $params[':them'] = $filters['thematique'];
+        }
+
+        $whereClause = implode(' AND ', $conditions);
+
+        // --- REQUÊTE ---
+        // On utilise des sous-requêtes pour le comptage et le group_concat pour éviter les doublons de lignes
+        $query = "SELECT 
+                    p.*,
+                    CONCAT(u.nom, ' ', u.prenom) as responsable_nom,
+                    u.photo_profil as responsable_photo,
+                    
+                    -- Compter les membres associés au projet
+                    (SELECT COUNT(*) FROM user_project up WHERE up.project_id = p.id) as nb_membres,
+                    
+                    -- Récupérer les noms des thématiques séparés par des virgules
+                    (
+                        SELECT GROUP_CONCAT(t.nom SEPARATOR ', ') 
+                        FROM thematiques t 
+                        JOIN project_thematique pt ON t.id = pt.thematic_id 
+                        WHERE pt.project_id = p.id
+                    ) as thematiques_list
+                    
+                  FROM {$this->table} p
+                  LEFT JOIN users u ON p.responsable_id = u.id
+                  WHERE $whereClause
+                  ORDER BY p.date_creation DESC";
+
+        $stmt = $this->conn->prepare($query);
+        foreach ($params as $key => $val) {
+            $stmt->bindValue($key, $val);
+        }
+        $stmt->execute();
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+     public function getProjectDetails($id) {
+        $query = "SELECT 
+                    p.*,
+                    CONCAT(u.nom, ' ', u.prenom) as responsable_nom,
+                    u.photo_profil as responsable_photo,
+                    u.email as responsable_email,
+                    u.grade as responsable_grade
+                  FROM projects p
+                  LEFT JOIN users u ON p.responsable_id = u.id
+                  WHERE p.id = :id";
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+        
+        // On récupère aussi les thématiques
+        $project = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($project) {
+            // Récupération des thématiques
+            $stmtThemes = $this->conn->prepare("
+                SELECT t.nom 
+                FROM thematiques t
+                JOIN project_thematique pt ON t.id = pt.thematic_id
+                WHERE pt.project_id = :pid
+            ");
+            $stmtThemes->bindParam(':pid', $id);
+            $stmtThemes->execute();
+            $project['thematiques'] = $stmtThemes->fetchAll(PDO::FETCH_COLUMN);
+        }
+        
+        return $project;
+    }
+
+    /**
+     * Récupérer les membres d'un projet (via user_project)
+     */
+   public function getProjectMembers($id) {
+        // CONCAT permet de fusionner nom et prénom en une seule chaine 'membre_nom'
+        $query = "SELECT 
+                    u.id, 
+                    CONCAT(u.nom, ' ', u.prenom) as membre_nom, 
+                    u.photo_profil, 
+                    u.grade,  
+                    up.role as role_projet
+                  FROM users u
+                  JOIN user_project up ON u.id = up.user_id
+                  WHERE up.project_id = :id
+                  ORDER BY u.nom ASC"; 
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Récupérer les publications associées (via project_publication)
+     */
+    public function getProjectPublications($id) {
+        $query = "SELECT pub.* 
+                  FROM publications pub
+                  JOIN project_publication pp ON pub.id = pp.publication_id
+                  WHERE pp.project_id = :id
+                  ORDER BY pub.date_publication DESC";
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 
 
 }

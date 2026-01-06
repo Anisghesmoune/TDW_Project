@@ -1,5 +1,5 @@
 <?php
-require_once '../models/Settings.php';
+require_once __DIR__ . '/../models/Settings.php';
 
 class Sidebar {
 

@@ -1,13 +1,26 @@
 <?php
-require_once '../models/ProjectModel.php';
+require_once __DIR__ . '/../models/ProjectModel.php';
+require_once __DIR__ .  '/../models/Menu.php';
+require_once __DIR__ . '/../models/Settings.php';
+require_once __DIR__ . '/../models/UserModel.php';
+require_once __DIR__ . '/../views/public/ProjectView.php';
+
+
+
 
 class ProjectController {
     private $project;
     private $errors = [];
     private $successMessage = '';
+    private $userModel;
+    private $settingsModel;
+    private $menuModel;
 
     public function __construct() {
         $this->project = new Project();
+        $this->userModel = new UserModel();
+        $this->settingsModel = new Settings();
+        $this->menuModel = new Menu();
     }
 
     /**
@@ -60,22 +73,61 @@ class ProjectController {
     /**
      * Afficher tous les projets
      */
-    public function index() {
-        try {
-            $projects = $this->project->getAll();
-            return [
-                'success' => true,
-                'data' => $projects,
-                'message' => count($projects) . ' projet(s) trouvé(s).'
-            ];
-        } catch (Exception $e) {
-            $this->errors[] = "Erreur lors de la récupération des projets: " . $e->getMessage();
-            return [
-                'success' => false,
-                'errors' => $this->errors
-            ];
-        }
+   public function index() {
+    try {
+
+        // 1. Récupération des filtres
+        $filters = [
+             'search' => isset($_GET['search']) ? trim($_GET['search']) : null,
+            'statut' => isset($_GET['statut']) ? trim($_GET['statut']) : null,
+            
+            'thematique' => !empty($_GET['thematique']) ? $_GET['thematique'] : null,
+            'responsable' => !empty($_GET['responsable']) ? $_GET['responsable'] : null
+        ];
+
+        // 2. Récupération des projets filtrés
+        $projects = $this->project->getPublicProjects($filters);
+
+        // 3. Données pour les filtres
+        $thematics = $this->project->getAllThematics();
+        $leaders   = $this->userModel->getAll();
+
+        // 4. Configuration globale
+        $config = $this->settingsModel->getAllSettings();
+        $menu   = $this->menuModel->getMenuTree();
+
+        // 5. Préparation des données pour la vue
+        $data = [
+            'projects' => $projects,
+            'filters_data' => [
+                'thematics' => $thematics,
+                'leaders' => $leaders
+            ],
+            'active_filters' => $filters,
+            'config' => $config,
+            'menu' => $menu
+        ];
+
+        // 6. Rendu de la vue
+        $view = new ProjectsView($data);
+        $view->render();
+
+        // 7. Retour optionnel (si API ou besoin logique)
+        return [
+            'success' => true,
+            'data' => $projects,
+            'message' => count($projects) . ' projet(s) trouvé(s).'
+        ];
+
+    } catch (Exception $e) {
+        $this->errors[] = "Erreur lors de la récupération des projets: " . $e->getMessage();
+
+        return [
+            'success' => false,
+            'errors' => $this->errors
+        ];
     }
+}
 
     /**
      * Afficher tous les projets avec leurs utilisateurs
@@ -739,7 +791,7 @@ class ProjectController {
 }
 
 public function generatePDF($filterType, $filterValue = null) {
-    require_once '../libs/PDFReport.php';
+    require_once __DIR__ . '/../libs/PDFReport.php';
     
     // 1. Get data
     $data = $this->getProjectsForReport($filterType, $filterValue);
@@ -781,4 +833,37 @@ public function generatePDF($filterType, $filterValue = null) {
     $pdf->Output('D', $filename);
     exit;
 }
+ public function details($id) {
+        if (!$id) {
+            header('Location: projects.php'); // Redirection si pas d'ID
+            exit;
+        }
+
+        // 1. Récupération des données
+        $project = $this->project->getProjectDetails($id);
+        
+        if (!$project) {
+            die("Projet introuvable.");
+        }
+
+        $members = $this->project->getProjectMembers($id);
+        $publications = $this->project->getProjectPublications($id);
+        
+        // 2. Config globale (Header/Footer)
+        $config = $this->settingsModel->getAllSettings();
+        $menu = $this->menuModel->getMenuTree();
+
+        // 3. Envoi à la vue (Note: on ne crée pas de classe View spécifique pour aller plus vite, on include direct)
+        // Mais on prépare les données
+        $data = [
+            'project' => $project,
+            'members' => $members,
+            'publications' => $publications,
+            'config' => $config,
+            'menu' => $menu
+        ];
+
+        // On inclut directement le fichier de vue
+        require_once __DIR__ . '/../views/public/project-detailsView.php';
+    }
 }

@@ -1,8 +1,8 @@
 <?php
-require_once 'config/Database.php';
-require_once 'models/OrganigrammeModel.php';
-require_once 'models/UserModel.php';
-require_once 'controllers/OrganigrammeController.php';
+require_once __DIR__ . 'config/Database.php';
+require_once __DIR__ . 'models/OrganigrammeModel.php';
+require_once __DIR__ . 'models/UserModel.php';
+require_once __DIR__ . 'controllers/OrganigrammeController.php';
 
 session_start();
 

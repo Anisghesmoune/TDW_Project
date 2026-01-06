@@ -1,5 +1,5 @@
 <?php
-require_once '../models/Event.php';
+require_once __DIR__ . '/../models/Event.php';
 
 class EventController {
     private $eventModel;
@@ -169,7 +169,7 @@ public function getALL(){
     public function getByType($id_type) {
         try {
             $events = $this->eventModel->getByType($id_type);
-            require_once __DIR__ . '/../views/events/list.php';
+            require_once __DIR__ . __DIR__ . '/../views/events/list.php';
         } catch (Exception $e) {
             $this->handleError($e->getMessage());
         }
@@ -181,7 +181,7 @@ public function getALL(){
     public function getByStatut($statut) {
         try {
             $events = $this->eventModel->getByStatut($statut);
-            require_once __DIR__ . '/../views/events/list.php';
+            require_once __DIR__ . __DIR__ . '/../views/events/list.php';
         } catch (Exception $e) {
             $this->handleError($e->getMessage());
         }
@@ -259,7 +259,7 @@ public function getALL(){
                 'top_capacity' => $this->eventModel->getTopEventsByCapacity(5)
             ];
             
-            require_once __DIR__ . '/../views/events/statistics.php';
+            require_once __DIR__ . __DIR__ . '/../views/events/statistics.php';
         } catch (Exception $e) {
             $this->handleError($e->getMessage());
         }
@@ -300,7 +300,7 @@ public function getALL(){
             $total = $this->eventModel->count();
             $totalPages = ceil($total / $perPage);
             
-            require_once __DIR__ . '/../views/events/paginate.php';
+            require_once __DIR__ . __DIR__ . '/../views/events/paginate.php';
         } catch (Exception $e) {
             $this->handleError($e->getMessage());
         }

@@ -1,5 +1,5 @@
 <?php
-require_once 'Model.php';
+require_once __DIR__ . '/Model.php';
 
 // ============================================================
 // MODEL AMÉLIORÉ : TeamsModel.php
@@ -458,6 +458,27 @@ public function unassignEquipment($team_id, $equipment_id) {
         $stmt->bindParam(':team_id', $team_id);
         $stmt->execute();
         
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    public function getTeamLeader($teamId) {
+        $sql = "SELECT u.* 
+                FROM users u
+                JOIN user_team ut ON u.id = ut.user_id
+                WHERE ut.team_id = :tid AND ut.role = 'chef'
+                LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':tid', $teamId);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+     public function getAllMembersFlat() {
+        $sql = "SELECT u.*, t.nom as team_name, ut.role as team_role 
+                FROM users u
+                LEFT JOIN user_team ut ON u.id = ut.user_id
+                LEFT JOIN teams t ON ut.team_id = t.id
+                WHERE u.role != 'admin'
+                ORDER BY u.nom";
+        $stmt = $this->conn->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
