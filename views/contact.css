@@ -1,0 +1,115 @@
+/* ===== STYLES POUR LA SECTION COORDONNÉES ===== */
+
+.coordonnees-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 3rem 1rem;
+    border-radius: 15px;
+    margin: 2rem auto;
+    max-width: 1200px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.coordonnees-section h1 {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    font-size: 2.5rem;
+    font-weight: 700;
+    position: relative;
+    padding-bottom: 1rem;
+}
+
+.coordonnees-section h1::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 4px;
+    background: white;
+    border-radius: 2px;
+}
+
+.coordonnees-content {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.coordonnees-content strong {
+    color: #ffd700;
+    font-weight: 600;
+}
+
+.coordonnees-content a {
+    color: white;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.coordonnees-content a:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.coordonnees-content ul {
+    list-style: none;
+    padding: 0;
+}
+
+.coordonnees-content ul li {
+    margin-bottom: 1.5rem;
+    padding-left: 2rem;
+    position: relative;
+}
+
+.coordonnees-content ul li::before {
+    content: '📍';
+    position: absolute;
+    left: 0;
+    top: 0.2rem;
+}
+
+/* Responsive pour mobile */
+@media (max-width: 768px) {
+    .coordonnees-section {
+        padding: 2rem 1rem;
+        margin: 1rem;
+    }
+    
+    .coordonnees-section h1 {
+        font-size: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .coordonnees-content {
+        font-size: 1rem;
+    }
+    
+    .coordonnees-content ul li {
+        padding-left: 1.5rem;
+    }
+}
+
+/* Animation d'apparition */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.coordonnees-section {
+    animation: fadeInUp 0.6s ease-out;
+}

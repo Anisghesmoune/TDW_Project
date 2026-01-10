@@ -1,54 +1,81 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// Imports des dépendances
+require_once __DIR__ . '/../../views/public/View.php';
+require_once __DIR__ . '/../../views/public/components/UIHeader.php';
+require_once __DIR__ . '/../../views/public/components/UIFooter.php';
 
-// 1. Sécurité : Vérifier connexion
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../../login.php');
-    exit;
-}
-echo($_SESSION['user_id']);
-// 2. Importations
-require_once __DIR__ . '/../../views/Sidebar.php';
-require_once __DIR__ . '/../../models/UserModel.php'; // Nécessaire pour charger les données
+class ProfileView extends View {
 
-// 3. Chargement des données de l'utilisateur
-$userModel = new UserModel();
-$user = $userModel->getById($_SESSION['user_id']);
+    /**
+     * Méthode principale pour structurer la page
+     */
+    public function render() {
+        // Récupération des données de configuration et de menu
+        $config = $this->data['config'] ?? [];
+        $menuData = $this->data['menu'] ?? [];
+        $pageTitle = 'Mon Profil - ' . ($this->data['user']['prenom'] ?? 'Utilisateur');
 
-if (!$user) {
-    die("Erreur : Impossible de charger les informations du profil.");
-}
-?>
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Mon Profil</title>
-    <link rel="stylesheet" href="../admin_dashboard.css">
-    <link rel="stylesheet" href="../landingPage.css">
-    <link rel="stylesheet" href="../../assets/css/profile.css">
-    <link rel="stylesheet" href="../../assets/css/public.css">
-    
-    <style>
-        .profile-container { display: flex; gap: 30px; }
-        .profile-card { flex: 1; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .avatar-preview { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 5px solid #f8f9fa; display: block; margin: 0 auto 20px; }
-        .error-text { color: #e74a3b; font-size: 0.85em; margin-top: 5px; display: none; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    </style>
-</head>
-<body>
-    <div class="sidebar">
-        <div class="sidebar-header"><h2>👤 Mon Profil</h2></div>
-        <?php (new Sidebar($_SESSION['role']))->render(); ?>
-    </div>
+        // CSS spécifiques
+        $customCss = [
+            'views/admin_dashboard.css',
+            'views/landingPage.css',
+            'assets/css/profile.css',
+            'assets/css/public.css'
+        ];
 
-    <div class="main-content">
-        <div class="top-bar">
-            <h1>Modifier mon profil</h1>
-            <a href="../../logout.php" class="logout-btn">Déconnexion</a>
+        // 1. Header
+        $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
+        echo $header->render();
+
+        // 2. Contenu
+        echo '<main class="main-content" style="margin-left: 0; width: 100%; padding: 40px; box-sizing: border-box; background-color: #f8f9fc;">';
+        echo $this->content();
+        echo '</main>';
+
+        // 3. Footer
+        $footer = new UIFooter($config, $menuData);
+        echo $footer->render();
+    }
+
+    /**
+     * Contenu spécifique du Profil
+     */
+    protected function content() {
+        // Extraction sécurisée des données
+        $user = $this->data['user'] ?? [];
+        
+        // Sécurisation affichage image
+        $userPhoto = !empty($user['photo_profil']) ? $user['photo_profil'] : 'assets/img/default-avatar.png';
+        // Correction chemin si nécessaire (selon votre structure de dossiers)
+        // Si l'image est stockée comme "assets/...", on s'assure qu'elle est accessible depuis la racine
+        if (strpos($userPhoto, 'http') === false && strpos($userPhoto, '/') !== 0) {
+             // Ajustez ce préfixe si nécessaire selon où se trouve index.php
+             // $userPhoto = $userPhoto; 
+        }
+
+        ob_start();
+        ?>
+
+        <style>
+            .profile-container { display: flex; gap: 30px; max-width: 900px; margin: 0 auto; }
+            .profile-card { flex: 1; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+            .avatar-preview { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 5px solid #f8f9fa; display: block; margin: 0 auto 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .error-text { color: #e74a3b; font-size: 0.85em; margin-top: 5px; display: none; }
+            .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            .form-group { margin-bottom: 20px; }
+            .form-control { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem; box-sizing: border-box; transition: border-color 0.3s; }
+            .form-control:focus { border-color: #4e73df; outline: none; }
+            label { display: block; margin-bottom: 8px; color: #4b5563; font-weight: 500; }
+            
+            @media (max-width: 768px) {
+                .form-row { grid-template-columns: 1fr; }
+                .profile-container { padding: 0 10px; }
+            }
+        </style>
+
+        <div class="top-bar-user" style="max-width: 900px; margin: 0 auto 30px auto; display: flex; justify-content: space-between; align-items: center; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <h1 style="margin:0; font-size:1.5em; color: #2e384d;">✏️ Modifier mon profil</h1>
+            <a href="index.php?route=logout" class="btn btn-danger" style="text-decoration:none; padding:10px 20px; border-radius:5px; background:#e74a3b; color: white; border: none;">Déconnexion</a>
         </div>
 
         <div class="profile-container">
@@ -56,23 +83,29 @@ if (!$user) {
                 <form id="profileForm" enctype="multipart/form-data">
                     
                     <!-- PHOTO DE PROFIL -->
-                    <div style="text-align:center;">
-                        <img src="../../<?= !empty($user['photo_profil']) ? $user['photo_profil'] : 'assets/img/default-avatar.png' ?>" class="avatar-preview" id="previewImg">
+                    <div style="text-align:center; margin-bottom: 30px;">
+                        <div style="position: relative; width: 150px; margin: 0 auto;">
+                            <img src="<?= htmlspecialchars($userPhoto) ?>" class="avatar-preview" id="previewImg" alt="Avatar">
+                            <button type="button" onclick="document.getElementById('photoInput').click()" 
+                                    style="position: absolute; bottom: 10px; right: 0; background: #4e73df; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                                📷
+                            </button>
+                        </div>
                         <input type="file" name="photo" id="photoInput" accept="image/*" style="display:none;" onchange="previewFile()">
-                        <button type="button" onclick="document.getElementById('photoInput').click()" class="btn-secondary" style="margin-bottom:20px;">📷 Changer la photo</button>
+                        <p style="color: #888; font-size: 0.9em; margin-top: 10px;">Cliquez sur l'icône caméra pour changer</p>
                     </div>
 
                     <!-- INFOS PRINCIPALES -->
                     <div class="form-group">
                         <label>Nom & Prénom</label>
-                        <input type="text" value="<?= htmlspecialchars($user['nom'] . ' ' . $user['prenom']) ?>" class="form-control" disabled style="background:#f0f0f0; cursor:not-allowed;">
-                        <small>Contactez l'admin pour changer votre nom.</small>
+                        <input type="text" value="<?= htmlspecialchars(($user['nom'] ?? '') . ' ' . ($user['prenom'] ?? '')) ?>" class="form-control" disabled style="background:#f0f0f0; cursor:not-allowed; color: #666;">
+                        <small style="color: #888;">Contactez l'administrateur pour modifier ces informations.</small>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Email</label>
-                            <input type="email" name="email" value="<?= htmlspecialchars($user['email']) ?>" class="form-control" required>
+                            <label>Email <span style="color:red">*</span></label>
+                            <input type="email" name="email" value="<?= htmlspecialchars($user['email'] ?? '') ?>" class="form-control" required>
                         </div>
 
                         <div class="form-group">
@@ -83,97 +116,117 @@ if (!$user) {
 
                     <div class="form-group">
                         <label>Domaine de Recherche / Spécialité</label>
-                        <input type="text" name="domaine_recherche" value="<?= htmlspecialchars($user['domaine_recherche'] ?? '') ?>" class="form-control">
+                        <input type="text" name="domaine_recherche" value="<?= htmlspecialchars($user['domaine_recherche'] ?? '') ?>" class="form-control" placeholder="Ex: Intelligence Artificielle, Biologie...">
                     </div>
 
                     <div class="form-group">
                         <label>Biographie</label>
-                        <textarea name="bio" rows="4" class="form-control"><?= htmlspecialchars($user['bio'] ?? '') ?></textarea>
+                        <textarea name="bio" rows="4" class="form-control" placeholder="Quelques mots à propos de vous..."><?= htmlspecialchars($user['bio'] ?? '') ?></textarea>
                     </div>
 
-                    <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+                    <hr style="margin:30px 0; border:0; border-top:1px solid #eee;">
 
                     <!-- CHANGEMENT DE MOT DE PASSE -->
-                    <h3 style="font-size:1.1em; margin-bottom:15px; color:#4e73df;">Sécurité</h3>
+                    <h3 style="font-size:1.2em; margin-bottom:20px; color:#4e73df; display:flex; align-items:center;">
+                        <i class="fas fa-lock" style="margin-right:10px;"></i> Sécurité
+                    </h3>
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Nouveau mot de passe <small>(Laisser vide si inchangé)</small></label>
-                            <input type="password" name="password" id="password" class="form-control" placeholder="••••••">
+                            <label>Nouveau mot de passe <small style="font-weight:normal; color:#888;">(Laisser vide si inchangé)</small></label>
+                            <input type="password" name="password" id="password" class="form-control" placeholder="••••••" autocomplete="new-password">
                         </div>
 
                         <div class="form-group">
                             <label>Confirmer le mot de passe</label>
-                            <input type="password" id="password_confirm" class="form-control" placeholder="••••••">
-                            <span id="passError" class="error-text">Les mots de passe ne correspondent pas.</span>
+                            <input type="password" id="password_confirm" class="form-control" placeholder="••••••" autocomplete="new-password">
+                            <span id="passError" class="error-text">❌ Les mots de passe ne correspondent pas.</span>
                         </div>
                     </div>
 
-                    <button type="button" onclick="saveProfile()" class="btn-primary" style="width:100%; padding:15px; font-size:1.1em;">💾 Enregistrer les modifications</button>
+                    <button type="button" onclick="saveProfile()" class="btn btn-primary" style="width:100%; padding:15px; font-size:1.1em; margin-top: 10px; background-color: #4e73df; color: white; border: none; border-radius: 5px; cursor: pointer; transition: background 0.3s;">
+                        💾 Enregistrer les modifications
+                    </button>
                 </form>
             </div>
         </div>
-    </div>
 
-    <script>
-        // Prévisualisation photo
-        function previewFile() {
-            const preview = document.getElementById('previewImg');
-            const file = document.getElementById('photoInput').files[0];
-            const reader = new FileReader();
-            reader.onloadend = function () { preview.src = reader.result; }
-            if (file) reader.readAsDataURL(file);
-        }
-
-        // Sauvegarde
-        async function saveProfile() {
-            const form = document.getElementById('profileForm');
-            const pass1 = document.getElementById('password').value;
-            const pass2 = document.getElementById('password_confirm').value;
-            const errorSpan = document.getElementById('passError');
-
-            // 1. Validation Mot de passe côté client
-            if (pass1 !== "" || pass2 !== "") {
-                if (pass1 !== pass2) {
-                    errorSpan.style.display = 'block';
-                    document.getElementById('password_confirm').style.borderColor = '#e74a3b';
-                    alert("❌ Les mots de passe ne correspondent pas !");
-                    return; // On arrête tout ici
-                } else {
-                    errorSpan.style.display = 'none';
-                    document.getElementById('password_confirm').style.borderColor = '#ddd';
-                }
+        <script>
+            // Prévisualisation photo
+            function previewFile() {
+                const preview = document.getElementById('previewImg');
+                const file = document.getElementById('photoInput').files[0];
+                const reader = new FileReader();
+                reader.onloadend = function () { preview.src = reader.result; }
+                if (file) reader.readAsDataURL(file);
             }
 
-            const formData = new FormData(form);
+            // Sauvegarde AJAX
+            async function saveProfile() {
+                const form = document.getElementById('profileForm');
+                const pass1 = document.getElementById('password').value;
+                const pass2 = document.getElementById('password_confirm').value;
+                const errorSpan = document.getElementById('passError');
 
-            // Désactivation bouton
-            const btn = document.querySelector('.btn-primary');
-            const originalText = btn.innerText;
-            btn.disabled = true;
-            btn.innerText = "⏳ Enregistrement...";
-
-            try {
-                const res = await fetch('../../controllers/api.php?action=updateProfile', {
-                    method: 'POST',
-                    body: formData
-                });
-                const json = await res.json();
-                
-                if(json.success) {
-                    alert('✅ Profil mis à jour avec succès !');
-                    location.reload();
-                } else {
-                    alert('❌ Erreur : ' + json.message);
+                // 1. Validation Mot de passe côté client
+                if (pass1 !== "" || pass2 !== "") {
+                    if (pass1 !== pass2) {
+                        errorSpan.style.display = 'block';
+                        document.getElementById('password_confirm').style.borderColor = '#e74a3b';
+                        alert("❌ Les mots de passe ne correspondent pas !");
+                        return; 
+                    } else {
+                        errorSpan.style.display = 'none';
+                        document.getElementById('password_confirm').style.borderColor = '#ddd';
+                    }
                 }
-            } catch(e) {
-                console.error(e);
-                alert('Erreur serveur');
-            } finally {
-                btn.disabled = false;
-                btn.innerText = originalText;
+
+                const formData = new FormData(form);
+
+                // UI Feedback
+                const btn = document.querySelector('.btn-primary');
+                const originalText = btn.innerText;
+                btn.disabled = true;
+                btn.innerText = "⏳ Enregistrement en cours...";
+                btn.style.opacity = "0.7";
+
+                try {
+                    // Ajustez le chemin vers votre contrôleur API si nécessaire
+                    const response = await fetch('../../controllers/api.php?action=updateProfile', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    // Vérification si la réponse est bien du JSON
+                    const contentType = response.headers.get("content-type");
+                    if (!contentType || !contentType.includes("application/json")) {
+                        throw new Error("Réponse serveur invalide (pas de JSON)");
+                    }
+
+                    const json = await response.json();
+                    
+                    if(json.success) {
+                        // Petit délai pour l'UX
+                        setTimeout(() => {
+                            alert('✅ Profil mis à jour avec succès !');
+                            location.reload();
+                        }, 500);
+                    } else {
+                        alert('❌ Erreur : ' + (json.message || "Erreur inconnue"));
+                    }
+                } catch(e) {
+                    console.error("Erreur Fetch:", e);
+                    alert('❌ Erreur de communication avec le serveur. Vérifiez la console.');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                    btn.style.opacity = "1";
+                }
             }
-        }
-    </script>
-</body>
-</html>
+        </script>
+
+        <?php
+        return ob_get_clean();
+    }
+}
+?>

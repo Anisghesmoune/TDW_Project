@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__."/Model.php";
 class Event extends Model {
     public $id;
     public $titre;

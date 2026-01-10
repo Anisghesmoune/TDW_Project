@@ -241,15 +241,22 @@ elseif ($action === 'updateUser' && $id) {
 // ============================================
 
 elseif ($action === 'createTeam') {
-    $controllers['team']->create();
+    executeController(function() use ($controllers) {
+        return $controllers['team']->create();
+    });
 } 
 elseif ($action === 'updateTeam' && $teamid) {
-    $controllers['team']->edit($teamid);
+    executeController(function() use ($controllers, $teamid) {
+        return $controllers['team']->edit($teamid);
+    });             
 } 
 elseif ($action === 'deleteTeam' && $teamid) {
-    $controllers['team']->delete($teamid);
+    executeController(function() use ($controllers, $teamid) {
+    return $controllers['team']->delete($teamid);
+    });
 } 
-elseif ($action === 'addMember' && $teamid) {
+elseif ($action === 'addMember') {
+    $teamid=requireId('teamid');
     executeController(function() use ($controllers, $teamid) {
         $user_id = requireId('user_id');
         return $controllers['team']->addMember($teamid, $user_id);
@@ -479,8 +486,7 @@ elseif ($action === 'getEquipmentTypes') {
 // ============================================
 
 elseif ($action === 'createReservation') {
-    requireAuth();
-    // Le contrôleur lit le JSON Input
+    // requireAuth();
     executeController(fn() => $controllers['reservation']->store());
 }
 elseif ($action === 'cancelReservation' && $id) {
@@ -514,6 +520,13 @@ elseif ($action === 'getReservationStats') {
 }
 elseif ($action === 'getAllReservations') {
     executeController(fn() => $controllers['reservation']->list());
+}elseif ($action === 'getConflictReservations') {
+    // Appel à la nouvelle méthode
+    executeController(fn() => $controllers['reservation']->getConflictReservations());
+}
+elseif ($action === 'resolveConflict') {
+    // Pour l'action "Accepter/Rejeter"
+    executeController(fn() => $controllers['reservation']->resolveConflict());
 }
 
 // ============================================
@@ -714,6 +727,18 @@ elseif ($action === 'restoreBackup') {
 }elseif ($action === 'updateProfile') {
     requireAuth(); // Vérifie juste si connecté
     executeController(fn() => $memberController->apiUpdateProfile($_POST, $_FILES));
+}// 5. Récupérer la liste des menus (JSON pour le tableau JS)
+elseif ($action === 'getMenu') {
+    // Accessible à tous ou admin seulement selon votre besoin. 
+    // Ici on laisse ouvert pour que le Sidebar puisse aussi l'utiliser si besoin.
+    executeController(fn() => $controllers['settings']->apiGetMenu());
+}
+
+// 6. Mettre à jour le menu (Sauvegarde du tableau JS)
+elseif ($action === 'updateMenu') {
+    // requireAdmin();
+    // Note : Les données JSON sont lues via php://input dans le contrôleur
+    executeController(fn() => $controllers['settings']->apiUpdateMenu());
 }
 
 // ============================================

@@ -1,18 +1,31 @@
 <?php
 
 require_once __DIR__ .  '/../models/Publications.php';
+
+// Imports des modèles
+require_once __DIR__ . '/../models/UserModel.php';
+// Ajout des modèles pour le Header/Footer
+require_once __DIR__ . '/../models/Settings.php';
+require_once __DIR__ . '/../models/Menu.php';
+
 class PublicationController {
+    
     private $publicationModel;
-    
+    private $userModel;
+    private $settingsModel;
+    private $menuModel;
+
     public function __construct() {
+        // Instanciation des modèles
         $this->publicationModel = new Publication();
+        $this->userModel = new UserModel();
+        $this->settingsModel = new Settings();
+        $this->menuModel = new Menu();
     }
-    
-    /**
-     * Afficher la liste de toutes les publications (avec filtres et pagination)
-     */
+
     public function index() {
-        // Récupérer les paramètres de filtrage et pagination
+       
+        // 2. Logique de filtrage (Votre code)
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $perPage = 10;
         
@@ -26,7 +39,7 @@ class PublicationController {
         // Supprimer les filtres vides
         $filters = array_filter($filters);
         
-        // Récupérer les publications avec filtres
+        // Récupérer les publications avec filtres (Côté Serveur)
         $publications = $this->publicationModel->getFiltered($page, $perPage, $filters);
         $totalPublications = $this->publicationModel->countFiltered($filters);
         $totalPages = ceil($totalPublications / $perPage);
@@ -34,15 +47,33 @@ class PublicationController {
         // Récupérer les statistiques pour les filtres
         $statsByType = $this->publicationModel->getStatsByType();
         $statsByDomain = $this->publicationModel->getStatsByDomain();
-         $isAdmin = false; 
-
-       
-
         
-    
-require_once __DIR__ .  '/../views/public/PublicationView.php';
+        // Vérification Admin
+        $isAdmin = isset($_SESSION['isAdmin']) ;
+         $user = $this->userModel->getById($_SESSION['user_id']);
+        // 3. Récupération des données globales pour Header/Footer
+        $config = $this->settingsModel->getAllSettings();
+        $menu = $this->menuModel->getMenuTree();
+
+        // 4. Préparation des données pour la vue
+        $data = [
+            'title' => 'Gestion des Publications',
+            'isAdmin' => $isAdmin,
+            'config' => $config,
+            'menu' => $menu,
+            // On passe aussi les données PHP même si le JS va probablement les recharger via API
+            'publications' => $publications,
+            'totalPages' => $totalPages,
+            'currentPage' => $page,
+            'currentUser'=> $user,
+        ];
+
+        // 5. Chargement de la Vue Classe
+        require_once __DIR__ . '/../views/public/PublicationView.php';
+        $view = new PublicationView($data);
+        $view->render();
     }
-    
+
     /**
      * Afficher une publication spécifique
      */
@@ -117,12 +148,12 @@ require_once __DIR__ .  '/../views/public/PublicationView.php';
         
         if ($this->publicationModel->create()) {
             $_SESSION['success'] = "Publication soumise avec succès. Elle sera validée par un administrateur.";
-            header('Location: /publications');
+            
             exit;
         } else {
             $_SESSION['error'] = "Erreur lors de la création de la publication.";
             $_SESSION['old'] = $_POST;
-            header('Location: /publications/create');
+           
             exit;
         }
     }
@@ -523,61 +554,54 @@ public function apiGetPublicationById($id) {
 /**
  * API: Créer une nouvelle publication
  */
-public function apiCreatePublication($postData, $filesData) {
-    // Validation des données
-    $errors = [];
-    
-    if (empty($postData['titre'])) {
-        $errors[] = 'Le titre est obligatoire';
-    } elseif (strlen($postData['titre']) > 255) {
-        $errors[] = 'Le titre ne peut pas dépasser 255 caractères';
-    }
-    
-    $typesValides = ['article', 'rapport', 'these', 'communication'];
-    if (empty($postData['type'])) {
-        $errors[] = 'Le type est obligatoire';
-    } elseif (!in_array($postData['type'], $typesValides)) {
-        $errors[] = 'Type invalide';
-    }
-    
-    if (!empty($postData['date_publication'])) {
-        $date = DateTime::createFromFormat('Y-m-d', $postData['date_publication']);
-        if (!$date) {
-            $errors[] = 'Format de date invalide';
+/**
+     * API : Créer une publication
+     */
+    public function apiCreatePublication($postData, $filesData) {
+        // 1. Vérification connexion
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        if (!isset($_SESSION['user_id'])) {
+            return ['success' => false, 'message' => 'Vous devez être connecté.'];
         }
-    }
-    
-    if (!empty($errors)) {
-        return ['success' => false, 'errors' => $errors];
-    }
-    
-    // Gérer l'upload du fichier
-    $lienTelechargement = null;
-    if (isset($filesData['fichier']) && $filesData['fichier']['error'] === UPLOAD_ERR_OK) {
-        $lienTelechargement = $this->uploadFile($filesData['fichier']);
         
-        if (!$lienTelechargement) {
-            return ['success' => false, 'message' => 'Erreur lors de l\'upload du fichier'];
+        $currentUserId = $_SESSION['user_id'];
+
+        // 2. Validation basique
+        $errors = [];
+        if (empty($postData['titre'])) $errors[] = 'Le titre est obligatoire';
+        if (empty($postData['type'])) $errors[] = 'Le type est obligatoire';
+        
+        if (!empty($errors)) return ['success' => false, 'errors' => $errors];
+        
+        // 3. Upload du Fichier PDF
+        $lienTelechargement = null;
+        if (isset($filesData['fichier']) && $filesData['fichier']['error'] === UPLOAD_ERR_OK) {
+            $lienTelechargement = $this->uploadFile($filesData['fichier']);
         }
+        
+        // 4. Préparation des données pour le Modèle
+        $this->publicationModel->titre = $postData['titre'];
+        $this->publicationModel->resume = $postData['resume'] ?? null;
+        $this->publicationModel->type = $postData['type'];
+        $this->publicationModel->date_publication = $postData['date_publication'] ?? date('Y-m-d'); // Date du jour par défaut
+        $this->publicationModel->doi = $postData['doi'] ?? null;
+        $this->publicationModel->lien_telechargement = $lienTelechargement;
+        $this->publicationModel->domaine = $postData['domaine'] ?? null;
+        $this->publicationModel->statut_validation = 'en_attente'; // Toujours en attente au début
+        
+        // --- POINT CLÉ : LE CRÉATEUR EST L'UTILISATEUR CONNECTÉ ---
+        $this->publicationModel->soumis_par = $currentUserId;
+        
+        // 5. Insertion en base
+        $newId = $this->publicationModel->create();
+        
+        if ($newId) {
+            
+            return ['success' => true, 'message' => 'Publication soumise avec succès ! En attente de validation.'];
+        }
+        
+        return ['success' => false, 'message' => 'Erreur SQL lors de l\'enregistrement.'];
     }
-    
-    // Créer la publication
-    $this->publicationModel->titre = $postData['titre'];
-    $this->publicationModel->resume = $postData['resume'] ?? null;
-    $this->publicationModel->type = $postData['type'];
-    $this->publicationModel->date_publication = $postData['date_publication'] ?? null;
-    $this->publicationModel->doi = $postData['doi'] ?? null;
-    $this->publicationModel->lien_telechargement = $lienTelechargement;
-    $this->publicationModel->domaine = $postData['domaine'] ?? null;
-    $this->publicationModel->statut_validation = 'en_attente';
-    $this->publicationModel->soumis_par = $_SESSION['user_id'];
-    
-    if ($this->publicationModel->create()) {
-        return ['success' => true, 'message' => 'Publication créée avec succès'];
-    } else {
-        return ['success' => false, 'message' => 'Erreur lors de la création'];
-    }
-}
 
 /**
  * API: Mettre à jour une publication
@@ -807,108 +831,39 @@ public function apiGetPublicationsByType($type, $limit = null) {
     ];
 }
 
-/**
- * API: Obtenir les publications par domaine
- */
-// public function apiGetPublicationsByDomain($domaine, $limit = null) {
-//     $publications = $this->publicationModel->getByDomain($domaine, $limit);
     
-//     return [
-//         'success' => true,
-//         'data' => $publications,
-//         'total' => count($publications)
-//     ];
-// }
- /**
-     * API CREATE : Création d'une publication + Liaison Auteurs
-     */
-    // public function apiCreatePublication($postData, $filesData) {
-    //     $errors = [];
-    //     if (empty($postData['titre'])) $errors[] = 'Le titre est obligatoire';
-    //     if (empty($postData['type'])) $errors[] = 'Le type est obligatoire';
-        
-    //     if (!empty($errors)) return ['success' => false, 'errors' => $errors];
-        
-    //     // Upload du PDF
-    //     $lienTelechargement = null;
-    //     if (isset($filesData['fichier']) && $filesData['fichier']['error'] === UPLOAD_ERR_OK) {
-    //         $lienTelechargement = $this->uploadFile($filesData['fichier']);
-    //     }
-        
-    //     // 1. Initialisation de l'objet Publication
-    //     $this->publicationModel->titre = $postData['titre'];
-    //     $this->publicationModel->resume = $postData['resume'] ?? null;
-    //     $this->publicationModel->type = $postData['type'];
-    //     $this->publicationModel->date_publication = $postData['date_publication'] ?? null;
-    //     $this->publicationModel->doi = $postData['doi'] ?? null;
-    //     $this->publicationModel->lien_telechargement = $lienTelechargement;
-    //     $this->publicationModel->domaine = $postData['domaine'] ?? null;
-    //     $this->publicationModel->statut_validation = 'en_attente';
-    //     $this->publicationModel->soumis_par = $_SESSION['user_id'];
-        
-    //     // 2. Insertion en base
-    //     $newId = $this->publicationModel->create();
-        
-    //     if ($newId) {
-    //         // 3. Gestion des Auteurs (Tableau d'IDs reçu depuis le select multiple)
-    //         if (!empty($postData['auteurs']) && is_array($postData['auteurs'])) {
-    //             $this->publicationModel->addAuthors($newId, $postData['auteurs']);
-    //         }
-    //         return ['success' => true, 'message' => 'Publication soumise avec succès'];
-    //     }
-    //     return ['success' => false, 'message' => 'Erreur SQL lors de la création'];
-    // }
-
-    /**
-     * API UPDATE : Mise à jour + Gestion Auteurs
-     */
-    // public function apiUpdatePublication($id, $postData, $filesData) {
-    //     $existing = $this->publicationModel->getById($id);
-    //     if (!$existing) return ['success' => false, 'message' => 'Publication introuvable'];
-
-    //     // Upload nouveau fichier (remplacement)
-    //     $lienTelechargement = $existing['lien_telechargement'];
-    //     if (isset($filesData['fichier']) && $filesData['fichier']['error'] === UPLOAD_ERR_OK) {
-    //         $lienTelechargement = $this->uploadFile($filesData['fichier']);
-    //         // Supprimer l'ancien fichier
-    //         if($existing['lien_telechargement'] && file_exists($existing['lien_telechargement'])) {
-    //             unlink($existing['lien_telechargement']);
-    //         }
-    //     }
-
-    //     // Mise à jour des propriétés
-    //     $this->publicationModel->id = $id;
-    //     $this->publicationModel->titre = $postData['titre'];
-    //     $this->publicationModel->resume = $postData['resume'] ?? null;
-    //     $this->publicationModel->type = $postData['type'];
-    //     $this->publicationModel->date_publication = $postData['date_publication'] ?? null;
-    //     $this->publicationModel->doi = $postData['doi'] ?? null;
-    //     $this->publicationModel->lien_telechargement = $lienTelechargement;
-    //     $this->publicationModel->domaine = $postData['domaine'] ?? null;
-        
-    //     if ($this->publicationModel->update()) {
-    //         // Mise à jour des auteurs : On supprime tout et on recrée
-    //         $this->publicationModel->clearAuthors($id);
-    //         if (!empty($postData['auteurs']) && is_array($postData['auteurs'])) {
-    //             $this->publicationModel->addAuthors($id, $postData['auteurs']);
-    //         }
-    //         return ['success' => true, 'message' => 'Publication mise à jour'];
-    //     }
-    //     return ['success' => false, 'message' => 'Erreur SQL update'];
-    // }
-
-    /**
-     * GÉNÉRATION DE RAPPORT PDF
-     */
-    /**
-     * API : Récupérer les détails complets (utilisé par le JS si besoin)
-     */
     public function apiGetPublicationDetails($id) {
-        $data = $this->publicationModel->getByIdWithDetails($id);
-        if ($data) {
-            return ['success' => true, 'data' => $data];
+      $id = (int)$id;
+        if ($id <= 0) {
+            header('Location: index.php?route=publications');
+            exit;
         }
-        return ['success' => false, 'message' => 'Publication introuvable'];
+
+        // 2. Récupération des données via le Modèle
+        $pub = $this->publicationModel->getByIdWithDetails($id);
+
+        if (!$pub) {
+            // Gestion erreur 404 ou redirection
+            header('Location: index.php?route=publications');
+            exit;
+        }
+
+        // 3. Récupération des données globales pour Header/Footer
+        $config = $this->settingsModel->getAllSettings();
+        $menu = $this->menuModel->getMenuTree();
+
+        // 4. Préparation des données pour la vue
+        $data = [
+            'publication' => $pub,
+            'config' => $config,
+            'menu' => $menu,
+            'title' => $pub['titre'] // Pour le <title> HTML
+        ];
+
+        // 5. Chargement de la Vue
+        require_once __DIR__ . '/../views/public/publication-detailsView.php';
+        $view = new PublicationDetailsView($data);
+        $view->render();
     }
 
     /**
@@ -1008,87 +963,45 @@ public function apiGetPublicationsByType($type, $limit = null) {
         $pdf->Output('D', 'Rapport_Publications.pdf');
         exit;
     }
-
-    // --- Helpers et API standard ---
-
-    // private function uploadFile($file) {
-    //     $uploadDir = '../uploads/publications/';
-    //     if (!file_exists($uploadDir)) mkdir($uploadDir, 0755, true);
+    public function indexAdmin() {
+        // 1. Vérification Session & Admin
+        if (session_status() === PHP_SESSION_NONE) session_start();
         
-    //     $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-    //     if (strtolower($ext) !== 'pdf') return false;
-        
-    //     $filename = uniqid() . '.' . $ext;
-    //     move_uploaded_file($file['tmp_name'], $uploadDir . $filename);
-    //     return $uploadDir . $filename;
-    // }
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: index.php?route=login');
+            exit;
+        }
 
-    // public function apiGetPublications() {
-    //     $page = $_GET['page'] ?? 1;
-    //     $filters = [
-    //         'type' => $_GET['type'] ?? null,
-    //         'statut' => $_GET['statut'] ?? null,
-    //         'domaine' => $_GET['domaine'] ?? null,
-    //         'year' => $_GET['year'] ?? null,
-    //         'q' => $_GET['q'] ?? null
-    //     ];
-    //     $filters = array_filter($filters);
-        
-    //     $data = $this->publicationModel->getFiltered($page, 10, $filters);
-    //     $total = $this->publicationModel->countFiltered($filters);
-        
-    //     return [
-    //         'success' => true,
-    //         'data' => $data,
-    //         'totalPages' => ceil($total / 10),
-    //         'total' => $total
-    //     ];
-    // }
+        // Vérification Rôle
+        // $isAdmin = isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'directeur');
+        // if (!$isAdmin) {
+        //     header('Location: index.php?route=dashboard-user'); 
+        //     exit;
+        // }
 
-//     public function apiValidatePublication($id) {
-//         if($this->publicationModel->validate($id)) return ['success' => true];
-//         return ['success' => false, 'message' => 'Erreur validation'];
-//     }
+        try {
+            // 2. Récupération des données globales (Header/Footer)
+            $config = $this->settingsModel->getAllSettings();
+            $menu = $this->menuModel->getMenuTree();
 
-//     public function apiRejectPublication($id) {
-//         if($this->publicationModel->reject($id)) return ['success' => true];
-//         return ['success' => false, 'message' => 'Erreur rejet'];
-//     }
-    
-//     public function apiDeletePublication($id) {
-//         if($this->publicationModel->delete($id)) return ['success' => true];
-//         return ['success' => false, 'message' => 'Erreur suppression'];
-//     }
+            $stats = $this->publicationModel->getAll(); // Supposons que cette méthode existe
 
-//     public function apiGetPublicationById($id) {
-//         $data = $this->publicationModel->getById($id);
-//         return ['success' => true, 'data' => $data];
-//     }
+            // 4. Préparation des données pour la vue
+            $data = [
+                'title' => 'Gestion des Publications',
+                'config' => $config,
+                'menu' => $menu,
+                'stats' => $stats
+            ];
 
-//     public function download($id) {
-//         $pub = $this->publicationModel->getById($id);
-//         if ($pub && file_exists($pub['lien_telechargement'])) {
-//             header('Content-Type: application/pdf');
-//             header('Content-Disposition: attachment; filename="doc_'.$id.'.pdf"');
-//             readfile($pub['lien_telechargement']);
-//             exit;
-//         }
-//         die('Fichier introuvable');
-//     }
+            // 5. Chargement de la Vue Classe
+            require_once __DIR__ . '/../views/publication_management.php';
+            $view = new PublicationAdminView($data);
+            $view->render();
 
-//     public function stats() {
-//         return [
-//             'total' => $this->publicationModel->count(),
-//             'valide' => $this->publicationModel->countValidated(),
-//             'en_attente' => $this->publicationModel->countPending(),
-//             'par_type' => $this->publicationModel->getStatsByType(),
-//             'par_domaine' => $this->publicationModel->getStatsByDomain()
-//         ];
-//     }
-    
-//     public function apiGetPublicationsByDomain() { return $this->publicationModel->getDistinctDomains(); }
-//     public function apiGetDistinctYears() { return $this->publicationModel->getDistinctYears(); }
-// }
+        } catch (Exception $e) {
+            die("Erreur lors du chargement des publications : " . $e->getMessage());
+        }
+    }
 
 }
-

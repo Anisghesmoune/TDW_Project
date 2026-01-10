@@ -71,7 +71,7 @@ class Reservation extends Model {
     $query = "SELECT COUNT(*) as count 
               FROM " . $this->table . " 
               WHERE id_equipement = :id_equipement 
-              AND statut IN ('confirmée', 'en_cours', 'en_attente') 
+              AND statut IN ('confirmé') 
               AND date_debut <= :date_fin 
               AND date_fin >= :date_debut";
     
@@ -103,41 +103,31 @@ class Reservation extends Model {
      * Get conflicting reservations for an equipment in a date range
      */
     public function getConflicts($id_equipement, $date_debut, $date_fin, $excludeReservationId = null) {
-        $query = "SELECT r.*, 
-                         u.nom as user_nom, 
-                         u.prenom as user_prenom, 
-                         u.email as user_email,
-                         e.nom as equipment_nom
+        $query = "SELECT r.*, u.nom as user_nom, u.prenom as user_prenom 
                   FROM " . $this->table . " r
-                  INNER JOIN users u ON r.id_utilisateur = u.id
-                  INNER JOIN equipment e ON r.id_equipement = e.id
-                  WHERE r.id_equipement = :id_equipement 
-                  AND r.statut IN ('confirmée', 'en_cours')
-                  AND (
-                      (r.date_debut <= :date_debut AND r.date_fin >= :date_debut)
-                      OR (r.date_debut <= :date_fin AND r.date_fin >= :date_fin)
-                      OR (r.date_debut >= :date_debut AND r.date_fin <= :date_fin)
-                  )";
-        
+                  JOIN users u ON r.id_utilisateur = u.id
+                  WHERE r.id_equipement = :id_equipement
+                  -- On cherche ce qui gêne : confirmé ou en cours (orthographe BDD)
+                  AND r.statut IN ('confirme', 'en_cours') 
+                  AND r.date_debut < :date_fin 
+                  AND r.date_fin > :date_debut";
+
         if ($excludeReservationId) {
             $query .= " AND r.id != :exclude_id";
         }
-        
-        $query .= " ORDER BY r.date_debut ASC";
-        
+
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id_equipement', $id_equipement, PDO::PARAM_INT);
-        $stmt->bindParam(':date_debut', $date_debut);
-        $stmt->bindParam(':date_fin', $date_fin);
-        
+        $stmt->bindValue(':id_equipement', $id_equipement, PDO::PARAM_INT);
+        $stmt->bindValue(':date_debut', $date_debut);
+        $stmt->bindValue(':date_fin', $date_fin);
+
         if ($excludeReservationId) {
-            $stmt->bindParam(':exclude_id', $excludeReservationId, PDO::PARAM_INT);
+            $stmt->bindValue(':exclude_id', $excludeReservationId, PDO::PARAM_INT);
         }
-        
+
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    
     /**
      * Get all reservations with equipment and user details
      */
@@ -301,14 +291,14 @@ class Reservation extends Model {
      * Cancel reservation
      */
     public function cancel($id) {
-        return $this->updateStatus($id, 'annulée');
+        return $this->updateStatus($id, 'annulé');
     }
     
     /**
      * Confirm reservation
      */
     public function confirm($id) {
-        return $this->updateStatus($id, 'confirmée');
+        return $this->updateStatus($id, 'confirmé');
     }
     
     /**
@@ -490,47 +480,43 @@ public function getEquipmentOccupancyStats($startDate, $endDate) {
      * NOUVEAU : Méthode magique pour mettre à jour automatiquement les statuts
      * À appeler régulièrement (ex: au chargement du dashboard ou via Cron)
      */
-    public function autoUpdateStatuses() {
+  public function autoUpdateStatuses() {
         $now = date('Y-m-d H:i:s');
 
-        // 1. Passer les réservations "confirmée" -> "en_cours"
-        // On utilise :now1 et :now2 pour éviter l'erreur de paramètre dupliqué
-        $sqlStart = "UPDATE " . $this->table . " SET statut = 'en_cours' 
-                     WHERE statut = 'confirmée' 
-                     AND date_debut <= :now1 
-                     AND date_fin > :now2";
-                     
-        $stmtStart = $this->conn->prepare($sqlStart);
+        // Note : On ne touche pas au statut de la réservation car il n'y a pas 'en_cours' ou 'terminé'
+        // On modifie seulement l'état de l'équipement.
+
+        // 1. METTRE L'ÉQUIPEMENT EN 'RÉSERVÉ'
+        // Si une réservation 'confirmé' est active MAINTENANT (date_debut < now < date_fin)
+        $sqlEquipReserved = "UPDATE equipment e 
+                             JOIN reservations r ON e.id = r.id_equipement
+                             SET e.etat = 'réservé'
+                             WHERE r.statut = 'confirmé'
+                             AND r.date_debut <= :now1
+                             AND r.date_fin > :now2";
+                             
+        $stmtStart = $this->conn->prepare($sqlEquipReserved);
         $stmtStart->bindValue(':now1', $now);
         $stmtStart->bindValue(':now2', $now);
         $stmtStart->execute();
 
-        // 2. Mettre à jour les équipements correspondants -> "réserve"
-        // (Attention à bien utiliser le nom exact de votre table équipements, ici 'equipment' ou 'equipements')
-        $sqlEquipReserved = "UPDATE equipment e 
-                             JOIN reservations r ON e.id = r.id_equipement
-                             SET e.etat = 'réserve'
-                             WHERE r.statut = 'en_cours'";
-        $this->conn->query($sqlEquipReserved);
-
-        // 3. Passer les réservations "en_cours" -> "terminée"
-        $sqlEnd = "UPDATE " . $this->table . " SET statut = 'terminée' 
-                   WHERE statut = 'en_cours' AND date_fin <= :now";
-        
-        $stmtEnd = $this->conn->prepare($sqlEnd);
-        $stmtEnd->bindValue(':now', $now);
-        $stmtEnd->execute();
-
-        // 4. Libérer les équipements qui n'ont plus de réservation active
+        // 2. METTRE L'ÉQUIPEMENT EN 'LIBRE'
+        // Si l'équipement est 'réservé' MAIS qu'aucune réservation 'confirmé' n'est active en ce moment
         $sqlFree = "UPDATE equipment e 
                     SET e.etat = 'libre' 
-                    WHERE e.etat = 'réserve' 
+                    WHERE e.etat = 'réservé' 
                     AND NOT EXISTS (
                         SELECT 1 FROM reservations r 
                         WHERE r.id_equipement = e.id 
-                        AND r.statut = 'en_cours'
+                        AND r.statut = 'confirmé'
+                        AND r.date_debut <= :now3
+                        AND r.date_fin > :now4
                     )";
-        $this->conn->query($sqlFree);
+                    
+        $stmtEnd = $this->conn->prepare($sqlFree);
+        $stmtEnd->bindValue(':now3', $now);
+        $stmtEnd->bindValue(':now4', $now);
+        $stmtEnd->execute();
     }
 }
 ?>

@@ -61,14 +61,14 @@ class TeamsModel extends Model {
      */
     public function update($team_id) {
         $query = "UPDATE {$this->table} 
-                  SET name = :name, 
+                  SET nom = :nom, 
                       description = :description, 
                       domaine_recherche = :domaine_recherche, 
                       chef_equipe_id = :chef_equipe_id
                   WHERE id = :team_id";
         
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':name', $this->name);
+        $stmt->bindParam(':nom', $this->name);
         $stmt->bindParam(':description', $this->description);
         $stmt->bindParam(':domaine_recherche', $this->domaine_recherche);
         $stmt->bindParam(':chef_equipe_id', $this->chef_equipe_id);

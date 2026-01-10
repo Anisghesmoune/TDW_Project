@@ -22,24 +22,76 @@ class Publication extends Model {
      * Créer une nouvelle publication
      */
     public function create() {
-        $query = "INSERT INTO " . $this->table . " 
-                  (titre, resume, type, date_publication, doi, lien_telechargement, 
-                   domaine, statut_validation, soumis_par) 
-                  VALUES (:titre, :resume, :type, :date_publication, :doi, 
-                          :lien_telechargement, :domaine, :statut_validation, :soumis_par)";
-        
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':titre', $this->titre);
-        $stmt->bindParam(':resume', $this->resume);
-        $stmt->bindParam(':type', $this->type);
-        $stmt->bindParam(':date_publication', $this->date_publication);
-        $stmt->bindParam(':doi', $this->doi);
-        $stmt->bindParam(':lien_telechargement', $this->lien_telechargement);
-        $stmt->bindParam(':domaine', $this->domaine);
-        $stmt->bindParam(':statut_validation', $this->statut_validation);
-        $stmt->bindParam(':soumis_par', $this->soumis_par);
-        
-        return $stmt->execute();
+        try {
+            // 1. Démarrer une transaction (Pour que tout s'exécute ou rien du tout)
+            $this->conn->beginTransaction();
+
+            // ---------------------------------------------------------
+            // ÉTAPE A : Insérer la publication
+            // ---------------------------------------------------------
+            // J'ai rajouté projet_id car il est souvent nécessaire dans votre contexte
+            $query = "INSERT INTO " . $this->table . " 
+                      (titre, resume, type, date_publication, doi, lien_telechargement, 
+                       domaine, statut_validation, soumis_par) 
+                      VALUES (:titre, :resume, :type, :date_publication, :doi, 
+                              :lien_telechargement, :domaine, :statut_validation, :soumis_par)";
+            
+            $stmt = $this->conn->prepare($query);
+            
+            // Nettoyage basique
+            $this->titre = htmlspecialchars(strip_tags($this->titre));
+
+            $stmt->bindParam(':titre', $this->titre);
+            $stmt->bindParam(':resume', $this->resume);
+            $stmt->bindParam(':type', $this->type);
+            $stmt->bindParam(':date_publication', $this->date_publication);
+            $stmt->bindParam(':doi', $this->doi);
+            $stmt->bindParam(':lien_telechargement', $this->lien_telechargement);
+            $stmt->bindParam(':domaine', $this->domaine);
+            $stmt->bindParam(':statut_validation', $this->statut_validation);
+            $stmt->bindParam(':soumis_par', $this->soumis_par);
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Erreur lors de l'insertion de la publication");
+            }
+
+            // ---------------------------------------------------------
+            // ÉTAPE B : Récupérer l'ID de la nouvelle publication
+            // ---------------------------------------------------------
+            $newPublicationId = $this->conn->lastInsertId();
+
+            // ---------------------------------------------------------
+            // ÉTAPE C : Lier l'auteur (celui qui soumet) dans user_publication
+            // ---------------------------------------------------------
+            $queryLink = "INSERT INTO user_publication 
+                          (user_id, id_publication, ordre_auteur, auteur_correspondant) 
+                          VALUES (:uid, :pid, :ordre, :correspondant)";
+            
+            $stmtLink = $this->conn->prepare($queryLink);
+            
+            // On lie l'utilisateur courant (celui qui soumet)
+            $stmtLink->bindValue(':uid', $this->soumis_par, PDO::PARAM_INT);
+            $stmtLink->bindValue(':pid', $newPublicationId, PDO::PARAM_INT);
+            $stmtLink->bindValue(':ordre', 1, PDO::PARAM_INT); // Il est l'auteur n°1 par défaut
+            $stmtLink->bindValue(':correspondant', 1, PDO::PARAM_INT); // Il est l'auteur correspondant par défaut
+            
+            if (!$stmtLink->execute()) {
+                throw new Exception("Erreur lors de la liaison auteur-publication");
+            }
+
+            // ---------------------------------------------------------
+            // ÉTAPE D : Valider la transaction
+            // ---------------------------------------------------------
+            $this->conn->commit();
+            
+            return $newPublicationId; // On retourne l'ID pour l'utiliser si besoin
+
+        } catch (Exception $e) {
+            // En cas d'erreur, on annule tout (Rollback)
+            $this->conn->rollBack();
+            error_log("Erreur création publication : " . $e->getMessage());
+            return false;
+        }
     }
     
     /**

@@ -95,6 +95,30 @@ class Project extends Model {
 
     return $stmt->execute();
 }
+// Dans ProjectModel.php ou Model.php
+    
+    public function getLastInsertedId() {
+        return $this->conn->lastInsertId();
+    }
+    
+    // Assurez-vous que addUserToProject existe et est correcte
+    public function addUserToProject($projectId, $userId) {
+        // On vérifie si l'association existe déjà pour éviter les doublons
+        $check = $this->conn->prepare("SELECT COUNT(*) FROM user_project WHERE user_id = :uid AND project_id = :pid");
+        $check->execute([':uid' => $userId, ':pid' => $projectId]);
+        
+        if ($check->fetchColumn() > 0) {
+            return true; // Déjà membre
+        }
+
+        // Ajout avec un rôle par défaut (ex: 'responsable' ou 'membre')
+        $query = "INSERT INTO user_project (project_id, user_id, role) VALUES (:pid, :uid, 'responsable')";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':pid', $projectId);
+        $stmt->bindParam(':uid', $userId);
+        
+        return $stmt->execute();
+    }
 // =====================
 // SETTERS
 // =====================
@@ -211,16 +235,7 @@ public function getProjectUsers($projectId) {
     
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
-public function addUserToProject($projectId, $userId) {
-    $query = "INSERT INTO user_project (project_id, user_id) 
-              VALUES (:project_id, :user_id)";
-    
-    $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':project_id', $projectId);
-    $stmt->bindParam(':user_id', $userId);
-    
-    return $stmt->execute();
-}
+
 public function removeUserFromProject($projectId, $userId) {
     $query = "DELETE FROM user_project 
               WHERE project_id = :project_id AND user_id = :user_id";

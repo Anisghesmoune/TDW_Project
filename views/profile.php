@@ -3,7 +3,7 @@ require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../controllers/AuthController.php';
 
-AuthController::requireLogin();
+// AuthController::requireLogin();
 
 $userModel = new UserModel();
 $user = $userModel->getById($_SESSION['user_id']);

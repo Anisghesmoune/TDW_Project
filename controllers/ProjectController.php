@@ -4,6 +4,9 @@ require_once __DIR__ .  '/../models/Menu.php';
 require_once __DIR__ . '/../models/Settings.php';
 require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../views/public/ProjectView.php';
+require_once __DIR__ . '/../models/TeamsModel.php';
+require_once __DIR__ . '/../controllers/EventController.php';
+require_once __DIR__ . '/../controllers/PublicationController.php';
 
 
 
@@ -15,14 +18,17 @@ class ProjectController {
     private $userModel;
     private $settingsModel;
     private $menuModel;
+    private $teamModel;
 
     public function __construct() {
         $this->project = new Project();
         $this->userModel = new UserModel();
         $this->settingsModel = new Settings();
         $this->menuModel = new Menu();
+        $this->teamModel = new TeamsModel();
     }
 
+    
     /**
      * Vérifier le rôle admin (commenté pour le moment)
      */
@@ -105,7 +111,8 @@ class ProjectController {
             ],
             'active_filters' => $filters,
             'config' => $config,
-            'menu' => $menu
+            'menu' => $menu,
+            'can_create' => $canCreate = $this->canCreateProject()
         ];
 
         // 6. Rendu de la vue
@@ -189,53 +196,90 @@ class ProjectController {
     /**
      * Créer un nouveau projet
      */
+    /**
+     * Vérifie si l'utilisateur a le droit de créer un projet
+     */
+    private function canCreateProject() {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+
+        // 1. Si pas connecté -> Non
+        if (!isset($_SESSION['user_id'])) return false;
+
+        // 2. Si Admin -> Oui
+        if (isset($_SESSION['is_admin']) && $_SESSION['is_admin'] == 1) return true;
+
+        // 3. Récupération des infos fraîches de l'utilisateur (pour le grade)
+        $user = $this->userModel->getById($_SESSION['user_id']);
+        if (!$user) return false;
+
+        $role = $user['role']; 
+        $grade = $user['grade']; // Assurez-vous que la colonne 'grade' existe dans la BDD
+
+        // 4. Règles métier
+        $rolesAutorises = ['enseignant', 'doctorant'];
+        $gradesAutorises = ['Professeur', 'MCA']; // MCA = Maître de Conférences A
+
+        if (in_array($role, $rolesAutorises) && in_array($grade, $gradesAutorises)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Créer un nouveau projet
+     */
+   /**
+     * Créer un nouveau projet
+     */
     public function create($data) {
         try {
-            // Vérification du rôle admin (commenté)
-            // if (!$this->checkAdminRole()) {
-            //     return [
-            //         'success' => false,
-            //         'errors' => $this->errors
-            //     ];
-            // }
+            if (!$this->canCreateProject()) {
+                return ['success' => false, 'message' => "Accès refusé."];
+            }
 
-            // Validation des données
             if (!$this->validateProjectData($data)) {
-                return [
-                    'success' => false,
-                    'errors' => $this->errors
-                ];
+                return ['success' => false, 'errors' => $this->errors];
             }
 
             // Définir les propriétés
             $this->project->setTitre($data['titre']);
             $this->project->setDescription($data['description']);
             $this->project->setTypeFinancement($data['type_financement']);
-            $this->project->setStatut($data['statut']);
+            $this->project->setStatut($data['statut'] ?? 'soumis');
             $this->project->setDateDebut($data['date_debut']);
-            $this->project->setDateFin($data['date_fin'] ?? null);
-            $this->project->setResponsableId($data['responsable_id']);
-            $this->project->setIdEquipe($data['id_equipe'] ?? null);
+            $this->project->setDateFin(!empty($data['date_fin']) ? $data['date_fin'] : null);
+            
+            // Responsable
+            $responsableId = !empty($data['responsable_id']) ? $data['responsable_id'] : $_SESSION['user_id'];
+            $this->project->setResponsableId($responsableId);
+            
+            $this->project->setIdEquipe(!empty($data['id_equipe']) ? $data['id_equipe'] : null);
 
-            // Créer le projet
+            // 1. CRÉATION DU PROJET
             if ($this->project->create()) {
+                
+                // Récupérer l'ID du projet créé
+                // ATTENTION : create() dans votre modèle actuel retourne true/false, pas l'ID.
+                // Il faut modifier votre modèle pour retourner l'ID (voir étape 3)
+                // OU récupérer le dernier ID inséré :
+                $newProjectId = $this->project->getLastInsertedId(); 
+
+                // 2. AJOUTER LE RESPONSABLE COMME MEMBRE DU PROJET
+                // Table 'user_project' : user_id, project_id, role
+                if ($newProjectId) {
+                    $this->project->addUserToProject($newProjectId, $responsableId);
+                }
+
                 return [
                     'success' => true,
                     'message' => 'Projet créé avec succès.'
                 ];
             } else {
-                $this->errors[] = "Erreur lors de la création du projet.";
-                return [
-                    'success' => false,
-                    'errors' => $this->errors
-                ];
+                return ['success' => false, 'message' => "Erreur technique lors de la création."];
             }
         } catch (Exception $e) {
-            $this->errors[] = "Erreur lors de la création du projet: " . $e->getMessage();
-            return [
-                'success' => false,
-                'errors' => $this->errors
-            ];
+            return ['success' => false, 'message' => "Exception: " . $e->getMessage()];
         }
     }
 
@@ -865,5 +909,118 @@ public function generatePDF($filterType, $filterValue = null) {
 
         // On inclut directement le fichier de vue
         require_once __DIR__ . '/../views/public/project-detailsView.php';
+    }
+   public function indexProject() {
+        // 1. Vérification Session & Admin
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: index.php?route=login');
+            exit;
+        }
+
+        // Vérification rôle (Admin ou Directeur)
+        // $isAdmin = isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'directeur');
+        // if (!$isAdmin) {
+        //     header('Location: index.php?route=dashboard-user'); 
+        //     exit;
+        // }
+
+        try {
+            // 2. Récupération des données métier
+            $projects = $this->project->getAll();
+            $nbProjetsActifs = $this->project->countActive();
+            $teams = $this->teamModel->getAllTeamsWithDetails();
+            $users = $this->userModel->getAll();
+
+            // Récupération des événements et publications via leurs contrôleurs
+            $eventController = new EventController();
+            $events = $eventController->getAll();
+            
+            $publicationController = new PublicationController();
+            $publications = $publicationController->stats();
+
+            // 3. Récupération des données globales (Header/Footer)
+            $config = $this->settingsModel->getAllSettings();
+            $menu = $this->menuModel->getMenuTree();
+
+            // 4. Préparation des données pour la vue
+            $data = [
+                'title' => 'Gestion des Projets',
+                'config' => $config,
+                'menu' => $menu,
+                'projects' => $projects,
+                'nbProjetsActifs' => $nbProjetsActifs,
+                'teams' => $teams,
+                'users' => $users,
+                'events' => $events,
+                'publications' => $publications
+            ];
+
+            // 5. Chargement de la Vue Classe
+            require_once __DIR__ . '/../views/project_management.php';
+            $view = new ProjectAdminView($data);
+            $view->render();
+
+        } catch (Exception $e) {
+            echo "Erreur lors du chargement des projets : " . $e->getMessage();
+        }
+    }
+ public function projectDetails($id) {
+        // Validation de l'ID
+        if (!$id || !is_numeric($id) || $id <= 0) {
+            header('Location: project_management.php'); // Ou index.php?route=project-admin
+            exit;
+        }
+
+        // Récupération des données statistiques
+        $statsByThematic = $this->project->getProjectsByThematic();
+        $statsByResponsable = $this->project->getProjectsByResponsable();
+        $statsByYear = $this->project->getProjectsByYear();
+        $statsByFinancement = $this->project->getProjectsByFinancement();
+        // Attention : vérifiez si getByEquipeId attend un ID équipe ou projet. 
+        // Je garde votre code tel quel :
+        $statsByTeam = $this->project->getByEquipeId($id); 
+        $advancedStats = $this->project->getAdvancedStats();
+        $topProjects = $this->project->getTopProjectsByMembers();
+        $recentProjects = $this->project->getRecentProjects(30);
+        
+        // Récupération du projet spécifique
+        $project = $this->project->getProjectDetails($id);
+        
+        if (!$project) {
+            die("Projet introuvable.");
+        }
+        
+        // Récupération des membres et publications
+        $members = $this->project->getProjectMembers($id);
+        $publications = $this->project->getProjectPublications($id);
+        
+        // Configuration globale
+        $config = $this->settingsModel->getAllSettings();
+        $menu = $this->menuModel->getMenuTree();
+        
+        // Préparation des données pour la vue
+        $data = [
+            'title' => 'Détails du Projet', // Ajout pour le Header
+            'project' => $project,
+            'members' => $members,
+            'publications' => $publications,
+            'statsByThematic' => $statsByThematic,
+            'statsByResponsable' => $statsByResponsable,
+            'statsByYear' => $statsByYear,
+            'statsByFinancement' => $statsByFinancement,
+            'statsByTeam' => $statsByTeam,
+            'advancedStats' => $advancedStats,
+            'topProjects' => $topProjects,
+            'recentProjects' => $recentProjects,
+            'config' => $config,
+            'menu' => $menu
+        ];
+        
+        // CHARGEMENT DE LA VUE CLASSE
+        require_once __DIR__ . '/../views/project-details.php';
+        $view = new ProjectDetailsView($data);
+        $view->render();
     }
 }

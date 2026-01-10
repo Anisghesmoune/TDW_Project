@@ -13,7 +13,7 @@ class UserModel {
  public function authentificate($email, $password){
 
     try{
-        $querry = "SELECT id ,password ,nom ,prenom ,email ,photo_profil,role,grade,domaine_recherche,statut FROM " . $this->table . " WHERE email = :email And statut = 'actif' limit 1 ";
+        $querry = "SELECT id ,password ,nom ,prenom ,email ,photo_profil,role,is_admin,grade,domaine_recherche,statut FROM " . $this->table . " WHERE email = :email And statut = 'actif' limit 1 ";
     
     $stmt=$this->db->prepare($querry);
     $stmt->bindParam(':email', $email, PDO::PARAM_STR);
@@ -303,7 +303,7 @@ public function getAllWithPublicationCount($filters = []) {
      */
     public function getAll($filters = []) {
         try {
-            $query = "SELECT id, username, nom, prenom, email, role, grade, statut, derniere_connexion 
+            $query = "SELECT *
                      FROM {$this->table} WHERE 1=1";
             
             if (!empty($filters['role'])) {

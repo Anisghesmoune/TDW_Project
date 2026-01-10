@@ -1,33 +1,66 @@
 <?php
 require_once __DIR__ . '/../models/Event.php';
+require_once __DIR__ . '/../models/Settings.php';
+require_once __DIR__ . '/../models/Menu.php';
 
 class EventController {
     private $eventModel;
+     private $settingsModel;
+    private $menuModel;
     
     public function __construct() {
         $this->eventModel = new Event();
+        $this->settingsModel = new Settings();
+        $this->menuModel = new Menu();
     }
     
- public function index() {
+public function index() {
+        // 1. Vérification Session & Admin
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: index.php?route=login');
+            exit;
+        }
+
+        // Vérification rôle (Admin ou Directeur)
+        // $isAdmin = isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'directeur');
+        // if (!$isAdmin) {
+        //     header('Location: index.php?route=dashboard-user'); 
+        //     exit;
+        // }
+
         try {
+            // 2. Paramètres de tri (optionnel, utilisé par le modèle)
             $orderBy = $_GET['orderBy'] ?? 'date_debut';
             $order = $_GET['order'] ?? 'DESC';
             
+            // 3. Récupération des données métier
             $events = $this->eventModel->getAllEvents($orderBy, $order);
             
-                return [
-            'total' => count($events),
-            'data' => $events
-        ];
+            // 4. Récupération des données globales (Header/Footer)
+            $config = $this->settingsModel->getAllSettings();
+            $menu = $this->menuModel->getMenuTree();
 
-    } catch (Exception $e) {
-        // En cas d'erreur, retourner vide
-        return [
-            'total' => 0,
-            'data' => []
-        ];
+            // 5. Préparation des données pour la vue
+            $data = [
+                'title' => 'Gestion des Événements',
+                'config' => $config,
+                'menu' => $menu,
+                'events' => $events,
+                'total' => count($events)
+            ];
+
+            // 6. Chargement de la Vue Classe
+            require_once __DIR__ . '/../views/event-management.php';
+            $view = new EventAdminView($data);
+            $view->render();
+
+        } catch (Exception $e) {
+            // Gestion d'erreur basique
+            echo "Erreur lors du chargement des événements : " . $e->getMessage();
+        }
     }
-}
 public function getALL(){
     return $this->eventModel->getAll();
 }
@@ -614,7 +647,7 @@ public function getALL(){
             
             // Simulation d'envoi de mail
             foreach ($participants as $p) {
-                // mail($p['email'], "Rappel : " . $event['titre'], "L'événement commence demain...");
+                mail($p['email'], "Rappel : " . $event['titre'], "L'événement commence demain...");
                 $count++;
             }
             

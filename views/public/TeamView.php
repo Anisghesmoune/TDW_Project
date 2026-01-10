@@ -1,87 +1,87 @@
 <?php
-require_once __DIR__ . '/../../config/Database.php';
-require_once __DIR__ . '/../../models/Model.php';
-require_once __DIR__ . '/../../models/UserModel.php';
-require_once __DIR__ . '/../../models/TeamsModel.php';
-
-require_once __DIR__ . '/../../controllers/AuthController.php';
-require_once __DIR__ . '/../../controllers/TeamController.php';
-
-require_once __DIR__ . '/../../controllers/ProjectController.php';
-require_once __DIR__ . '/../../controllers/PublicationController.php';
-require_once __DIR__ . '/../../controllers/EventController.php';
-require_once __DIR__ . '/../../views/public/components/UIOrganigramme.php'; 
-
-require_once __DIR__ . '/../../views/Sidebar.php';
+// Imports des dépendances
+require_once __DIR__ . '/../../views/public/View.php';
+require_once __DIR__ . '/../../views/public/components/UIHeader.php';
+require_once __DIR__ . '/../../views/public/components/UIFooter.php';
+// Composants spécifiques à cette page
+require_once __DIR__ . '/../../views/public/components/UIOrganigramme.php';
 require_once __DIR__ . '/../../views/Table.php';
 
-// AuthController::requireAdmin();
-$controller = new ProjectController();
-$data = $controller->index(); 
-$eventController = new EventController();
-$eventData = $eventController->index();
-$publicationController = new PublicationController();
-$publicationData = $publicationController->stats();
-$teamController= new TeamController();
-// Récupérer les équipes et les utilisateurs
-$teamModel = new TeamsModel();
-$teams = $teamModel->getAllTeamsWithDetails();
-$dataOrg=$teamController->index();
+class TeamView extends View {
 
-$userModel = new UserModel();
-$users = $userModel->getAll(); // Pour le select du chef d'équipe
-?>
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion des Équipes - Laboratoire</title>
-    <link rel="stylesheet" href="../admin_dashboard.css">
-    <link rel="stylesheet" href='../../views/organigramme.css'>
-    <link rel="stylesheet" href="../teamManagement.css">
-</head>
-<body>
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <h2>⚙️ Administration</h2>
-            <span class="admin-badge">ADMINISTRATEUR</span>
-        </div>
-       <?php 
-       $sidebar = new Sidebar("admin");
-       $sidebar->render(); 
-       ?>
-    </div>
-    
-    <div class="main-content">
-        <div class="top-bar">
+    /**
+     * Méthode principale pour structurer la page
+     */
+    public function render() {
+        // Extraction des données globales
+        $config = $this->data['config'] ?? [];
+        $menuData = $this->data['menu'] ?? [];
+        $pageTitle = $this->data['title'] ?? 'Gestion des Équipes';
+
+        // CSS spécifiques
+        $customCss = [
+            'views/admin_dashboard.css',
+            "views/landingPage.css",
+            'views/organigramme.css',
+            'views/teamManagement.css',
+            'assets/css/public.css' // Pour le header
+        ];
+
+        // 1. Rendu du Header
+        $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
+        echo $header->render();
+
+        // 2. Contenu Principal
+        echo '<main style="width: 100%; padding: 40px 20px; box-sizing: border-box; background-color: #f8f9fc; min-height: 80vh;">';
+        echo $this->content();
+        echo '</main>';
+
+        // 3. Rendu du Footer
+        $footer = new UIFooter($config, $menuData);
+        echo $footer->render();
+    }
+
+    /**
+     * Contenu spécifique (Stats, Organigramme, Tableau)
+     */
+    protected function content() {
+        // Extraction des données métier
+        $teams = $this->data['teams'] ?? [];
+        $projects = $this->data['projects'] ?? [];
+        $organigrammeData = $this->data['organigramme'] ?? [];
+
+        ob_start();
+        ?>
+        
+        <!-- En-tête interne -->
+        <div class="top-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
             <div>
-                <h1>Gestion des Équipes de Recherche</h1>
-                <p style="color: #666;">Organisation et structure des équipes</p>
+                <h1 style="margin:0; color: #2c3e50;">Gestion des Équipes de Recherche</h1>
+                <p style="color: #666; margin-top:5px;">Organisation et structure des équipes</p>
             </div>
-            <a href="../logout.php" class="logout-btn">Déconnexion</a>
         </div>
         
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>Total Équipes</h3>
-                <div class="number"><?php echo count($teams); ?></div>
+        <!-- Statistiques -->
+        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px;">
+            <div class="stat-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 4px solid #4e73df;">
+                <h3 style="color:#888; font-size:0.9em; text-transform:uppercase;">Total Équipes</h3>
+                <div class="number" style="font-size:2em; font-weight:bold; color:#333;"><?php echo count($teams); ?></div>
             </div>
             
-           
-            
-            <div class="stat-card">
-                <h3>Publications</h3>
-                <div class="number"><?php echo $publicationData['total']; ?></div>
+            <div class="stat-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 4px solid #1cc88a;">
+                <h3 style="color:#888; font-size:0.9em; text-transform:uppercase;">Total Projets</h3>
+                <div class="number" style="font-size:2em; font-weight:bold; color:#333;"><?php echo count($projects); ?></div>
             </div>
             
-            <div class="stat-card">
-                <h3>Événements à venir</h3>
-                <div class="number"><?php echo $eventData['total']; ?></div>
+            <div class="stat-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 4px solid #36b9cc;">
+                <h3 style="color:#888; font-size:0.9em; text-transform:uppercase;">Publications</h3>
+                <div class="number" style="font-size:2em; font-weight:bold; color:#333;">0</div>
             </div>
         </div>
-       <section class="container" style="text-align:center; padding: 60px 20px;">
-            <h1 class="page-title" style="color:var(--primary-color); font-size:2.5em; margin-bottom:20px;">Le Laboratoire</h1>
+        
+        <!-- Description Labo -->
+        <section class="container" style="text-align:center; padding: 20px; background: white; border-radius: 10px; margin-bottom: 40px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+            <h1 class="page-title" style="color:#4e73df; font-size:2em; margin-bottom:20px;">Le Laboratoire</h1>
             <div style="max-width:800px; margin:0 auto; font-size:1.1em; line-height:1.6; color:#555;">
                 <p>Notre laboratoire d'informatique est un centre d'excellence dédié à la recherche fondamentale et appliquée.
                 Nous explorons des thématiques variées telles que l'Intelligence Artificielle, le Génie Logiciel, 
@@ -89,43 +89,63 @@ $users = $userModel->getAll(); // Pour le select du chef d'équipe
             </div>
         </section>
 
-  <?php
-        // On vérifie si les données existent dans $dataOrg (pas $this->dataOrg)
-        if (!empty($dataOrg['organigramme'])) {
-            // Pas besoin de ob_start ici car on est directement dans le HTML
-            $orgData = $dataOrg['organigramme'];
-            
-            // Instanciation de la Vue Organigramme
-            
+        <!-- Organigramme -->
+        <?php
+        if (!empty($organigrammeData)) {
+            try {
+                echo '<div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 40px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">';
                 $orgView = new OrganigrammeSectionView(
-                    $orgData['director'] ?? null, 
-                    $orgData['tree'] ?? [], 
-                    $orgData['stats'] ?? null 
+                    $organigrammeData['director'] ?? null, 
+                    $organigrammeData['tree'] ?? [], 
+                    null 
                 );
-                $orgView->render(); // Affiche le HTML de l'arbre
+                $orgView->render();
+                echo '</div>';
+            } catch (Exception $e) {
+                echo '<div class="alert alert-error">Erreur lors de l\'affichage de l\'organigramme</div>';
             }
-     
+        }
         ?>
-          <?php
+        
+        <!-- Tableau des Équipes -->
+        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+            <h2 style="margin-bottom: 20px; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px;">Liste des Équipes</h2>
+            <?php
+            // Préparation des données pour le composant Table
+            $teamsForTable = [];
+            foreach ($teams as $team) {
+                $info = $team['info'] ?? [];
+                $leader = $team['leader'] ?? null;
+                
+                $teamsForTable[] = [
+                    'id' => $info['id'] ?? 0,
+                    'nom' => $info['nom'] ?? 'Sans nom',
+                    'resp_name' => $leader['prenom'] ?? '',
+                    'chef_nom' => $leader['nom'] ?? '',
+                    'domaine_recherche' => $info['domaine_recherche'] ?? 'Non défini',
+                    'description' => $info['description'] ?? ''
+                ];
+            }
+
             $teamTable = new Table([
                 'id' => 'TeamsTable',
                 'headers' => ['ID', 'Nom de l\'équipe', 'Chef d\'équipe', 'Domaine', 'Description'],
-                'data' => $teams,
+                'data' => $teamsForTable,
                 'columns' => [
                     ['key' => 'id'],
                     ['key' => 'nom'],
                     ['key' => function($row) { 
-                        if ($row['chef_nom']) {
-                            return $row['resp_name'] . ' ' . $row['chef_nom'];
+                        if (!empty($row['chef_nom'])) {
+                            return '<strong>' . trim($row['resp_name'] . ' ' . $row['chef_nom']) . '</strong>';
                         }
-                        return 'Non défini';
+                        return '<em style="color: #999;">Non défini</em>';
                     }],
                     ['key' => 'domaine_recherche'],
-                  
-
-
                     ['key' => function($row) {
                         $desc = $row['description'] ?? '';
+                        if (empty($desc)) {
+                            return '<em style="color: #999;">Aucune description</em>';
+                        }
                         return strlen($desc) > 50 ? substr($desc, 0, 50) . '...' : $desc;
                     }]
                 ],
@@ -133,56 +153,50 @@ $users = $userModel->getAll(); // Pour le select du chef d'équipe
                     [
                         'icon' => '👁️',
                         'class' => 'btn-sm btn-view',
+                        // Note: Assurez-vous que le style des boutons est chargé ou ajoutez-le inline
                         'onclick' => 'viewTeam({id})',
                         'label' => ' Voir'
                     ]
-                    
                 ]
             ]);
 
             $teamTable->display();
             ?>
         </div>
-    </div>
-    
-   
 
-    <script>
-        // Fonction helper
-        function ucfirst(str) {
-            if (!str) return '';
-            return str.charAt(0).toUpperCase() + str.slice(1);
-        }
-
-        // Voir une équipe
-        function viewTeam(id) {
-            window.location.href = `../team-details.php?id=${id}`;
-        }
-
-     
-        // Charger les données d'une équipe
-        async function loadTeamData(id) {
-            try {
-                const response = await fetch(`../controllers/api.php?action=getTeam&id=${id}`);
-                const result = await response.json();
-
-                if (result.success) {
-                    const team = result.team;
-                    document.getElementById('teamId').value = team.id;
-                    document.getElementById('name').value = team.name;
-                    document.getElementById('chef_equipe_id').value = team.chef_equipe_id;
-                    document.getElementById('domaine_recherche').value = team.domaine_recherche || '';
-                    document.getElementById('description').value = team.description || '';
-                } else {
-                    showAlert('❌ ' + result.message, 'error');
-                }
-            } catch (error) {
-                console.error('Erreur:', error);
-                showAlert('❌ Impossible de charger les données.', 'error');
+        <script>
+            // Fonction helper
+            function ucfirst(str) {
+                if (!str) return '';
+                return str.charAt(0).toUpperCase() + str.slice(1);
             }
-        }
 
+            // Voir une équipe (Redirection)
+            function viewTeam(id) {
+                window.location.href = `index.php?route=teams-details&id=${id}`;
+            }
 
-    </script>
-</body>
-</html><?php
+            // Charger les données d'une équipe (si nécessaire pour modal, sinon laisser tel quel)
+            async function loadTeamData(id) {
+                try {
+                    const response = await fetch(`../controllers/api.php?action=getTeam&id=${id}`);
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const team = result.team;
+                        // Logique de remplissage de modal ici si besoin
+                        console.log("Team loaded", team);
+                    } else {
+                        alert('❌ ' + result.message);
+                    }
+                } catch (error) {
+                    console.error('Erreur:', error);
+                    alert('❌ Impossible de charger les données.');
+                }
+            }
+        </script>
+        <?php
+        return ob_get_clean();
+    }
+}
+?>

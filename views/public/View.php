@@ -19,8 +19,8 @@ abstract class View {
     // Méthode principale pour afficher la page complète
     public function render() {
         // On inclut les composants nécessaires
-        require_once __DIR__ . 'components/UIHeader.php';
-        require_once __DIR__ . 'components/UIFooter.php';
+        require_once __DIR__ . '/components/UIHeader.php';
+        require_once __DIR__ . '/components/UIFooter.php';
 
         // 1. Rendu du Header
         $header = new UIHeader($this->pageTitle ?? 'Accueil', $this->config, $this->menu);

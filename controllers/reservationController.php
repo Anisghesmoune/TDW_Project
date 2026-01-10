@@ -108,97 +108,140 @@ class ReservationController {
     /**
      * Store new reservation
      */
-    public function store() {
+  public function store() {
         header('Content-Type: application/json');
         
+        // 1. Vérification de la méthode HTTP
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
             exit;
         }
-        
-        // Get JSON input
+
+        // 2. Vérification de l'authentification
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        if (!isset($_SESSION['user_id'])) {
+            echo json_encode(['success' => false, 'message' => 'Vous devez être connecté pour réserver.']);
+            exit;
+        }
+
+        // 3. Récupération des données
         $input = json_decode(file_get_contents('php://input'), true);
         
         $id_equipement = (int)($input['id_equipement'] ?? 0);
-        $id_utilisateur = (int)($input['id_utilisateur'] ?? 0);
+        $id_utilisateur = $_SESSION['user_id']; 
         $date_debut = $input['date_debut'] ?? '';
         $date_fin = $input['date_fin'] ?? '';
         $notes = $input['notes'] ?? null;
-        
-        // Validation
+        $forceRequest = $input['force_request'] ?? false; // Le flag envoyé par le JS si l'utilisateur insiste
+
+        // 4. Validation des données
         $errors = [];
         
-        if ($id_equipement <= 0) {
-            $errors[] = 'Équipement requis';
-        }
+        if ($id_equipement <= 0) $errors[] = 'Équipement requis';
+        if (empty($date_debut)) $errors[] = 'Date de début requise';
+        if (empty($date_fin)) $errors[] = 'Date de fin requise';
         
-        if ($id_utilisateur <= 0) {
-            $errors[] = 'Utilisateur requis';
-        }
-        
-        if (empty($date_debut)) {
-            $errors[] = 'Date de début requise';
-        }
-        
-        if (empty($date_fin)) {
-            $errors[] = 'Date de fin requise';
-        }
-        
-        if ($date_debut > $date_fin) {
-            $errors[] = 'La date de fin doit être après la date de début';
-        }
-        
-        if ($date_debut < date('Y-m-d')) {
-            $errors[] = 'La date de début ne peut pas être dans le passé';
+        if (!empty($date_debut) && !empty($date_fin)) {
+            if ($date_debut > $date_fin) {
+                $errors[] = 'La date de fin doit être après la date de début';
+            }
+            // Comparaison avec la date du jour (sans l'heure) pour permettre la réservation aujourd'hui
+            if ($date_debut < date('Y-m-d')) {
+                $errors[] = 'La date de début ne peut pas être dans le passé';
+            }
         }
         
         if (!empty($errors)) {
-            echo json_encode([
-                'success' => false,
-                'message' => 'Erreurs de validation',
-                'errors' => $errors
-            ]);
+            echo json_encode(['success' => false, 'message' => 'Erreur de validation', 'errors' => $errors]);
             exit;
         }
+
+        // 5. Logique de Disponibilité et de Statut
         
-        // Check availability
-        $availability = $this->equipmentModel->isAvailableForPeriod(
-            $id_equipement, 
-            $date_debut, 
-            $date_fin
-        );
-        
-        if (!$availability['available']) {
-            echo json_encode([
-                'success' => false,
-                'message' => 'Équipement non disponible pour cette période',
-                'conflicts' => $availability['conflicts']
-            ]);
+        // A. Vérifier l'état global de l'équipement
+        $equipment = $this->equipmentModel->getById($id_equipement);
+        if (!$equipment) {
+            echo json_encode(['success' => false, 'message' => 'Équipement introuvable']);
             exit;
         }
+
+        // B. Vérifier si le créneau est libre (Chevauchement de dates)
+        $availability = $this->equipmentModel->isAvailableForPeriod($id_equipement, $date_debut, $date_fin);
         
-        // Check if user can reserve this equipment
-        if (!$this->reservationModel->canUserReserve($id_utilisateur, $id_equipement)) {
-            echo json_encode([
-                'success' => false,
-                'message' => 'L\'utilisateur a déjà une réservation active pour cet équipement'
-            ]);
-            exit;
+        // C. Détermination du statut
+        $statutReservation = 'confirmé'; // Optimiste par défaut (Attention à l'orthographe BDD : 'confirmé')
+        $messageSuccess = 'Réservation confirmée avec succès.';
+        $isOccupied = false;
+        $conflictReason = "";
+
+        // Cas 1 : L'équipement est physiquement marqué "En maintenance" ou "Réservé"
+        if ($equipment['etat'] !== 'libre') {
+            $isOccupied = true;
+            $conflictReason = "L'équipement est actuellement marqué comme '" . ucfirst($equipment['etat']) . "'.";
         }
-        
-        // Create reservation using Equipment model
-        $result = $this->equipmentModel->reserve(
-            $id_equipement,
-            $id_utilisateur,
-            $date_debut,
-            $date_fin,
-            $notes
-        );
-        
-        echo json_encode($result);
+        // Cas 2 : Le créneau chevauche une autre réservation future
+        elseif (!$availability['available']) {
+            $isOccupied = true;
+            $conflictReason = "Ce créneau horaire est déjà réservé par un autre membre.";
+        }
+
+        // 6. Gestion du Conflit
+        if ($isOccupied) {
+            if (!$forceRequest) {
+                // Si l'utilisateur n'a pas encore forcé, on renvoie une erreur "conflict"
+                echo json_encode([
+                    'success' => false,
+                    'conflict' => true, 
+                    'message' => $conflictReason . "\n\nVoulez-vous envoyer une demande prioritaire à l'administrateur ?"
+                ]);
+                exit;
+            } else {
+                // Si l'utilisateur a forcé, on accepte mais en statut "en_conflit"
+                $statutReservation = 'en_conflit';
+                $messageSuccess = 'Demande envoyée à l\'administration pour arbitrage.';
+            }
+        }
+
+        // 7. Enregistrement en Base de Données
+        $dataToSave = [
+            'id_equipement' => $id_equipement,
+            'id_utilisateur' => $id_utilisateur,
+            'date_debut' => $date_debut,
+            'date_fin' => $date_fin,
+            'notes' => $notes,
+            'statut' => $statutReservation
+        ];
+
+        // On utilise le ReservationModel pour créer
+        if ($this->reservationModel->create($dataToSave)) {
+            
+            // --- MODIFICATION ICI : Mise à jour de l'état de l'équipement ---
+            // Si la réservation est confirmée et qu'elle commence AUJOURD'HUI (ou maintenant),
+            // on passe l'équipement en 'réservé' immédiatement.
+            
+            if ($statutReservation === 'confirmé') {
+                // On vérifie si la réservation concerne la période actuelle
+                // (date_debut <= maintenant <= date_fin) OU si elle commence aujourd'hui
+                // Pour simplifier : si confirmé, on le réserve.
+                // Note : Pour une gestion fine (réservation future), il faudrait un CRON.
+                // Ici, on applique la règle demandée : changement d'état direct.
+                
+                $this->equipmentModel->updateStatus($id_equipement, 'réservé');
+                $messageSuccess .= ' L\'équipement est maintenant marqué comme réservé.';
+            }
+
+            echo json_encode([
+                'success' => true, 
+                'message' => $messageSuccess,
+                'statut' => $statutReservation
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Erreur SQL lors de l\'enregistrement']);
+        }
         exit;
     }
-    
+        // 7. Enregistrement en Base de Données
+      
     /**
      * View reservation details
      */
@@ -232,7 +275,7 @@ class ReservationController {
         }
         
         // Don't allow editing past or cancelled reservations
-        if ($reservation['statut'] === 'terminée' || $reservation['statut'] === 'annulée') {
+        if ($reservation['statut'] === 'terminé' || $reservation['statut'] === 'annulé') {
             $_SESSION['error'] = 'Impossible de modifier une réservation terminée ou annulée.';
             header('Location: /reservation/view/' . $id);
             exit;
@@ -341,7 +384,7 @@ class ReservationController {
             
             echo json_encode([
                 'success' => true,
-                'message' => 'Réservation confirmée'
+                'message' => 'Réservation confirmé'
             ]);
         } else {
             echo json_encode([
@@ -570,7 +613,7 @@ class ReservationController {
         $id = (int)($input['id'] ?? 0);
         $statut = $input['statut'] ?? '';
         
-        if (!in_array($statut, ['en_attente', 'confirmée', 'annulée', 'en_cours', 'terminée'])) {
+        if (!in_array($statut, ['en_attente', 'confirmé', 'annulé'])) {
             echo json_encode([
                 'success' => false,
                 'message' => 'Statut invalide'
@@ -582,14 +625,14 @@ class ReservationController {
             // Update equipment status accordingly
             $reservation = $this->reservationModel->getById($id);
             if ($reservation) {
-                if ($statut === 'confirmée' || $statut === 'en_cours') {
-                    $this->equipmentModel->updateStatus($reservation['id_equipement'], 'réserve');
-                } elseif ($statut === 'annulée' || $statut === 'terminée') {
+                if ($statut === 'confirmé' ) {
+                    $this->equipmentModel->updateStatus($reservation['id_equipement'], 'réservé');
+                } elseif ($statut === 'annulé') {
                     // Check if there are other active reservations
                     $others = $this->reservationModel->getByEquipment($reservation['id_equipement']);
                     $hasOthers = false;
                     foreach ($others as $other) {
-                        if ($other['id'] != $id && in_array($other['statut'], ['confirmée', 'en_cours'])) {
+                        if ($other['id'] != $id && in_array($other['statut'], ['confirmé'])) {
                             $hasOthers = true;
                             break;
                         }
@@ -703,6 +746,74 @@ class ReservationController {
         $pdf->EquipmentReportTable($headerUser, $dataUser, [80, 35, 35, 30]);
 
         $pdf->Output('D', 'Rapport_Equipements.pdf');
+        exit;
+    }
+    /**
+     * Action Admin : Résoudre un conflit
+     */
+    public function resolveConflict() {
+        // requireAdmin(); 
+        header('Content-Type: application/json');
+        
+        $input = json_decode(file_get_contents('php://input'), true);
+        $reservationId = $input['id'];
+        $decision = $input['decision']; 
+
+        // 1. Cas du REJET
+        if ($decision === 'reject') {
+            // Attention : 'annule' sans accent comme dans la BDD
+            if ($this->reservationModel->updateStatus($reservationId, 'annulé')) {
+                echo json_encode(['success' => true, 'message' => 'Demande rejetée avec succès.']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Erreur lors du rejet.']);
+            }
+        } 
+        // 2. Cas de l'ACCEPTATION
+        elseif ($decision === 'accept') {
+            $res = $this->reservationModel->getById($reservationId);
+            
+            if (!$res) {
+                echo json_encode(['success' => false, 'message' => 'Réservation introuvable.']);
+                exit;
+            }
+
+            // A. Trouver les réservations qui gênent (Conflits)
+            $conflicts = $this->reservationModel->getConflicts(
+                $res['id_equipement'], 
+                $res['date_debut'], 
+                $res['date_fin'], 
+                $reservationId // On s'exclut soi-même
+            );
+
+            // B. Annuler les anciennes réservations gênantes
+            foreach($conflicts as $c) {
+                $this->reservationModel->updateStatus($c['id'], 'annulé');
+            }
+
+            // C. Confirmer la nouvelle
+            $this->reservationModel->updateStatus($reservationId, 'confirmé');
+            
+            // D. Mettre à jour l'équipement immédiatement si c'est pour maintenant
+            $this->equipmentModel->updateStatus($res['id_equipement'], 'réservé');
+            
+            echo json_encode(['success' => true, 'message' => 'Conflit résolu : Nouvelle demande acceptée, anciennes annulées.']);
+        }
+        exit;
+    }
+    /**
+     * API Admin : Récupérer les réservations en conflit
+     */
+    public function getConflictReservations() {
+        // requireAdmin(); 
+
+        $conflicts = $this->reservationModel->getByStatus('en_conflit');
+        
+        
+
+        echo json_encode([
+            'success' => true,
+            'data' => $conflicts
+        ]);
         exit;
     }
 }

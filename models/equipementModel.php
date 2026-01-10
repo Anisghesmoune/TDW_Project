@@ -194,17 +194,22 @@ class Equipment extends Model {
      * Returns array with 'available' boolean and 'conflicts' array if any
      */
     public function isAvailableForPeriod($id, $date_debut, $date_fin) {
-        // First check if equipment exists and is not in maintenance
+        // 1. Vérifier si l'équipement existe et n'est pas en maintenance
         $equipment = $this->getById($id);
+        
         if (!$equipment || $equipment['etat'] === 'en_maintenance') {
             return [
                 'available' => false,
-                'reason' => 'Equipment not available or in maintenance',
+                'reason' => 'Équipement en maintenance ou introuvable',
                 'conflicts' => []
             ];
         }
         
-        // Check for conflicting reservations
+        // 2. Vérifier les conflits de dates
+        // Note : J'ai simplifié la logique de chevauchement. 
+        // Cette formule couvre tous les cas (dedans, autour, chevauchement partiel)
+        // et n'utilise les paramètres qu'une seule fois, ce qui corrige le bug PDO.
+        
         $query = "SELECT r.*, 
                          u.nom as user_nom, 
                          u.prenom as user_prenom,
@@ -212,18 +217,19 @@ class Equipment extends Model {
                   FROM reservations r
                   INNER JOIN users u ON r.id_utilisateur = u.id
                   WHERE r.id_equipement = :id_equipement 
-                  AND r.statut IN ('confirmée', 'en_cours')
-                  AND (
-                      (r.date_debut <= :date_debut AND r.date_fin >= :date_debut)
-                      OR (r.date_debut <= :date_fin AND r.date_fin >= :date_fin)
-                      OR (r.date_debut >= :date_debut AND r.date_fin <= :date_fin)
-                  )
+                 
+                  AND r.statut IN ('confirmé', 'annulé', 'en_conflit') 
+                  AND r.date_debut < :date_fin 
+                  AND r.date_fin > :date_debut
                   ORDER BY r.date_debut ASC";
         
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id_equipement', $id, PDO::PARAM_INT);
-        $stmt->bindParam(':date_debut', $date_debut);
-        $stmt->bindParam(':date_fin', $date_fin);
+        
+        // Utilisation de bindValue (plus sûr ici)
+        $stmt->bindValue(':id_equipement', $id, PDO::PARAM_INT);
+        $stmt->bindValue(':date_debut', $date_debut);
+        $stmt->bindValue(':date_fin', $date_fin);
+        
         $stmt->execute();
         
         $conflicts = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -234,7 +240,6 @@ class Equipment extends Model {
             'equipment' => $equipment
         ];
     }
-    
     /**
      * Get equipment with current reservation status
      */
@@ -335,7 +340,7 @@ class Equipment extends Model {
             $reservation_id = $this->conn->lastInsertId();
             
             // Update equipment status to 'réserve'
-            $this->updateStatus($id_equipement, 'réserve');
+            $this->updateStatus($id_equipement, 'réservé');
             
             $this->conn->commit();
             
@@ -374,7 +379,7 @@ class Equipment extends Model {
             }
             
             // Update reservation status
-            $query = "UPDATE reservations SET statut = 'annulée' WHERE id = :id";
+            $query = "UPDATE reservations SET statut = 'annulé' WHERE id = :id";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':id', $reservation_id, PDO::PARAM_INT);
             $stmt->execute();
@@ -382,7 +387,7 @@ class Equipment extends Model {
             // Check if equipment has other active reservations
             $query = "SELECT COUNT(*) as count FROM reservations 
                       WHERE id_equipement = :id_equipement 
-                      AND statut IN ('confirmée', 'en_cours') 
+                      AND statut IN ('confirmé') 
                       AND id != :reservation_id";
             
             $stmt = $this->conn->prepare($query);

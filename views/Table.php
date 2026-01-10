@@ -1,9 +1,9 @@
 <?php
 /**
  * Classe Table - Composant générique pour afficher des tableaux
- * Peut être utilisée pour n'importe quel type de données
  */
 class Table {
+    private $id; // ✅ Ajout de la propriété ID
     private $headers;
     private $data;
     private $columns;
@@ -13,9 +13,9 @@ class Table {
     
     /**
      * Constructeur
-     * @param array $options - Configuration du tableau
      */
     public function __construct($options = []) {
+        $this->id = $options['id'] ?? ''; // ✅ Récupération de l'ID
         $this->headers = $options['headers'] ?? [];
         $this->data = $options['data'] ?? [];
         $this->columns = $options['columns'] ?? [];
@@ -35,7 +35,6 @@ class Table {
             $headerHtml .= '<th>' . htmlspecialchars($header) . '</th>';
         }
         
-        // Ajouter colonne Actions si des actions sont définies
         if (!empty($this->actions)) {
             $headerHtml .= '<th>Actions</th>';
         }
@@ -54,7 +53,8 @@ HTML;
      */
     private function formatValue($value, $format = null) {
         if ($format === null) {
-            return htmlspecialchars($value ?? '');
+            // On retourne la valeur brute pour permettre le HTML généré par les fonctions de callback
+            return ($value ?? '');
         }
         
         // Format personnalisé (callable)
@@ -73,6 +73,7 @@ HTML;
                     }
                 }
             }
+            // Ici, on échappe la valeur du texte pour la sécurité
             return '<span class="' . $badgeClass . '">' . htmlspecialchars(ucfirst($value)) . '</span>';
         }
         
@@ -82,70 +83,61 @@ HTML;
     /**
      * Générer le HTML des actions
      */
-  private function renderActions($row) {
-    // Si aucune action n'est définie, ne rien retourner
-    if (empty($this->actions)) return '';
-    
-    // Conteneur pour les boutons d'action
-    $actionsHtml = '<div class="action-btns">';
-    
-    // Parcourir chaque action définie
-    foreach ($this->actions as $action) {
-        $label = $action['label'] ?? '';
+    private function renderActions($row) {
+        if (empty($this->actions)) return '';
         
-        // ✅ CORRECTION : Gérer les callables pour icon
-        if (is_callable($action['icon'])) {
-            $icon = $action['icon']($row); // Appeler la fonction avec $row
-        } else {
-            $icon = $action['icon'] ?? '';
-        }
+        $actionsHtml = '<div class="action-btns">';
         
-        // ✅ CORRECTION : Gérer les callables pour class
-        if (is_callable($action['class'])) {
-            $class = $action['class']($row); // Appeler la fonction avec $row
-        } else {
-            $class = $action['class'] ?? 'btn-sm';
-        }
-        
-        $onclick = '';
-        
-        // Gérer l'événement onclick
-        if (isset($action['onclick'])) {
-            if (is_callable($action['onclick'])) {
-                // Si c'est une fonction, l'appeler avec $row
-                $onclick = $action['onclick']($row);
+        foreach ($this->actions as $action) {
+            $label = $action['label'] ?? '';
+            
+            // Gestion des icônes dynamiques
+            if (is_callable($action['icon'])) {
+                $icon = $action['icon']($row);
             } else {
-                // Si c'est une chaîne, remplacer {id} par la vraie valeur
-                $onclick = str_replace('{id}', $row['id'] ?? '', $action['onclick']);
+                $icon = $action['icon'] ?? '';
             }
-            // Ajouter l'attribut onclick avec échappement de sécurité
-            $onclick = 'onclick="' . htmlspecialchars($onclick) . '"';
-        }
-        
-        // Gérer le href pour les liens
-        $href = '#';
-        if (isset($action['href'])) {
-            if (is_callable($action['href'])) {
-                $href = $action['href']($row);
+            
+            // Gestion des classes dynamiques
+            if (isset($action['class']) && is_callable($action['class'])) {
+                $class = $action['class']($row);
             } else {
-                $href = str_replace('{id}', $row['id'] ?? '', $action['href']);
+                $class = $action['class'] ?? 'btn-sm';
+            }
+            
+            $onclick = '';
+            
+            // Gestion onclick
+            if (isset($action['onclick'])) {
+                if (is_callable($action['onclick'])) {
+                    $onclick = $action['onclick']($row);
+                } else {
+                    $onclick = str_replace('{id}', $row['id'] ?? '', $action['onclick']);
+                }
+                $onclick = 'onclick="' . htmlspecialchars($onclick) . '"';
+            }
+            
+            // Gestion href
+            $href = '#';
+            if (isset($action['href'])) {
+                if (is_callable($action['href'])) {
+                    $href = $action['href']($row);
+                } else {
+                    $href = str_replace('{id}', $row['id'] ?? '', $action['href']);
+                }
+            }
+            
+            // Rendu Bouton ou Lien
+            if (isset($action['href'])) {
+                $actionsHtml .= '<a href="' . htmlspecialchars($href) . '" class="' . htmlspecialchars($class) . '">' . $icon . $label . '</a>';
+            } else {
+                $actionsHtml .= '<button class="' . htmlspecialchars($class) . '" ' . $onclick . '>' . $icon . $label . '</button> ';
             }
         }
         
-        // Générer le bouton ou le lien
-        if (isset($action['href'])) {
-            // Si href est défini, créer un lien <a>
-            $actionsHtml .= '<a href="' . htmlspecialchars($href) . '" class="' . htmlspecialchars($class) . '">' . $icon . $label . '</a>';
-        } else {
-            // Sinon, créer un bouton <button>
-            $actionsHtml .= '<button class="' . htmlspecialchars($class) . '" ' . $onclick . '>' . $icon . $label . '</button>';
-        }
+        $actionsHtml .= '</div>';
+        return $actionsHtml;
     }
-    
-    $actionsHtml .= '</div>';
-    return $actionsHtml;
-}
-
     
     /**
      * Générer le HTML des lignes de données
@@ -156,7 +148,7 @@ HTML;
             return <<<HTML
             <tbody>
                 <tr>
-                    <td colspan="{$colSpan}" style="text-align: center; padding: 20px;">
+                    <td colspan="{$colSpan}" style="text-align: center; padding: 20px; color: #666;">
                         {$this->emptyMessage}
                     </td>
                 </tr>
@@ -169,12 +161,10 @@ HTML;
         foreach ($this->data as $row) {
             $bodyHtml .= '<tr>';
             
-            // Parcourir chaque colonne définie
             foreach ($this->columns as $column) {
                 $key = $column['key'] ?? '';
                 $format = $column['format'] ?? null;
                 
-                // Si c'est une fonction callback
                 if (is_callable($key)) {
                     $value = $key($row);
                 } else {
@@ -184,7 +174,6 @@ HTML;
                 $bodyHtml .= '<td>' . $this->formatValue($value, $format) . '</td>';
             }
             
-            // Ajouter la colonne Actions
             if (!empty($this->actions)) {
                 $bodyHtml .= '<td>' . $this->renderActions($row) . '</td>';
             }
@@ -203,8 +192,11 @@ HTML;
         $headersHtml = $this->renderHeaders();
         $bodyHtml = $this->renderBody();
         
+        // ✅ Ajout de l'attribut ID ici
+        $idAttr = !empty($this->id) ? 'id="' . htmlspecialchars($this->id) . '"' : '';
+        
         return <<<HTML
-        <table class="{$this->customClass}">
+        <table {$idAttr} class="{$this->customClass}">
             {$headersHtml}
             {$bodyHtml}
         </table>
@@ -218,11 +210,9 @@ HTML;
         echo $this->render();
     }
     
-    /**
-     * Méthode statique pour créer et afficher rapidement un tableau
-     */
     public static function create($options) {
         $table = new self($options);
         return $table->render();
     }
 }
+?>

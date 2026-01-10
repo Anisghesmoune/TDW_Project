@@ -1,11 +1,26 @@
 <?php
 
 require_once __DIR__ . '/../models/UserModel.php';
+require_once __DIR__ . '/../controllers/ProjectController.php';
+require_once __DIR__ . '/../controllers/EventController.php';
+require_once __DIR__ . '/../controllers/PublicationController.php';
+require_once __DIR__ . '/../models/Settings.php';
+require_once __DIR__ . '/../models/Menu.php';
+require_once __DIR__ . '/../models/TeamsModel.php';
+
 class UserController {
     private $userModel;
+    private $settingsModel;
+    private $menuModel;
+    private $teamsModel;
     
     public function __construct() {
         $this->userModel = new UserModel();
+         $this->settingsModel = new Settings();
+        $this->menuModel = new Menu();
+        $this->teamsModel = new TeamsModel();
+
+
     }
     
     /**
@@ -30,7 +45,15 @@ class UserController {
         // Utiliser directement la méthode du model
         $users = $this->userModel->getAll($filters);
         
-        require_once __DIR__ . 'views/admin/users/index.php';
+        // Préparer les données pour la vue
+        $data = [
+            'users' => $users,
+            'filters' => $filters
+        ];
+        
+        require_once __DIR__ . '/../views/admin/users/index.php';
+        
+        return $data;
     }
     
     /**
@@ -47,7 +70,6 @@ class UserController {
             return $this->store();
         }
         
-        require_once __DIR__ . 'views/admin/users/create.php';
     }
     
     /**
@@ -57,32 +79,35 @@ class UserController {
         // Préparer les données
         $input = json_decode(file_get_contents('php://input'), true);
 
-if (!$input) {
-    echo json_encode(['success' => false, 'message' => 'Données invalides']);
-    exit;
-}
+        if (!$input) {
+            echo json_encode(['success' => false, 'message' => 'Données invalides']);
+            exit;
+        }
 
-$data = [
-    'username' => $input['username'] ?? '',
-    'password' => $input['password'] ?? '',
-    'nom' => $input['nom'] ?? '',
-    'prenom' => $input['prenom'] ?? '',
-    'email' => $input['email'] ?? '',
-    'role' => $input['role'] ?? 'etudiant',
-    'grade' => $input['grade'] ?? null,
-    'domaine_recherche' => $input['domaine_recherche'] ?? null
-];
+        $data = [
+            'username' => $input['username'] ?? '',
+            'password' => $input['password'] ?? '',
+            'nom' => $input['nom'] ?? '',
+            'prenom' => $input['prenom'] ?? '',
+            'email' => $input['email'] ?? '',
+            'role' => $input['role'] ?? 'etudiant',
+            'is_admin' => isset($input['is_admin']) && $input['is_admin'] ? 1 : 0,
+            'grade' => $input['grade'] ?? null,
+            'domaine_recherche' => $input['domaine_recherche'] ?? null
+        ];
 
         // Appeler directement la méthode create du model
         $result = $this->userModel->create($data);
         
         if ($result['success']) {
             $_SESSION['success'] = $result['message'];
-            header('Location: /admin/users');
+            return $this->jsonResponse(['success' => true, 'message' => $result['message']]);
+            
         } else {
             $_SESSION['error'] = $result['message'];
             $_SESSION['old'] = $_POST;
-            header('Location: /admin/users/create');
+            return $this->jsonResponse(['success' => false, 'message' => $result['message']]);
+           
         }
         exit;
     }
@@ -110,7 +135,7 @@ $data = [
             return $this->update($id);
         }
         
-        require_once __DIR__ . 'views/admin/users/edit.php';
+        require_once __DIR__ . '/../views/admin/users/edit.php';
     }
     
     /**
@@ -203,7 +228,11 @@ $data = [
             $this->jsonResponse(['success' => false, 'message' => 'Erreur lors de l\'activation']);
         }
     }
-     public function getUser($id) {
+    
+    /**
+     * API: Récupérer un utilisateur par ID
+     */
+    public function getUser($id) {
         // Vérifier que l'utilisateur est admin
         // if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
         //     $this->jsonResponse(['success' => false, 'message' => 'Accès non autorisé']);
@@ -252,12 +281,15 @@ $data = [
             'grade' => $data['grade'] ?? null,
             'domaine_recherche' => $data['domaine_recherche'] ?? null,
             'specialite' => $data['specialite'] ?? null
-            
         ];
         
         // Utiliser directement updateProfile du model
         $result = $this->userModel->updateProfile($id, $profileData);
-        $result = $this->userModel->updatePhoto($id, $photo_profil);
+        
+        // Mettre à jour la photo si fournie
+        if ($photo_profil) {
+            $result = $this->userModel->updatePhoto($id, $photo_profil);
+        }
         
         // Gérer le mot de passe si fourni (ajouter cette méthode au model si nécessaire)
         if (isset($data['password']) && !empty($data['password'])) {
@@ -272,73 +304,77 @@ $data = [
         }
     }
     
+    /**
+     * Mettre à jour la photo de profil d'un utilisateur
+     */
     public function updatePhoto($id) {
-    // Vérifier que l'utilisateur est admin (décommenter si nécessaire)
-    // if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    //     $this->jsonResponse(['success' => false, 'message' => 'Accès non autorisé']);
-    // }
-    
-    // Vérifier qu'un fichier a été uploadé
-    if (!isset($_FILES['photo']) || $_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
-        $this->jsonResponse(['success' => false, 'message' => 'Aucun fichier uploadé']);
-    }
-    
-    $file = $_FILES['photo'];
-    
-    // Vérifier que l'utilisateur existe
-    $user = $this->userModel->getById($id);
-    if (!$user) {
-        $this->jsonResponse(['success' => false, 'message' => 'Utilisateur introuvable']);
-    }
-    
-    // Validation du fichier
-    $allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
-    $maxSize = 5 * 1024 * 1024; // 5MB
-    
-    if (!in_array($file['type'], $allowedTypes)) {
-        $this->jsonResponse(['success' => false, 'message' => 'Type de fichier non autorisé. Utilisez JPG, PNG ou GIF']);
-    }
-    
-    if ($file['size'] > $maxSize) {
-        $this->jsonResponse(['success' => false, 'message' => 'Fichier trop volumineux. Maximum 5MB']);
-    }
-    
-    // Créer le dossier uploads si nécessaire
-    $uploadDir = '../uploads/profiles/';
-    if (!file_exists($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
-    }
-    
-    // Générer un nom de fichier unique
-    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-    $filename = 'profile_' . $id . '_' . time() . '.' . $extension;
-    $destination = $uploadDir . $filename;
-    
-    // Supprimer l'ancienne photo si elle existe
-    if ($user['photo_profil'] && file_exists($user['photo_profil'])) {
-        unlink($user['photo_profil']);
-    }
-    
-    // Déplacer le fichier uploadé
-    if (move_uploaded_file($file['tmp_name'], $destination)) {
-        // Mettre à jour la base de données
-        $result = $this->userModel->updatePhoto($id, $destination);
+        // Vérifier que l'utilisateur est admin (décommenter si nécessaire)
+        // if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+        //     $this->jsonResponse(['success' => false, 'message' => 'Accès non autorisé']);
+        // }
         
-        if ($result) {
-            $this->jsonResponse([
-                'success' => true, 
-                'message' => 'Photo de profil mise à jour avec succès',
-                'photo_url' => $destination
-            ]);
-        } else {
-            // Supprimer le fichier si la BDD échoue
-            unlink($destination);
-            $this->jsonResponse(['success' => false, 'message' => 'Erreur lors de la mise à jour de la base de données']);
+        // Vérifier qu'un fichier a été uploadé
+        if (!isset($_FILES['photo']) || $_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
+            $this->jsonResponse(['success' => false, 'message' => 'Aucun fichier uploadé']);
         }
-    } else {
-        $this->jsonResponse(['success' => false, 'message' => 'Erreur lors de l\'upload du fichier']);
+        
+        $file = $_FILES['photo'];
+        
+        // Vérifier que l'utilisateur existe
+        $user = $this->userModel->getById($id);
+        if (!$user) {
+            $this->jsonResponse(['success' => false, 'message' => 'Utilisateur introuvable']);
+        }
+        
+        // Validation du fichier
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+        $maxSize = 5 * 1024 * 1024; // 5MB
+        
+        if (!in_array($file['type'], $allowedTypes)) {
+            $this->jsonResponse(['success' => false, 'message' => 'Type de fichier non autorisé. Utilisez JPG, PNG ou GIF']);
+        }
+        
+        if ($file['size'] > $maxSize) {
+            $this->jsonResponse(['success' => false, 'message' => 'Fichier trop volumineux. Maximum 5MB']);
+        }
+        
+        // Créer le dossier uploads si nécessaire
+        $uploadDir = '../uploads/profiles/';
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        // Générer un nom de fichier unique
+        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $filename = 'profile_' . $id . '_' . time() . '.' . $extension;
+        $destination = $uploadDir . $filename;
+        
+        // Supprimer l'ancienne photo si elle existe
+        if ($user['photo_profil'] && file_exists($user['photo_profil'])) {
+            unlink($user['photo_profil']);
+        }
+        
+        // Déplacer le fichier uploadé
+        if (move_uploaded_file($file['tmp_name'], $destination)) {
+            // Mettre à jour la base de données
+            $result = $this->userModel->updatePhoto($id, $destination);
+            
+            if ($result) {
+                $this->jsonResponse([
+                    'success' => true, 
+                    'message' => 'Photo de profil mise à jour avec succès',
+                    'photo_url' => $destination
+                ]);
+            } else {
+                // Supprimer le fichier si la BDD échoue
+                unlink($destination);
+                $this->jsonResponse(['success' => false, 'message' => 'Erreur lors de la mise à jour de la base de données']);
+            }
+        } else {
+            $this->jsonResponse(['success' => false, 'message' => 'Erreur lors de l\'upload du fichier']);
+        }
     }
-}
+    
     /**
      * Afficher les utilisateurs avec nombre de publications
      */
@@ -357,17 +393,12 @@ $data = [
         // Utiliser directement getAllWithPublicationCount du model
         $users = $this->userModel->getAllWithPublicationCount($filters);
         
-        require_once __DIR__ . 'views/admin/users/publications.php';
+        require_once __DIR__ . '/../views/admin/users/publications.php';
     }
     
     /**
-     * Envoyer une réponse JSON
+     * API: Récupérer tous les utilisateurs
      */
-    private function jsonResponse($data) {
-        header('Content-Type: application/json');
-        echo json_encode($data);
-        exit;
-    }
     public function getUsers() {
         // Vérifier que l'utilisateur est admin
         // if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
@@ -388,5 +419,104 @@ $data = [
         
         $this->jsonResponse(['success' => true, 'users' => $users]);
     }
-  
+    
+    /**
+     * Dashboard principal avec toutes les statistiques
+     */
+   public function indexDashboard() {
+        // 1. Vérification Session & Admin
+        if (session_status() === PHP_SESSION_NONE) session_start();
+
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: index.php?route=login');
+            exit;
+        }
+
+        // Vérification rôle admin (à adapter selon votre logique)
+        // $isAdmin = isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'directeur');
+        // if (!$isAdmin) {
+        //     header('Location: index.php?route=dashboard-user');
+        //     exit;
+        // }
+
+        try {
+            // 2. Récupération des données globales (Header/Footer)
+            $config = $this->settingsModel->getAllSettings();
+            $menu = $this->menuModel->getMenuTree();
+
+            // 3. Récupération des données métier via les autres contrôleurs/modèles
+            
+            // Projets
+            $projectController = new ProjectController();
+            $projects = $projectController->getAll(); // Assurez-vous que cette méthode retourne un array
+
+            // Événements
+            $eventController = new EventController();
+            $events = $eventController->getAll(); // Assurez-vous que cette méthode retourne un array
+
+            // Publications
+            $publicationController = new PublicationController();
+            // Si stats() retourne un array directement, sinon adaptez
+            $publicationData = $publicationController->stats(); 
+
+            // Utilisateurs
+            $users = $this->userModel->getAll();
+
+            // 4. Préparation des données pour la vue
+            $data = [
+                'title' => 'Administration - Laboratoire',
+                'config' => $config,
+                'menu' => $menu,
+                'users' => $users,
+                'projects' => $projects,
+                'events' => $events,
+                'publications' => $publicationData
+            ];
+
+            // 5. Chargement de la Vue
+            require_once __DIR__ . '/../views/admin_dashboard.php';
+            $view = new DashboardAdminView($data);
+            $view->render();
+
+        } catch (Exception $e) {
+            // Gestion d'erreur basique
+            echo "Erreur lors du chargement du dashboard : " . $e->getMessage();
+        }
+    }
+     public function indexUpdateUserAdmin() {
+        // 1. Récupération des données existantes
+        $users = $this->userModel->getAll();
+        $teams = $this->teamsModel->getAllTeamsWithDetails();
+        
+        
+        // 2. AJOUT : Récupération des données globales (Header/Footer)
+        $config = $this->settingsModel->getAllSettings();
+        $menu = $this->menuModel->getMenuTree();
+        
+        // 3. Préparation des données
+        $data = [
+            'title' => 'Gestion des Utilisateurs', // Titre pour le Header
+            'users' => $users,
+            'teams' => $teams,
+            'config' => $config,
+            'menu' => $menu
+        ];
+        
+        // 4. Appel de la Vue Classe
+        require_once __DIR__ . '/../views/updateUser.php';
+        $view = new UpdateUserView($data);
+        $view->render();
+        
+        return $data;
+    }
+
+    
+    /**
+     * Envoyer une réponse JSON
+     */
+    private function jsonResponse($data) {
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
+    }
 }

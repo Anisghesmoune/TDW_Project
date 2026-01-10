@@ -46,25 +46,39 @@ class HomeController {
      * Méthode helper pour combiner Projets et Publications
      * et les trier par date décroissante.
      */
+    /**
+     * Méthode helper pour combiner Projets et Publications
+     * et les trier par date décroissante.
+     */
     private function getCombinedNews($limit = 6) {
         $combined = [];
 
         // 1. Récupérer les Projets récents
-        // (Vérifiez si votre ProjectModel renvoie un tableau direct ou ['data' => ...])
         $projectsResult = $this->projectModel->getRecentProjects($limit); 
-        $projects = $projectsResult['data'] ?? $projectsResult; // Sécurité format
+        $projects = $projectsResult['data'] ?? $projectsResult; 
 
+        // CORRECTION 1 : Vérification stricte du format
         if (is_array($projects)) {
+            // Si c'est un tableau associatif simple (un seul projet), on le met dans un tableau
+            if (isset($projects['id'])) {
+                $projects = [$projects];
+            }
+
             foreach ($projects as $p) {
+                // Sécurité : On s'assure que $p est bien un tableau (un projet)
+                if (!is_array($p)) {
+                    continue; 
+                }
+
                 $combined[] = [
-                    'id'          => $p['id'],
-                    'titre'       => $p['titre'],
+                    'id'          => $p['id'] ?? 0,
+                    'titre'       => $p['titre'] ?? 'Sans titre',
                     'description' => $p['description'] ?? '',
-                    // On mappe la date de début du projet vers 'date_debut' pour UINews
-                    'date_debut'  => $p['date_debut'], 
-                    'type'        => 'projet', // Pour l'icône
-                    'lieu'        => 'Laboratoire', // Optionnel
-                    'source'      => 'project' // Pour savoir où faire le lien (détails projet)
+                    // CORRECTION 2 : Gestion des dates nulles
+                    'date_debut'  => !empty($p['date_debut']) ? $p['date_debut'] : date('Y-m-d'),
+                    'type'        => 'projet', 
+                    'lieu'        => 'Laboratoire',
+                    'source'      => 'project' 
                 ];
             }
         }
@@ -73,23 +87,39 @@ class HomeController {
         $pubs = $this->publicationModel->getRecent($limit);
         
         if (is_array($pubs)) {
+            // Même vérification pour les publications si nécessaire
+            if (isset($pubs['id'])) {
+                $pubs = [$pubs];
+            }
+
             foreach ($pubs as $pub) {
+                if (!is_array($pub)) {
+                    continue;
+                }
+
                 $combined[] = [
-                    'id'          => $pub['id'],
-                    'titre'       => $pub['titre'],
+                    'id'          => $pub['id'] ?? 0,
+                    'titre'       => $pub['titre'] ?? 'Sans titre',
                     'description' => $pub['resume'] ?? '',
-                    // On mappe la date de publi vers 'date_debut' pour que UINews comprenne
-                    'date_debut'  => $pub['date_publication'], 
-                    'type'        => $pub['type'] ?? 'publication', // article, thèse...
-                    'lieu'        => 'Bibliothèque', // Optionnel
-                    'source'      => 'publication' // Pour savoir où faire le lien
+                    // CORRECTION 2 : Gestion des dates nulles
+                    'date_debut'  => !empty($pub['date_publication']) ? $pub['date_publication'] : date('Y-m-d'),
+                    'type'        => $pub['type'] ?? 'publication', 
+                    'lieu'        => 'Bibliothèque', 
+                    'source'      => 'publication'
                 ];
             }
         }
 
         // 3. Trier le tout par date (du plus récent au plus vieux)
         usort($combined, function($a, $b) {
-            return strtotime($b['date_debut']) - strtotime($a['date_debut']);
+            // CORRECTION 3 : Éviter l'erreur Deprecated strtotime(null)
+            $dateA = $a['date_debut'] ?? null;
+            $dateB = $b['date_debut'] ?? null;
+
+            $timeA = $dateA ? strtotime($dateA) : 0;
+            $timeB = $dateB ? strtotime($dateB) : 0;
+
+            return $timeB - $timeA;
         });
 
         // 4. Retourner seulement le nombre demandé

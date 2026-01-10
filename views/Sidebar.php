@@ -13,7 +13,7 @@ class Sidebar {
     // Icône générique de secours
     private $defaultIcon = '🔗'; 
 
-    // Dictionnaire des icônes standards (comme l'admin)
+    // Dictionnaire des icônes standards pour mappage automatique
     private $standardIcons = [
         'Vue d\'ensemble' => '📊',
         'Utilisateurs'    => '👥',
@@ -25,8 +25,12 @@ class Sidebar {
         'Actualités'      => '📰',
         'Partenaires'     => '🤝',
         'Paramètres'      => '⚙️',
+        'Historique'      => '🕒',
+        'Mon Espace'      => '👤',
+        'Mon Profil'      => '✏️',
         'Accueil'         => '🏠',
-        'Contact'         => '📧'
+        'Contact'         => '📞',
+        'Déconnexion'     => '🚪'
     ];
 
     public function __construct(string $role) {
@@ -34,33 +38,34 @@ class Sidebar {
         $this->menuModel = new Menu();
         
         $this->config = $this->settingsModel->getAllSettings();
+        // Couleurs par défaut si non définies
         $this->pColor = $this->config['primary_color'] ?? '#e74c3c';
         $this->sColor = $this->config['sidebar_color'] ?? '#2c3e50';
 
         $this->buildMenu($role);
     }
 
-    private function buildMenu(string $role) {
-        // --- A. LIEN DASHBOARD ---
-        $this->items[] = [
-            'label' => "Vue d'ensemble",
-            'icon'  => $this->standardIcons["Vue d'ensemble"],
-            'link'  => 'dashboard.php'
-        ];
-        $isAdmin = isset($_SESSION['is_admin']) && $_SESSION['is_admin'] === true;
-        // --- B. LIENS ADMINISTRATEUR ---
+    private function buildMenu() {
+        // Vérification du rôle Admin (via la session)
+        $isAdmin = (isset($_SESSION['is_admin']) && $_SESSION['is_admin'] === 1) ;
+
+       
         if ($isAdmin) {
-            // Liste des clés à ajouter pour l'admin
+            $this->items[] = [
+                'label' => "Vue d'ensemble",
+                'icon'  => $this->standardIcons["Vue d'ensemble"],
+                'link'  => 'index.php?route=admin-dashboard'
+            ];
+
+            // Liste des liens Admin codés en dur
             $adminKeys = [
-                'Utilisateurs' => 'users.php',
-                'Équipes'      => 'team-management.php',
-                'Projets'      => 'manage-projects.php',
-                'Publications' => 'publications.php',
-                'Équipements'  => 'equipement_management.php',
-                'Événements'   => 'event-management.php',
-                'Actualités'   => 'news.php',
-                'Partenaires'  => 'partners.php',
-                'Paramètres'   => 'settings.php'
+                'Projets'      => 'index.php?route=admin-projects',
+                'Équipes'      => 'index.php?route=admin-teams',
+                'Équipements'  => 'index.php?route=admin-equipement',
+                'Historique'   => 'index.php?route=reservation-history',
+                'Publications' => 'index.php?route=admin-publications',
+                'Événements'   => 'index.php?route=admin-events',
+                'Paramètres'   => 'views/Settings.php' 
             ];
 
             foreach ($adminKeys as $label => $link) {
@@ -70,40 +75,68 @@ class Sidebar {
                     'link'  => $link
                 ];
             }
-        }
+        } 
+      
+        else {
+            // 1. Liens fixes pour le membre connecté
+            $this->items[] = [
+                'label' => "Mon Espace",
+                'icon'  => $this->standardIcons["Mon Espace"], 
+                'link'  => 'index.php?route=dashboard-user'
+            ];
+            
+            $this->items[] = [
+                'label' => "Mon Profil",
+                'icon'  => $this->standardIcons["Mon Profil"],
+                'link'  => 'index.php?route=profile-user'
+            ];
 
-        // --- C. LIENS DYNAMIQUES (Base de Données) ---
-        $dbItems = $this->menuModel->getAll(); 
-        
-        if (!empty($dbItems)) {
-            foreach ($dbItems as $dbItem) {
-                $label = $dbItem['title'] ?? $dbItem['label'];
-                $dbIcon = $dbItem['icon'] ?? '';
-                
-                // LOGIQUE INTELLIGENTE :
-                // 1. Si icône en BDD -> on l'utilise
-                // 2. Sinon, on cherche si le label existe dans les icônes standards (ex: "Projets")
-                // 3. Sinon, on met l'icône par défaut (🔗)
-                
-                if (!empty($dbIcon)) {
-                    $finalIcon = $dbIcon;
-                } elseif (isset($this->standardIcons[$label])) {
-                    $finalIcon = $this->standardIcons[$label];
-                } else {
-                    $finalIcon = $this->defaultIcon;
+            // 2. Liens Dynamiques (Gérés depuis les Paramètres)
+            $dbItems = $this->menuModel->getAll(); 
+            
+            if (!empty($dbItems)) {
+                foreach ($dbItems as $dbItem) {
+                    $label = $dbItem['title'] ?? $dbItem['label'];
+                    $dbIcon = $dbItem['icon'] ?? '';
+                    $url = $dbItem['url'] ?? $dbItem['link'];
+
+                    // --- Gestion de l'icône ---
+                    if (!empty($dbIcon)) {
+                        $finalIcon = $dbIcon;
+                    } elseif (isset($this->standardIcons[$label])) {
+                        $finalIcon = $this->standardIcons[$label];
+                    } else {
+                        $finalIcon = $this->defaultIcon;
+                    }
+
+                    // --- Correction automatique de l'URL ---
+                    // Si l'utilisateur a écrit juste "projects" au lieu de "index.php?route=projects"
+                    if (strpos($url, 'index.php') === false && strpos($url, 'http') === false) {
+                        $url = 'index.php?route=' . $url;
+                    }
+
+                    $this->items[] = [
+                        'label' => $label,
+                        'icon'  => $finalIcon,
+                        'link'  => $url
+                    ];
                 }
-
-                $this->items[] = [
-                    'label' => $label,
-                    'icon'  => $finalIcon,
-                    'link'  => $dbItem['url'] ?? $dbItem['link']
-                ];
             }
         }
+
+        // =========================================================
+        // COMMUN : DÉCONNEXION (Toujours à la fin)
+        // =========================================================
+        $this->items[] = [
+            'label' => "Déconnexion",
+            'icon'  => $this->standardIcons["Déconnexion"],
+            'link'  => 'index.php?route=logout',
+            'class' => 'logout-link'
+        ];
     }
 
     public function render() {
-        // Injection CSS Dynamique
+        // Injection CSS Dynamique pour les couleurs
         echo "<style>
             :root {
                 --primary-color: {$this->pColor};
@@ -113,18 +146,36 @@ class Sidebar {
 
         echo '<ul class="sidebar-menu">';
 
-        $currentPage = basename($_SERVER['PHP_SELF']); 
+        // LOGIQUE ACTIVE CLASS (Mise en surbrillance du lien actuel)
+        $currentRoute = $_GET['route'] ?? 'home'; 
+        // On récupère le nom du script actuel (ex: Settings.php) pour le cas Paramètres
+        $currentScript = basename($_SERVER['PHP_SELF']); 
 
         foreach ($this->items as $item) {
-            $linkPage = basename($item['link']);
-            $activeClass = ($currentPage === $linkPage) ? 'active' : '';
-            
-            // Dernière sécurité si l'icône est vide (ne devrait pas arriver avec la logique ci-dessus)
+            $isActive = false;
+
+            // Analyse du lien pour voir s'il correspond à la page actuelle
+            if (strpos($item['link'], 'route=') !== false) {
+                // Comparaison par paramètre route
+                $parsedUrl = parse_url($item['link']);
+                if (isset($parsedUrl['query'])) {
+                    parse_str($parsedUrl['query'], $queryParams);
+                    if (isset($queryParams['route']) && $queryParams['route'] === $currentRoute) {
+                        $isActive = true;
+                    }
+                }
+            } elseif (strpos($item['link'], $currentScript) !== false) {
+                // Comparaison par nom de fichier (ex: views/Settings.php)
+                $isActive = true;
+            }
+
+            $activeClass = $isActive ? 'active' : '';
             $icon = $item['icon'] ?: $this->defaultIcon;
+            $extraClass = $item['class'] ?? '';
 
             echo "
                 <li>
-                    <a href='{$item['link']}' class='{$activeClass}'>
+                    <a href='{$item['link']}' class='{$activeClass} {$extraClass}'>
                         {$icon} {$item['label']}
                     </a>
                 </li>

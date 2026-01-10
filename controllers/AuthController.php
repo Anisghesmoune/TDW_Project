@@ -46,6 +46,8 @@ class AuthController {
                 // Stocker les informations utilisateur en session
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['email'] = $user['email'];
+                $_SESSION['nom'] = $user['nom'];
+                $_SESSION['prenom'] = $user['prenom'];
                 $_SESSION['role'] = $user['role'];
                 $_SESSION['is_admin'] = ($user['is_admin'] == 1); 
                 $_SESSION['nom_complet'] = $user['nom'] . ' ' . $user['prenom'];
@@ -175,20 +177,15 @@ class AuthController {
         unset($_SESSION[$key]);
     }
 
-    private function getRedirectUrl($role) {
-        switch ($role) {
-            case 'admin':
-                return 'admin/dashboard.php';
-            case 'enseignant':
-            case 'doctorant':
-            case 'etudiant':
-            case 'invite':
-                return '../views/public/dashboard.php';
-            default:
-                return 'index.php';
+  private function getRedirectUrl($user) {
+        // Si l'utilisateur a le flag is_admin à 1 (Vrai)
+        if (isset($user['is_admin']) && $user['is_admin'] == 1) {
+            return 'index.php?route=admin-dashboard';
         }
-    }
 
+        // Sinon, c'est un membre normal (enseignant, étudiant, etc.)
+        return 'index.php?route=dashboard-user';
+    }
       private function sendResponse($success, $message, $data = []) {
         header('Content-Type: application/json');
         echo json_encode([

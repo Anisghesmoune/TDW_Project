@@ -113,5 +113,39 @@ class Settings extends Model {
             throw $e;
         }
     }
+    // models/Menu.php
+
+public function replaceAll($items) {
+    try {
+        $this->conn->beginTransaction();
+        
+        // 1. On vide la table
+        $this->conn->exec("TRUNCATE TABLE menu_items"); // Ou DELETE FROM
+        
+        // 2. On réinsère tout
+        $sql = "INSERT INTO menu_items (title, url, ordre) VALUES (:title, :url, :ordre)";
+        $stmt = $this->conn->prepare($sql);
+        
+        foreach ($items as $item) {
+            $stmt->bindValue(':title', $item['title']);
+            $stmt->bindValue(':url', $item['url']);
+            $stmt->bindValue(':ordre', $item['ordre']);
+            $stmt->execute();
+        }
+        
+        $this->conn->commit();
+        return true;
+    } catch (Exception $e) {
+        $this->conn->rollBack();
+        return false;
+    }
+}
+// Dans models/Menu.php
+
+public function delete($id) {
+    $stmt = $this->conn->prepare("DELETE FROM menu WHERE id = :id");
+    $stmt->execute(['id' => $id]);
+    return $stmt->rowCount() > 0;
+}
 }
 ?>

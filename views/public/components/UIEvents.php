@@ -53,7 +53,7 @@ class UIEvents extends Component {
                         <h3>".htmlspecialchars($event['titre'])."</h3>
                         <p class='description'>".htmlspecialchars(substr($event['description'], 0, 100))."...</p>
                         <div class='card-meta'>
-                            <span>📍 ".htmlspecialchars($event['lieu'])."</span>
+                            <span>📍 ".htmlspecialchars($event['localisation'])."</span>
                             <span>⏰ $time</span>
                         </div>
                         <a href='event.php?id=".$event['id']."' class='card-link'>En savoir plus →</a>

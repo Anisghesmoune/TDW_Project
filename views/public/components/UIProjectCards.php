@@ -58,7 +58,7 @@ class UIProjectCard extends Component {
                 </div>
 
                 <div class="card-footer">
-                    <a href="project-details.php?id={$id}" class="btn-detail">Voir la fiche →</a>
+                 <a href="index.php?route=project-details&id=$id " class="btn-detail">Voir la fiche →</a>
                 </div>
             </div>
         </article>

@@ -2,38 +2,58 @@
 require_once __DIR__ . "/../models/reservationModel.php";
 require_once __DIR__ . "/../models/equipementModel.php";
 require_once __DIR__ . "/../models/equipementType.php";
+require_once __DIR__ .  '/../models/Menu.php';
+require_once __DIR__ . '/../models/Settings.php';
 
 
 class EquipmentController {
     private $equipmentModel;
     private $equipmentTypeModel;
     private $reservationModel;
+    private $settingsModel;
+    private $menuModel;
     
     public function __construct() {
         $this->equipmentModel = new Equipment();
         $this->equipmentTypeModel = new EquipmentType();
         $this->reservationModel = new Reservation();
+        $this->settingsModel = new Settings();
+        $this->menuModel = new Menu();
     }
     
     /**
      * Display equipment dashboard
      */
-    public function index() {
-        // Auto-update reservation statuses
+   public function index() {
+        // 1. Mise à jour automatique des statuts
         $this->reservationModel->autoUpdateStatuses();         
-        // Get statistics
+
+        // 2. RÉCUPÉRATION DES DONNÉES GLOBALES (Header/Footer)
+        // ----------------------------------------------------
+        $config = $this->settingsModel->getAllSettings(); // Logo, Couleurs, etc.
+        $menu = $this->menuModel->getMenuTree();          // Menu de navigation
+
+        // 3. RÉCUPÉRATION DES DONNÉES SPÉCIFIQUES (Équipements)
+        // -----------------------------------------------------
         $statusStats = $this->equipmentModel->getStatsByStatus();
         $typeStats = $this->equipmentModel->getStatsByType();
         $maintenanceNeeded = $this->equipmentModel->getMaintenanceNeeded(30);
         
-        // Get recent equipment
+        // Équipements récents
         $recentEquipment = $this->equipmentModel->getAll('id', 'DESC', 10);
         
-        // Get reservation stats
+        // Stats réservations
         $reservationStats = $this->reservationModel->getStats();
         
+        // 4. PRÉPARATION DES DONNÉES POUR LA VUE
+        // --------------------------------------
         $data = [
+            // Données structurelles (Header/Footer)
             'title' => 'Tableau de Bord - Équipements',
+            'config' => $config,
+            'menu' => $menu,
+            
+            // Données métier (Page actuelle)
             'statusStats' => $statusStats,
             'typeStats' => $typeStats,
             'maintenanceNeeded' => $maintenanceNeeded,
@@ -41,9 +61,13 @@ class EquipmentController {
             'reservationStats' => $reservationStats
         ];
         
-        
+        // 5. CHARGEMENT ET RENDU DE LA VUE
+        // --------------------------------
         require_once __DIR__ . '/../views/public/EquipementView.php';
-return $data;
+        
+        // On instancie la classe de vue et on appelle render()
+        $view = new EquipementView($data);
+        $view->render();
     }
     
     /**
@@ -169,7 +193,6 @@ return $data;
             'types' => $types
         ];
         
-        require_once __DIR__ . 'views/equipment/edit.php';
     }
     
     /**
@@ -439,6 +462,87 @@ return $data;
             'data' => $calendar
         ]);
         exit;
+    }
+     public function indexEquipementAdmin() {
+        // 1. Vérification Session & Admin
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: index.php?route=login');
+            exit;
+        }
+
+        // Vérification rôle (Admin ou Directeur)
+        // $isAdmin = isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'directeur');
+        // if (!$isAdmin) {
+        //     header('Location: index.php?route=dashboard-user'); 
+        //     exit;
+        // }
+
+        // 2. Mise à jour auto des réservations
+        $this->reservationModel->autoUpdateStatuses();         
+        
+        // 3. Récupération des données globales (Header/Footer)
+        $config = $this->settingsModel->getAllSettings();
+        $menu = $this->menuModel->getMenuTree();
+
+        // 4. Récupération des données métier
+        $statusStats = $this->equipmentModel->getStatsByStatus();
+        $typeStats = $this->equipmentModel->getStatsByType();
+        $maintenanceNeeded = $this->equipmentModel->getMaintenanceNeeded(30);
+        $recentEquipment = $this->equipmentModel->getAll('id', 'DESC', 10);
+        $reservationStats = $this->reservationModel->getStats();
+        
+        // 5. Préparation des données pour la vue
+        $data = [
+            'title' => 'Administration - Équipements',
+            'config' => $config,
+            'menu' => $menu,
+            'statusStats' => $statusStats,
+            'typeStats' => $typeStats,
+            'maintenanceNeeded' => $maintenanceNeeded,
+            'recentEquipment' => $recentEquipment,
+            'reservationStats' => $reservationStats
+        ];
+        
+        // 6. Chargement de la Vue Classe
+        require_once __DIR__ . '/../views/equipement_management.php';
+        $view = new EquipementAdminView($data);
+        $view->render();
+    }
+
+    public function indexReservationHistory() {
+        // 1. Vérification de la session
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: index.php?route=login');
+            exit;
+        }
+
+        // // Vérification Rôle Admin (Optionnel selon votre logique)
+        // $isAdmin = isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'directeur');
+        // if (!$isAdmin) {
+        //     header('Location: index.php?route=dashboard-user'); 
+        //     exit;
+        // }
+
+        // 2. Récupération des données globales pour le Header/Footer
+        $config = $this->settingsModel->getAllSettings();
+        $menu = $this->menuModel->getMenuTree();
+
+        // 3. Préparation des données pour la vue
+        // Les données des réservations seront chargées via AJAX par la vue
+        $data = [
+            'title' => 'Historique des Réservations',
+            'config' => $config,
+            'menu' => $menu
+        ];
+
+        // 4. Chargement de la Vue Classe
+        require_once __DIR__ . '/../views/reservation-history.php';
+        $view = new ReservationHistoryView($data);
+        $view->render();
     }
 }
 ?>
