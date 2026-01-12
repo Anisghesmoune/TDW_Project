@@ -453,6 +453,20 @@ class Event extends Model {
         
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
+    public function autoUpdateStatuses() {
+        
+        $sql = "UPDATE events 
+                SET statut = 'terminé' 
+                WHERE statut = 'programmé' 
+                AND (
+                    (date_fin IS NOT NULL AND date_fin < NOW())
+                    OR 
+                    (date_fin IS NULL AND date_debut < DATE_SUB(NOW(), INTERVAL 1 DAY))
+                )";
+
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute();
+    }
 }
 
 ?>

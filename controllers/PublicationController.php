@@ -888,35 +888,59 @@ public function apiGetPublicationsByType($type, $limit = null) {
         }
         die("Erreur : Le fichier n'existe pas sur le serveur.");
     }
+   
+
+    /**
+     * Génère et télécharge le rapport PDF
+     */
     public function generateReport() {
+        // Nettoyer le buffer de sortie pour éviter de corrompre le PDF
+        if (ob_get_length()) ob_clean();
+
         require_once __DIR__ . '/../libs/PDFReport.php';
 
-        $year = $_GET['year'] ?? null;
-        $domaine = $_GET['domaine'] ?? null;
-        
-        $filters = array_filter(['year' => $year, 'domaine' => $domaine]);
+        $year = $_REQUEST['year'] ?? null;
+        $domaine = $_REQUEST['domaine'] ?? null;
+        $typeFiltre = $_REQUEST['type'] ?? null;
+        $format = $_REQUEST['format'] ?? 'pdf';
+
+        if ($format !== 'pdf') {
+            die("Format non supporté.");
+        }
+
+        $filters = array_filter([
+            'year' => $year,
+            'domaine' => $domaine,
+            'type' => ($typeFiltre === 'type') ? null : $typeFiltre
+        ]);
+
         $publications = $this->publicationModel->getAllForReport($filters);
 
         $pdf = new PDFReport();
         $pdf->AliasNbPages();
         $pdf->AddPage();
         
+        // --- CORRECTION 1 : Encodage du titre ---
         $titre = "Rapport Bibliographique";
         if ($year) $titre .= " - Année $year";
-        $pdf->setReportTitle($titre);
-        $pdf->setFilterInfo("Généré le " . date('d/m/Y'));
+        // iconv remplace utf8_decode
+        $pdf->setReportTitle(iconv('UTF-8', 'windows-1252', $titre));
+        
+        $dateInfo = "Généré le " . date('d/m/Y H:i');
+        $pdf->setFilterInfo(iconv('UTF-8', 'windows-1252', $dateInfo));
 
         if (empty($publications)) {
             $pdf->SetFont('Arial', 'I', 12);
-            $pdf->Cell(0, 10, $pdf->convert("Aucune publication trouvée pour ces critères."), 0, 1, 'C');
+            $msg = "Aucune publication trouvée pour ces critères.";
+            $pdf->Cell(0, 10, iconv('UTF-8', 'windows-1252', $msg), 0, 1, 'C');
             $pdf->Output('D', 'Rapport_Vide.pdf');
             exit;
         }
 
-        // Groupement par Type
         $grouped = [];
         foreach ($publications as $pub) {
-            $grouped[ucfirst($pub['type'])][] = $pub;
+            $typeName = ucfirst($pub['type'] ?? 'Autre');
+            $grouped[$typeName][] = $pub;
         }
 
         foreach ($grouped as $type => $pubs) {
@@ -925,18 +949,24 @@ public function apiGetPublicationsByType($type, $limit = null) {
             // En-tête de catégorie
             $pdf->SetFont('Arial', 'B', 12);
             $pdf->SetFillColor(230, 230, 230);
-            $pdf->Cell(0, 8, $pdf->convert(strtoupper($type)), 0, 1, 'L', true);
+            
+            // --- CORRECTION 2 : Encodage du type ---
+            $typeText = strtoupper($type);
+            $pdf->Cell(0, 8, iconv('UTF-8', 'windows-1252', $typeText), 0, 1, 'L', true);
             $pdf->Ln(2);
 
             // En-têtes Tableau
             $header = ['Titre', 'Auteurs', 'Date', 'Projet'];
-            $w = [80, 50, 25, 35]; // Total 190
+            $w = [80, 50, 25, 35];
             
             $pdf->SetFont('Arial', 'B', 9);
             $pdf->SetFillColor(78, 115, 223);
             $pdf->SetTextColor(255);
-            for($i=0; $i<count($header); $i++) 
-                $pdf->Cell($w[$i], 7, $pdf->convert($header[$i]), 1, 0, 'C', true);
+            
+            foreach($header as $i => $col) {
+                // --- CORRECTION 3 : Encodage des en-têtes ---
+                $pdf->Cell($w[$i], 7, iconv('UTF-8', 'windows-1252', $col), 1, 0, 'C', true);
+            }
             $pdf->Ln();
 
             // Données
@@ -946,21 +976,31 @@ public function apiGetPublicationsByType($type, $limit = null) {
             $fill = false;
 
             foreach ($pubs as $row) {
-                // 'auteurs_noms' vient du GROUP_CONCAT dans le modèle
-                $titre = substr($row['titre'], 0, 45) . (strlen($row['titre']) > 45 ? '...' : '');
-                $auteurs = substr($row['auteurs_noms'] ?? 'N/A', 0, 30) . '...';
-                $projet = substr($row['projet_titre'] ?? '-', 0, 18);
+                // --- CORRECTION 4 : Encodage des données ---
+                // On prépare les chaînes
+                $titreRaw = substr($row['titre'], 0, 50) . (strlen($row['titre']) > 50 ? '...' : '');
+                $auteursRaw = substr($row['auteurs_noms'] ?? 'N/A', 0, 35) . '...';
+                $dateRaw = $row['date_publication'] ? date('d/m/Y', strtotime($row['date_publication'])) : '-';
+                $projetRaw = substr($row['projet_titre'] ?? '-', 0, 20);
 
-                $pdf->Cell($w[0], 7, $pdf->convert($titre), 1, 0, 'L', $fill);
-                $pdf->Cell($w[1], 7, $pdf->convert($auteurs), 1, 0, 'L', $fill);
-                $pdf->Cell($w[2], 7, $row['date_publication'], 1, 0, 'C', $fill);
-                $pdf->Cell($w[3], 7, $pdf->convert($projet), 1, 0, 'C', $fill);
+                // Conversion UTF-8 -> Windows-1252 (Latin)
+                // //TRANSLIT permet d'approximer les caractères inconnus au lieu de planter
+                $titre = iconv('UTF-8', 'windows-1252//TRANSLIT', $titreRaw);
+                $auteurs = iconv('UTF-8', 'windows-1252//TRANSLIT', $auteursRaw);
+                $date = iconv('UTF-8', 'windows-1252//TRANSLIT', $dateRaw);
+                $projet = iconv('UTF-8', 'windows-1252//TRANSLIT', $projetRaw);
+
+                $pdf->Cell($w[0], 7, $titre, 1, 0, 'L', $fill);
+                $pdf->Cell($w[1], 7, $auteurs, 1, 0, 'L', $fill);
+                $pdf->Cell($w[2], 7, $date, 1, 0, 'C', $fill);
+                $pdf->Cell($w[3], 7, $projet, 1, 0, 'C', $fill);
                 $pdf->Ln();
                 $fill = !$fill;
             }
         }
 
-        $pdf->Output('D', 'Rapport_Publications.pdf');
+        $filename = 'Rapport_Publications_' . date('Y-m-d') . '.pdf';
+        $pdf->Output('D', $filename);
         exit;
     }
     public function indexAdmin() {

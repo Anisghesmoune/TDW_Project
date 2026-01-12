@@ -87,9 +87,16 @@ switch ($route) {
     ======================== */
 
     case 'login':
-        require_once ROOT_PATH . '/views/login.php';
+        require_once ROOT_PATH . '/login.php';
         break;
         
+
+    case  'opportunities':
+      require_once ROOT_PATH  . '/controllers/OpportunityController.php';
+    $controller = new OpportunityController();
+    $controller->indexPublic(); 
+    break;
+ 
     case 'logout':
         require_once ROOT_PATH . '/logout.php';
         break;
@@ -188,12 +195,41 @@ switch ($route) {
         require_once ROOT_PATH . '/controllers/SettingsControllers.php';
         (new SettingsController())->apiDeleteMenuItem();
          break;
-
+    
 
     case 'admin-settings':
         require_once ROOT_PATH . '/controllers/SettingsControllers.php';
         (new SettingsController())->indexAdmin();
-         break;     
+         break;
+         
+         
+    case 'opportunities-admin':
+    require_once ROOT_PATH . '/controllers/OpportunityController.php';
+    $controller = new OpportunityController();
+    $controller->indexAdmin();
+    break;
+
+    case'admin-partners':
+    require_once __DIR__ . '/controllers/PartnerController.php';
+    (new PartnerController())->indexAdmin();
+    exit;
+
+
+// Route Publique
+case'partners':
+    require_once __DIR__ . '/controllers/PartnerController.php';
+    (new PartnerController())->indexPublic();
+    break;
+
+case'eventsLists':
+    require_once __DIR__ . '/controllers/EventController.php';
+    $controller = new EventController();
+    $controller->indexPublic();
+    exit;
+    
+
+
+     
     /* =======================
        404
     ======================== */

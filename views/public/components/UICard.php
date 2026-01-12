@@ -101,7 +101,7 @@ HTML;
             <h3>{$title}</h3>
             <p>{$description}</p>
             {$metadataHtml}
-            <span class="card-link">En savoir plus &rarr;</span>
+            <span class="card-link"></span>
         </div>
 HTML;
         

@@ -56,7 +56,7 @@ class UIEvents extends Component {
                             <span>📍 ".htmlspecialchars($event['localisation'])."</span>
                             <span>⏰ $time</span>
                         </div>
-                        <a href='event.php?id=".$event['id']."' class='card-link'>En savoir plus →</a>
+                        <a href='index.php?route=eventsLists' class='card-link'>En savoir plus →</a>
                     </div>
                 </article>";
             }

@@ -699,12 +699,22 @@ class PublicationAdminView extends View {
         async function downloadReport() {
             const type = document.getElementById('reportType').value;
             const format = document.getElementById('reportFormat').value;
+            
+            // Construction de l'URL pour un appel direct (GET)
             let url = `../controllers/api.php?action=generateReport&type=${type}&format=${format}`;
             
-            if(type === 'year') url += `&year=${document.getElementById('reportYear').value}`;
+            const year = document.getElementById('reportYear').value;
+            const author = document.getElementById('reportAuthor')?.value;
             
-            window.open(url, '_blank');
+            if(type === 'year' && year) url += `&year=${year}`;
+            if(type === 'author' && author) url += `&author=${author}`;
+            
+            // Fermer le modal
             closeReportModal();
+            
+            // Ouvrir dans un nouvel onglet pour déclencher le téléchargement
+            // Cela permet au navigateur de gérer le flux binaire PDF
+            window.open(url, '_blank');
         }
 
         function editPublication(id) { openModal(true, id); }

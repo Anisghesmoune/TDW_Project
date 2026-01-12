@@ -7,39 +7,54 @@ class UIHeader extends Component {
     private $config;
     private $menuData;
     private $customCss; 
-   private $adminKeys = [
-    [
-        'title' => 'Projets',
-        'url'   => 'index.php?route=admin-projects'
-    ],
-    [
-        'title' => 'Équipes',
-        'url'   => 'index.php?route=admin-teams'
-    ],
-    [
-        'title' => 'Équipements',
-        'url'   => 'index.php?route=admin-equipement'
-    ],
-    [
-        'title' => 'Historique',
-        'url'   => 'index.php?route=reservation-history'
-    ],
-    [
-        'title' => 'Publications',
-        'url'   => 'index.php?route=admin-publications'
-    ],
-    [
-        'title' => 'Événements',
-        'url'   => 'index.php?route=admin-events'
-    ],
-    [
-        'title' => 'Paramètres',
-        'url'   => 'index.php?route=admin-settings'
-    ]
-];
 
-    
-    // Ajout du paramètre $customCss (tableau)
+    // Modification ici : regroupement dans un sous-menu
+    private $adminKeys = [
+        [
+            'title' => 'Projets',
+            'url'   => 'index.php?route=admin-projects'
+        ],
+        [
+            'title' => 'Équipes',
+            'url'   => 'index.php?route=admin-teams'
+        ],
+        [
+            'title' => 'Équipements',
+            'url'   => 'index.php?route=admin-equipement'
+        ],
+        [
+            'title' => 'Historique',
+            'url'   => 'index.php?route=reservation-history'
+        ],
+        [
+            'title' => 'Publications',
+            'url'   => 'index.php?route=admin-publications'
+        ],
+        [
+            'title' => 'Événements',
+            'url'   => 'index.php?route=admin-events'
+        ],
+        [
+            'title' => 'Administration', // Le ▾ indique un menu déroulant
+            'url'   => '#', 
+            'children' => [
+                [
+                    'title' => 'Opportunités',
+                    'url'   => 'index.php?route=opportunities-admin'
+                ],
+                [
+                    'title' => 'Partenaires',
+                    'url'   => 'index.php?route=admin-partners'
+                ],
+                [
+                    'title' => 'Paramètres',
+                    'url'   => 'index.php?route=admin-settings'
+                ]
+            ]
+        ]
+        // --- FIN DU SOUS-MENU ---
+    ];
+
     public function __construct($pageTitle, $config, $menuData, $customCss = []) {
         $this->pageTitle = $pageTitle;
         $this->config = $config;
@@ -58,10 +73,8 @@ class UIHeader extends Component {
         // Génération du Menu
         if ($isAdmin) {
             // Menu Admin Statique
-           $menuComponent = new UIMenu($this->adminKeys);
+            $menuComponent = new UIMenu($this->adminKeys);
             $menuHtml = $menuComponent->render();
-
-
         } else {
             // Menu Public Dynamique
             $menuComponent = new UIMenu($this->menuData);
@@ -70,17 +83,17 @@ class UIHeader extends Component {
         
         // Génération des liens CSS dynamiques
         $cssLinks = '';
-        // CSS de base toujours présent
         $cssLinks .= '<link rel="stylesheet" href="../views/css/public.css">';
         $cssLinks .= '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">';
         
-        // Ajout des CSS spécifiques passés en paramètre
         if (!empty($this->customCss)) {
             foreach ($this->customCss as $cssFile) {
                 $cssLinks .= '<link rel="stylesheet" href="' . htmlspecialchars($cssFile) . '">';
             }
         }
         
+        // J'ajoute un petit CSS inline ici pour gérer le survol du sous-menu
+        // (Idéalement, mettez cela dans votre fichier public.css)
         return <<<HTML
 <!DOCTYPE html>
 <html lang="fr">
@@ -90,7 +103,34 @@ class UIHeader extends Component {
     <title>{$this->pageTitle} - {$siteName}</title>
     <!-- Injection des fichiers CSS -->
     {$cssLinks}
-    <style>:root { --primary-color: {$pColor}; }</style>
+    <style>
+        :root { --primary-color: {$pColor}; }
+        
+        /* CSS pour le sous-menu (Dropdown) */
+        .navbar ul li { position: relative; }
+        .navbar ul li ul {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            min-width: 180px;
+            z-index: 1000;
+            border-radius: 4px;
+            padding: 0;
+        }
+        .navbar ul li:hover > ul { display: block; }
+        .navbar ul li ul li { display: block; width: 100%; }
+        .navbar ul li ul li a {
+            display: block;
+            padding: 10px 15px;
+            color: #333;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .navbar ul li ul li a:hover { background: #f8f9fa; color: var(--primary-color); }
+    </style>
 </head>
 <body>
     <header>
@@ -115,9 +155,5 @@ class UIHeader extends Component {
     </header>
 HTML;
     }
-    
-    
-   
-    
 }
 ?>

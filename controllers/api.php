@@ -9,6 +9,9 @@ require_once __DIR__ . '/equipementController.php';
 require_once __DIR__ . '/../models/equipementModel.php';
 require_once __DIR__ . '/../models/equipementType.php';
 require_once __DIR__ . '/SettingsControllers.php';
+require_once __DIR__ . '/OpportunityController.php';
+require_once __DIR__ . '/PartnerController.php';
+
 
 
 // NOUVEAU : Réservations
@@ -194,6 +197,8 @@ $controllers = [
     'event' => new EventController(),
     'eventType' => new EventTypeController(),
     'settings'=> new SettingsController(),
+    'partner'=> new PartnerController(),
+    'opportunity'=> new OpportunityController(),
 ];
 
 $models = [
@@ -357,18 +362,8 @@ elseif ($action === 'addThematicToProject') {
     executeController(fn() => $controllers['project']->addThematic($params['project_id'], $params['thematic_id']));
 }
 elseif ($action === 'generateProjectReport') {
-    $type = getParam('filter_type', 'POST', 'all'); 
-    $value = null;
-
-    if ($type === 'year') {
-        $value = getParam('year_val', 'POST', date('Y'));
-    } elseif ($type === 'responsable') {
-        $value = getParam('resp_val', 'POST', 0);
-    } elseif ($type === 'thematique') {
-        $value = getParam('them_val', 'POST', 0);
-    }
-    
-    $controllers['project']->generatePDF($type, $value);
+   
+    $controllers['project']->generatePDF();
 }
 
 // ============================================
@@ -606,7 +601,9 @@ elseif ($action === 'getPublicationsByType') {
     $limit = getParam('limit', 'GET', null);
     executeController(fn() => $controllers['publication']->apiGetPublicationsByType($type, $limit));
 }
-
+elseif ($action === 'generateReport') {
+    $controllers['publication']->generateReport();
+}
 // ============================================
 // ROUTES ÉVÉNEMENTS
 // ============================================
@@ -739,6 +736,49 @@ elseif ($action === 'updateMenu') {
     // requireAdmin();
     // Note : Les données JSON sont lues via php://input dans le contrôleur
     executeController(fn() => $controllers['settings']->apiUpdateMenu());
+}
+// ...
+
+// ============================================
+// ROUTES OPPORTUNITÉS
+// ============================================
+
+require_once __DIR__ . '/OpportunityController.php';
+$controllers['opportunity'] = new OpportunityController();
+
+if ($action === 'getOpportunities') {
+    executeController(fn() => $controllers['opportunity']->apiGetAll());
+}
+elseif ($action === 'getOpportunity' && $id) {
+    executeController(fn() => $controllers['opportunity']->apiGetById($id));
+}
+elseif ($action === 'createOpportunity') {
+    $data = getJsonInput();
+    executeController(fn() => $controllers['opportunity']->apiCreate($data));
+}
+elseif ($action === 'updateOpportunity' && $id) {
+    $data = getJsonInput();
+    executeController(fn() => $controllers['opportunity']->apiUpdate($id, $data));
+}
+elseif ($action === 'deleteOpportunity' && $id) {
+    executeController(fn() => $controllers['opportunity']->apiDelete($id));
+}
+// ROUTES PARTENAIRES
+if ($action === 'getPartners') {
+    executeController(fn() => $controllers['partner']->apiGetAll());
+}
+elseif ($action === 'createPartner') {
+    // Note: Utilisation de $_POST et $_FILES pour l'upload
+    requireAuth(); // Seulement connecté (ou requireAdmin)
+    executeController(fn() => $controllers['partner']->apiCreate($_POST, $_FILES));
+}
+elseif ($action === 'updatePartner' && $id) {
+    requireAuth();
+    executeController(fn() => $controllers['partner']->apiUpdate($id, $_POST, $_FILES));
+}
+elseif ($action === 'deletePartner' && $id) {
+    requireAuth();
+    executeController(fn() => $controllers['partner']->apiDelete($id));
 }
 
 // ============================================

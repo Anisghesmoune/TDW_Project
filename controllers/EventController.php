@@ -37,7 +37,7 @@ public function index() {
             
             // 3. Récupération des données métier
             $events = $this->eventModel->getAllEvents($orderBy, $order);
-            
+            $this->eventModel->autoUpdateStatuses();
             // 4. Récupération des données globales (Header/Footer)
             $config = $this->settingsModel->getAllSettings();
             $menu = $this->menuModel->getMenuTree();
@@ -350,12 +350,14 @@ public function getALL(){
                 'success' => true,
                 'data' => $events
             ]);
+            exit;
         } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
                 'message' => $e->getMessage()
             ]);
+            exit;
         }
     }
 
@@ -673,8 +675,33 @@ public function getALL(){
      */
     private function handleError($message) {
         $_SESSION['error'] = $message;
-        header('Location: /events');
         exit();
+    }
+     public function indexPublic() {
+        // Chargement des dépendances globales si pas déjà fait dans le constructeur
+        if (!$this->settingsModel) $this->settingsModel = new Settings();
+        if (!$this->menuModel) $this->menuModel = new Menu();
+
+        // Récupération des événements (triés par date début ASC pour l'affichage public)
+        // Vous pouvez aussi filtrer pour ne montrer que les événements "programmés"
+        $events = $this->eventModel->getAllEvents('date_debut', 'ASC');
+        $this->eventModel->autoUpdateStatuses();
+        // Configuration globale
+        $config = $this->settingsModel->getAllSettings();
+        $menu = $this->menuModel->getMenuTree();
+
+        // Préparation des données
+        $data = [
+            'title' => 'Agenda des Événements',
+            'config' => $config,
+            'menu' => $menu,
+            'events' => $events
+        ];
+
+        // Chargement de la vue
+        require_once __DIR__ . '/../views/public/EventListView.php';
+        $view = new EventListView($data);
+        $view->render();
     }
     
 }

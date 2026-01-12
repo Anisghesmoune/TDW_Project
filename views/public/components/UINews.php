@@ -22,9 +22,8 @@ class UINews extends Component {
        
         // Début de la section (HTML string)
         $html = '<section class="events-section">';
-        $html .= '<h2 class="section-title">Événements à venir</h2>';
-        $html .= '<p class="section-subtitle">Rejoignez-nous lors de nos prochains événements scientifiques</p>';
-        
+       $html .= '<h2 class="section-title">À la une</h2>';
+       $html .= '<p class="section-subtitle">Découvrez les dernières avancées du laboratoire</p>';
         $html .= '<div class="events-grid">';
 
         if (!empty($this->data)) {
@@ -47,7 +46,6 @@ class UINews extends Component {
                 $card = new UICard([
                     'title'       => $newsItem['titre'],
                     'description' => substr($newsItem['description'] ?? $newsItem['resume'] ?? '', 0, 100) . '...',
-                    'link'        => 'details.php?id=' . ($newsItem['id'] ?? 0),
                     
                     // Tableau Date pour renderDate()
                     'date'        => [

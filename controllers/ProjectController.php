@@ -793,90 +793,103 @@ class ProjectController {
     /**
      * Récupérer les données filtrées pour le rapport
      */
-  private function getProjectsForReport($filterType, $filterValue) {
-    $projects = [];
-    $allProjects = $this->project->getAll();
-    
-    switch ($filterType) {
-        case 'year':
-            foreach ($allProjects as $p) {
-                $year = date('Y', strtotime($p['date_debut']));
-                if ($year == $filterValue) {
-                    $projects[] = $p;
-                }
+/**
+     * Génère et télécharge le rapport PDF
+     */
+ public function generatePDF() {
+        if (ob_get_length()) ob_clean();
+        require_once __DIR__ . '/../libs/PDFReport.php';
+
+        // 1. Récupération des données
+        $filterType = $_REQUEST['filterType'] ?? 'all';
+        $filterValue = $_REQUEST['filterValue'] ?? null;
+        
+        // C'est ici qu'on récupère le NOM envoyé par le JS
+        $filterName = $_REQUEST['filterLabel'] ?? ''; 
+
+        // Récupération des projets via le modèle
+        // (Cette méthode retourne généralement un tableau avec 'id', 'titre', 'date_debut'...)
+        $data = $this->getProjectsForReport($filterType, $filterValue);
+
+        if (empty($data)) {
+            // ... gestion erreur vide ...
+            die("Aucun projet trouvé.");
+        }
+
+        // 2. INJECTION DU NOM DANS LES DONNÉES
+        if ($filterType === 'responsable' && !empty($filterName)) {
+            foreach ($data as &$row) {
+                // On crée/écrase la clé que le PDF va lire
+                $row['responsable_nom'] = $filterName; 
+                $row['responsable_prenom'] = ''; // Vide car filterName contient déjà "Nom Prénom"
+                $row['responsable'] = $filterName; // Sécurité si le PDF lit cette clé
             }
-            break;
-            
-        case 'responsable':
-            // Filter by responsable ID
-            if (is_numeric($filterValue)) {
-                foreach ($allProjects as $p) {
-                    if ($p['responsable_id'] == $filterValue) {
-                        $projects[] = $p;
+        }
+        
+        // 3. Titre du PDF
+        $title = "Liste des projets";
+        if ($filterType === 'year') {
+            $title = "Projets - Année " . $filterName;
+        } elseif ($filterType === 'responsable') {
+            $title = "Projets dirigés par : " . $filterName;
+        } elseif ($filterType === 'thematique') {
+            $title = "Thématique : " . $filterName;
+        }
+
+        // 4. Génération
+        $pdf = new PDFReport();
+        $pdf->AliasNbPages();
+        $pdf->AddPage();
+        
+        // iconv pour les accents du titre
+        $pdf->setReportTitle(iconv('UTF-8', 'windows-1252//TRANSLIT', $title));
+        $pdf->setFilterInfo(iconv('UTF-8', 'windows-1252', "Généré le " . date('d/m/Y')));
+        
+        // Le tableau utilisera maintenant les données modifiées (avec le bon nom)
+        $pdf->ProjectTable($data);
+        
+        $pdf->Output('D', 'Rapport.pdf');
+        exit;
+    }
+
+    /**
+     * Méthode privée pour filtrer les données
+     */
+    private function getProjectsForReport($type, $value) {
+        // Si aucun filtre, on renvoie tout
+        if ($type === 'all' || empty($value)) {
+            return $this->project->getAll();
+        }
+
+        switch ($type) {
+            case 'year':
+                // Filtrage PHP pour l'année (plus simple que le SQL pour les dates complètes)
+                $all = $this->project->getAll();
+                $filtered = [];
+                foreach ($all as $p) {
+                    if (!empty($p['date_debut'])) {
+                        $y = date('Y', strtotime($p['date_debut']));
+                        if ($y == $value) {
+                            $filtered[] = $p;
+                        }
                     }
                 }
-            }
-            break;
-            
-        case 'thematique':
-            // Get projects for specific thematic
-            if (is_numeric($filterValue)) {
-                $projects = $this->project->getProjectsByThematicId($filterValue);
-            }
-            break;
-            
-        case 'all':
-        default:
-            $projects = $allProjects;
-            break;
-    }
-    
-    return $projects;
-}
+                return $filtered;
 
-public function generatePDF($filterType, $filterValue = null) {
-    require_once __DIR__ . '/../libs/PDFReport.php';
-    
-    // 1. Get data
-    $data = $this->getProjectsForReport($filterType, $filterValue);
-    
-    if (empty($data)) {
-        // Better error handling
-        header('Content-Type: text/html; charset=UTF-8');
-        die("Aucun projet trouvé pour ces critères.");
+            case 'responsable':
+                // Filtrage SQL via le modèle (plus performant)
+                return $this->project->getByResponsableId($value);
+
+            case 'thematique':
+                // Filtrage SQL via le modèle (Obligatoire car relation N:N)
+                return $this->project->getProjectsByThematicId($value);
+
+            default:
+                return $this->project->getAll();
+        }
     }
-    
-    // 2. Define title
-    $title = "Liste complète des projets";
-    
-    if ($filterType === 'year') {
-        $title = "Rapport des projets - Année " . $filterValue;
-    }
-    
-    if ($filterType === 'responsable') {
-        $respName = $data[0]['responsable_name'] ?? 'Responsable #' . $filterValue;
-        $title = "Projets dirigés par : " . $respName;
-    }
-    
-    if ($filterType === 'thematique') {
-        $themName = $data[0]['thematic_name'] ?? 'Thématique #' . $filterValue;
-        $title = "Projets de la thématique : " . $themName;
-    }
-    
-    // 3. Create PDF
-    $pdf = new PDFReport();
-    $pdf->AliasNbPages();
-    $pdf->AddPage();
-    $pdf->setReportTitle($title);
-    
-    // 4. Generate table
-    $pdf->ProjectTable($data);
-    
-    // 5. Output
-    $filename = 'Rapport_Projets_' . date('Y-m-d') . '.pdf';
-    $pdf->Output('D', $filename);
-    exit;
-}
+
+
  public function details($id) {
         if (!$id) {
             header('Location: projects.php'); // Redirection si pas d'ID

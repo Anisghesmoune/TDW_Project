@@ -80,6 +80,40 @@ class HomeView extends View {
             $orgView->render();
             $html .= ob_get_clean();
         }
+        if (!empty($this->data['opportunities'])) {
+            $html .= '<section class="opportunities-section container" style="padding: 40px 20px; background-color: #f8f9fc;">';
+            $html .= '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">';
+            $html .= '<h2 class="section-title" style="color:#2c3e50; border-left:5px solid #4e73df; padding-left:15px;">🚀 Offres et Opportunités</h2>';
+            // Lien vers la page complète des opportunités
+            $html .= '<a href="index.php?route=opportunities" class="btn-link" style="color:#4e73df; text-decoration:none; font-weight:bold;">Voir tout →</a>';
+            $html .= '</div>';
+            
+            $html .= '<div class="grid-container" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:20px;">';
+            
+            foreach ($this->data['opportunities'] as $opp) {
+                // Couleurs de badges selon le type
+                $badgeColor = '#6c757d'; // gris par défaut
+                if ($opp['type'] == 'stage') $badgeColor = '#1cc88a'; // vert
+                if ($opp['type'] == 'thèse') $badgeColor = '#4e73df'; // bleu
+                if ($opp['type'] == 'bourse') $badgeColor = '#f6c23e'; // jaune
+                
+                $html .= '<div class="card-item" style="background:white; padding:20px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05); transition:transform 0.2s;">';
+                $html .= '<span style="background:'.$badgeColor.'; color:white; padding:3px 10px; border-radius:15px; font-size:0.8em; text-transform:uppercase; font-weight:bold;">'.htmlspecialchars($opp['type']).'</span>';
+                $html .= '<h3 style="margin:15px 0 10px; font-size:1.1em; color:#333;">'.htmlspecialchars($opp['titre']).'</h3>';
+                // Description courte
+                $desc = substr(strip_tags($opp['description']), 0, 80) . '...';
+                $html .= '<p style="color:#666; font-size:0.9em; line-height:1.5;">'.$desc.'</p>';
+                $html .= '<div style="margin-top:15px; padding-top:15px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">';
+                $html .= '<small style="color:#888;">📅 Fin: '.date('d/m/Y', strtotime($opp['date_expiration'])).'</small>';
+                // Lien vers détail (ancre ou page dédiée)
+                $html .= '<a href="index.php?route=opportunities" style="color:#4e73df; text-decoration:none; font-size:0.9em;">Détails</a>';
+                $html .= '</div>';
+                $html .= '</div>';
+            }
+            
+            $html .= '</div>';
+            $html .= '</section>';
+        }
 
         // --- 6. PARTENAIRES ---
         if (!empty($this->data['partners'])) {

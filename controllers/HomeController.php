@@ -9,6 +9,7 @@ require_once __DIR__ .  '/../models/Partner.php';
 require_once __DIR__ .  '/../models/organigrame.php'; 
 require_once __DIR__ .  '/../models/Menu.php';
 require_once __DIR__ . '/../models/Settings.php';
+require_once __DIR__ . '/../models/OpportunityModel.php'; 
 
 // Inclusion de la Vue (Même logique)
 require_once __DIR__ .  '/../views/public/HomeView.php';
@@ -28,6 +29,7 @@ class HomeController {
     private $settingsModel; 
     private $publicationModel;
     private $projectModel;
+    private $opportunityModel;
     
 
     
@@ -40,6 +42,7 @@ class HomeController {
         $this->menuModel = new Menu();
         $this->publicationModel =new Publication();
         $this->projectModel=new Project();
+        $this->opportunityModel = new OpportunityModel(); 
     }
     
  /**
@@ -138,7 +141,8 @@ class HomeController {
         
         // Récupérer les partenaires
         $partners = $this->partnerModel->getAll();
-        
+        $opportunities = $this->opportunityModel->getAllOpportunities(); 
+         $opportunities = array_slice($opportunities, 0, 4);
         // Organigramme
         $organigramme = [
             'director' => $this->organigrammeModel->getDirector(),
@@ -158,7 +162,9 @@ class HomeController {
             'news' => $recentNews,
             'events' => $upcomingEvents,
             'partners' => $partners,
-            'organigramme' => $organigramme
+            'organigramme' => $organigramme,
+            'opportunities' => $opportunities 
+
         ];
         
         // Charger la vue

@@ -100,8 +100,8 @@ class ProjectDetailsView extends View {
             <div class="chart-box" style="margin-bottom: 20px; padding: 25px;">
                 <h3 style="margin-bottom: 20px;">📄 Exporter un Rapport PDF</h3>
                 
-                <form action="../controllers/api.php?action=generateProjectReport" method="POST" target="_blank" style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
-                    
+                <form action="../controllers/api.php?action=generateProjectReport" method="POST" target="_blank" onsubmit="prepareLabel()" style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
+                     <input type="hidden" name="filterLabel" id="filterLabel" value="">
                     <!-- Sélection du type de filtre -->
                     <div style="flex: 1; min-width: 200px;">
                         <label for="filter_type" style="display:block; margin-bottom:5px; font-weight:bold; color: #5a5c69;">Type de rapport :</label>
@@ -227,6 +227,26 @@ class ProjectDetailsView extends View {
         </div>
                 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
         <script>
+            function prepareLabel() {
+    const type = document.getElementById('filter_type').value;
+    let label = '';
+
+    if (type === 'responsable') {
+        const sel = document.getElementById('resp_val');
+        // Récupère le texte de l'option sélectionnée (ex: "Jean Dupont")
+        if(sel.selectedIndex >= 0) label = sel.options[sel.selectedIndex].text;
+    } 
+    else if (type === 'thematique') {
+        const sel = document.getElementById('them_val');
+        if(sel.selectedIndex >= 0) label = sel.options[sel.selectedIndex].text;
+    }
+    else if (type === 'year') {
+        label = document.getElementById('year_val').value;
+    }
+
+    // On met ce texte dans l'input caché
+    document.getElementById('filterLabel').value = label;
+}
             
             // Fonction pour afficher/cacher les inputs selon le type de filtre
             function toggleInputs(val) {

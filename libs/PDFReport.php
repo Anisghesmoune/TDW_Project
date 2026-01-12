@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . 'fpdf/fpdf.php';
+require_once __DIR__ . '/fpdf/fpdf.php';
 
 class PDFReport extends FPDF {
     private $reportTitle;
@@ -35,11 +35,7 @@ class PDFReport extends FPDF {
         $this->SetFillColor(78, 115, 223);
         $this->SetTextColor(255);
         
-        $this->Cell(70, 10, $this->convert('Titre du Projet'), 1, 0, 'C', true);
-        $this->Cell(45, 10, $this->convert('Responsable'), 1, 0, 'C', true);
-        $this->Cell(25, 10, $this->convert('Début'), 1, 0, 'C', true);
-        $this->Cell(25, 10, 'Statut', 1, 0, 'C', true);
-        $this->Cell(25, 10, 'Finan.', 1, 1, 'C', true);
+       
     }
     
     function Footer() {
@@ -51,59 +47,7 @@ class PDFReport extends FPDF {
         $this->Cell(95, 10, $this->convert('Généré le ' . date('d/m/Y H:i')), 0, 0, 'R');
     }
     
-    function ProjectTable($data) {
-        $this->SetFont('Arial', '', 9);
-        $this->SetTextColor(0);
-        $this->SetFillColor(245, 245, 245);
-        $fill = false;
-        
-        foreach($data as $row) {
-            // Check if we need a new page
-            if ($this->GetY() > 260) {
-                $this->AddPage();
-            }
-            
-            // Title (truncate if too long)
-            $titre = $row['titre'] ?? 'N/A';
-            $titre = $this->convert($titre);
-            $titre = (strlen($titre) > 40) ? substr($titre, 0, 37) . '...' : $titre;
-            
-            // Responsable
-            $responsable = $row['responsable_name'] ?? $row['responsable'] ?? 'N/A';
-            $responsable = $this->convert($responsable);
-            $responsable = (strlen($responsable) > 25) ? substr($responsable, 0, 22) . '...' : $responsable;
-            
-            // Date
-            $date = $row['date_debut'] ?? 'N/A';
-            if ($date && $date !== 'N/A') {
-                $date = date('d/m/Y', strtotime($date));
-            }
-            
-            // Status
-            $statutMap = [
-                'soumis' => 'Soumis',
-                'en_cours' => 'En cours',
-                'termine' => 'Terminé',
-                'annule' => 'Annulé'
-            ];
-            $statut = $statutMap[$row['statut']] ?? $row['statut'];
-            $statut = $this->convert($statut);
-            
-            // Financing
-            $financement = $row['type_financement'] ?? 'Interne';
-            $financement = $this->convert($financement);
-            
-            // Draw cells
-            $this->Cell(70, 8, $titre, 1, 0, 'L', $fill);
-            $this->Cell(45, 8, $responsable, 1, 0, 'L', $fill);
-            $this->Cell(25, 8, $date, 1, 0, 'C', $fill);
-            $this->Cell(25, 8, $statut, 1, 0, 'C', $fill);
-            $this->Cell(25, 8, $financement, 1, 1, 'C', $fill);
-            
-            $fill = !$fill;
-        }
-    }
-    // À ajouter dans la classe PDFReport
+    
 
     function EquipmentReportTable($header, $data, $colWidths) {
         // Couleurs, épaisseur du trait et police grasse
@@ -221,5 +165,94 @@ class PDFReport extends FPDF {
         }
         return $nl;
     }
+     public function ProjectTable($data) {
+        // 1. Définition des largeurs de colonnes
+        // Total = 190 (A4 standard avec marges)
+        $w = [85, 55, 25, 25]; // Titre, Responsable, Début, Statut
+        
+        // 2. En-têtes du tableau
+        $header = ['Titre du Projet', 'Responsable', 'Début', 'Statut'];
+        
+        // Style des en-têtes
+        $this->SetFont('Arial', 'B', 10);
+        $this->SetFillColor(78, 115, 223); // Bleu Admin
+        $this->SetTextColor(255);          // Blanc
+        $this->SetLineWidth(.3);
+        
+        // Affichage des en-têtes
+        foreach($header as $i => $col) {
+            // Conversion utf-8 -> windows-1252 pour les accents
+            $texte = iconv('UTF-8', 'windows-1252//TRANSLIT', $col);
+            $this->Cell($w[$i], 8, $texte, 1, 0, 'C', true);
+        }
+        $this->Ln();
+        
+        // 3. Style des données
+        $this->SetFont('Arial', '', 9);
+        $this->SetTextColor(0); // Noir
+        $this->SetFillColor(245, 245, 245); // Gris très clair pour l'alternance
+        $fill = false;
+        
+        // 4. Boucle sur les données
+        foreach($data as $row) {
+            
+            // --- A. Traitement du Titre ---
+            $titreRaw = $row['titre'] ?? 'Sans titre';
+            // On coupe si trop long pour éviter de casser la mise en page
+            $titre = substr($titreRaw, 0, 55) . (strlen($titreRaw) > 55 ? '...' : '');
+
+            // --- B. Traitement du Responsable ---
+            // Priorité : 1. Nom injecté par le contrôleur (filtre) ou jointure SQL
+            //            2. Champ 'responsable' simple
+            //            3. 'Non défini'
+            $respRaw = 'Non défini';
+            
+            if (!empty($row['resp_nom'])) {
+                // Cas : Jointure SQL ou Injection via le filtre
+                $respRaw = $row['resp_nom'];
+                if (!empty($row['resp_prenom'])) {
+                    $respRaw .= ' ' . $row['resp_prenom'];
+                }
+            } elseif (!empty($row['responsable'])) {
+                // Cas : Champ simple
+                $respRaw = $row['responsable'];
+            }
+            $resp = substr($respRaw, 0, 30); // Tronquer si trop long
+
+            // --- C. Traitement de la Date ---
+            $date = '-';
+            if (!empty($row['date_debut'])) {
+                $date = date('d/m/Y', strtotime($row['date_debut']));
+            }
+
+            // --- D. Traitement du Statut ---
+            // On remplace les "_" par des espaces et on met la 1ère lettre en majuscule
+            $statutRaw = $row['statut'] ?? '';
+            $statut = ucfirst(str_replace('_', ' ', $statutRaw));
+
+            // --- E. Affichage de la ligne ---
+            
+            // TITRE (Aligné à gauche)
+            $this->Cell($w[0], 7, iconv('UTF-8', 'windows-1252//TRANSLIT', $titre), 1, 0, 'L', $fill);
+            
+            // RESPONSABLE (Aligné à gauche)
+            $this->Cell($w[1], 7, iconv('UTF-8', 'windows-1252//TRANSLIT', $resp), 1, 0, 'L', $fill);
+            
+            // DATE (Centré)
+            $this->Cell($w[2], 7, $date, 1, 0, 'C', $fill);
+            
+            // STATUT (Centré)
+            $this->Cell($w[3], 7, iconv('UTF-8', 'windows-1252//TRANSLIT', $statut), 1, 0, 'C', $fill);
+            
+            $this->Ln();
+            
+            // Alternance de couleur
+            $fill = !$fill;
+        }
+        
+        // Trait de fin de tableau
+        $this->Cell(array_sum($w), 0, '', 'T');
+    }
+
 }
 ?>

@@ -9,10 +9,11 @@ class UIPartners extends Component {
         foreach ($this->data as $p) {
             $img = htmlspecialchars($p['logo']);
             $nom = htmlspecialchars($p['nom']);
-            $logosHtml .= "<div class='partner-logo'><img src='$img' alt='$nom' title='$nom'></div>";
+            $logosHtml .= "<div class='partner-logo'><img src='' alt='$nom' title='$nom'></div>";
         }
 
         return <<<HTML
+          <a href="index.php?route=partners" style="text-decoration:none; color:inherit; display:block; width:100%;">
         <section class="container" style="background:#fff; text-align:center; padding: 40px 0;">
             <h2 class="section-title">Nos Partenaires</h2>
             <div class="partners-grid" style="display:flex; justify-content:center; gap:30px; flex-wrap:wrap;">
