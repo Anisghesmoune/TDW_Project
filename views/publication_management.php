@@ -145,7 +145,6 @@ class PublicationAdminView extends View {
                             <th style="padding: 12px; text-align: left;">ID</th>
                             <th style="padding: 12px; text-align: left;">Titre</th>
                             <th style="padding: 12px; text-align: left;">Type</th>
-                            <th style="padding: 12px; text-align: left;">Auteur(s)</th>
                             <th style="padding: 12px; text-align: left;">Domaine</th>
                             <th style="padding: 12px; text-align: left;">Date</th>
                             <th style="padding: 12px; text-align: left;">Statut</th>
@@ -235,10 +234,7 @@ class PublicationAdminView extends View {
                             <small style="color: #666;">Format PDF uniquement, max 10MB</small>
                         </div>
 
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label for="auteurs" style="display:block; margin-bottom:5px; font-weight:bold;">Auteurs</label>
-                            <input type="text" class="form-control" id="auteurs" name="auteurs" placeholder="Noms séparés par virgules">
-                        </div>
+                      
 
                         <div class="form-group">
                             <label for="projet" style="display:block; margin-bottom:5px; font-weight:bold;">Projet associé</label>
@@ -555,7 +551,7 @@ class PublicationAdminView extends View {
             document.getElementById('validationPublicationId').value = id;
             const pub = allPublications.find(p => p.id == id);
             if(pub) {
-                document.getElementById('publicationDetails').innerHTML = `<h3>${pub.titre}</h3><p>Auteurs: ${pub.auteurs}</p>`;
+                document.getElementById('publicationDetails').innerHTML = `<h3>${pub.titre}</h3>`;
             }
             document.getElementById('validationModal').classList.add('active');
         }

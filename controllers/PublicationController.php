@@ -485,9 +485,7 @@ public function apiUpdatePublication($id, $postData, $filesData) {
         return ['success' => false, 'message' => 'Publication introuvable'];
     }
     
-    if ($publication['soumis_par'] != $_SESSION['user_id'] && $_SESSION['role'] !== 'admin') {
-        return ['success' => false, 'message' => 'Non autorisé à modifier cette publication'];
-    }
+  
     
     $errors = [];
     
