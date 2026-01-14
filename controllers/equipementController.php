@@ -445,7 +445,6 @@ class EquipmentController {
     }
 
     public function indexReservationHistory() {
-        // 1. Vérification de la session
         if (session_status() === PHP_SESSION_NONE) session_start();
         
         if (!isset($_SESSION['user_id'])) {
@@ -453,26 +452,17 @@ class EquipmentController {
             exit;
         }
 
-        // // Vérification Rôle Admin (Optionnel selon votre logique)
-        // $isAdmin = isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'directeur');
-        // if (!$isAdmin) {
-        //     header('Location: index.php?route=dashboard-user'); 
-        //     exit;
-        // }
-
-        // 2. Récupération des données globales pour le Header/Footer
+       
         $config = $this->settingsModel->getAllSettings();
         $menu = $this->menuModel->getMenuTree();
 
-        // 3. Préparation des données pour la vue
-        // Les données des réservations seront chargées via AJAX par la vue
+       
         $data = [
             'title' => 'Historique des Réservations',
             'config' => $config,
             'menu' => $menu
         ];
 
-        // 4. Chargement de la Vue Classe
         require_once __DIR__ . '/../views/reservation-history.php';
         $view = new ReservationHistoryView($data);
         $view->render();

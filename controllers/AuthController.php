@@ -192,7 +192,7 @@ class AuthController {
         if (session_status() === PHP_SESSION_NONE) session_start();
         $csrfToken = $this->generateCsrfToken();
         $data = ['csrfToken' => $csrfToken];
-        include 'views/register.php';
+        require_once __DIR__ . '/../views/register.php';
 
         $view = new RegisterView($data);
         $view->render();
