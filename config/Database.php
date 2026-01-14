@@ -4,10 +4,11 @@ class Database {
     private static $instance = null;
     private $conn;
 
-    private $host = 'localhost';
-    private $db_name = 'TDW';
-    private $username = 'root';
-    private $password = 'root';
+    private $host = "localhost";
+    private $db_name = "TDW";   
+    private $username = "admin"; 
+    private $password = "admin"; 
+
     private $charset = 'utf8mb4';
 
 
