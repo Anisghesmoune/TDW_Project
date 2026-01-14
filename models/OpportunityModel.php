@@ -3,9 +3,7 @@ require_once __DIR__ . '/Model.php';
 
 class OpportunityModel extends Model {
 
-    /**
-     * Récupère toutes les opportunités avec les infos de l'auteur
-     */
+ 
     public function getAllOpportunities() {
         $sql = "SELECT o.*, u.nom as auteur_nom, u.prenom as auteur_prenom 
                 FROM opportunities o 
@@ -69,7 +67,6 @@ class OpportunityModel extends Model {
         return $stmt->execute(['id' => $id]);
     }
 
-    // Statistiques pour le dashboard
     public function getStats() {
         $stats = [
             'total' => 0,
@@ -79,22 +76,18 @@ class OpportunityModel extends Model {
         ];
 
         try {
-            // Total
             $stmt = $this->conn->query("SELECT COUNT(*) as c FROM opportunities");
             $res = $stmt->fetch(PDO::FETCH_ASSOC);
             $stats['total'] = $res ? $res['c'] : 0;
 
-            // Actives
             $stmt = $this->conn->query("SELECT COUNT(*) as c FROM opportunities WHERE statut = 'active'");
             $res = $stmt->fetch(PDO::FETCH_ASSOC);
             $stats['active'] = $res ? $res['c'] : 0;
             
-            // Par type
             $stmt = $this->conn->query("SELECT type, COUNT(*) as c FROM opportunities GROUP BY type");
             $types = $stmt->fetchAll(PDO::FETCH_ASSOC);
             if($types) {
                 foreach($types as $t) {
-                    // Mapping simple pour stage et thèse (attention aux accents selon votre BDD)
                     if(isset($t['type'])) {
                         $key = strtolower($t['type']);
                         if(strpos($key, 'stage') !== false) $stats['stage'] += $t['c'];

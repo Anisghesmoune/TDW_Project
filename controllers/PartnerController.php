@@ -15,16 +15,10 @@ class PartnerController {
         $this->menuModel = new Menu();
     }
 
-    // --- PAGE ADMIN ---
     public function indexAdmin() {
         if (session_status() === PHP_SESSION_NONE) session_start();
         
-        // // Vérification Admin
-        // $isAdmin = isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'directeur');
-        // if (!$isAdmin) {
-        //     header('Location: index.php?route=login'); 
-        //     exit;
-        // }
+      
 
         $config = $this->settingsModel->getAllSettings();
         $menu = $this->menuModel->getMenuTree();
@@ -42,7 +36,6 @@ class PartnerController {
         $view->render();
     }
 
-    // --- PAGE PUBLIQUE ---
     public function indexPublic() {
         $config = $this->settingsModel->getAllSettings();
         $menu = $this->menuModel->getMenuTree();
@@ -59,7 +52,6 @@ class PartnerController {
         $view->render();
     }
 
-    // --- API CRUD ---
 
     public function apiGetAll() {
         $data = $this->partnerModel->getAllPartners();
@@ -74,8 +66,7 @@ class PartnerController {
     public function apiCreate($postData, $filesData) {
         $data = $postData;
         
-        // Gestion Upload Logo
-        $data['logo'] = ''; // Par défaut
+        $data['logo'] = '';
         if (isset($filesData['logo']) && $filesData['logo']['error'] === UPLOAD_ERR_OK) {
             $uploadDir = __DIR__ . '/../assets/img/partners/';
             if (!file_exists($uploadDir)) mkdir($uploadDir, 0755, true);
@@ -97,7 +88,6 @@ class PartnerController {
     public function apiUpdate($id, $postData, $filesData) {
         $data = $postData;
         
-        // Gestion Upload Logo (seulement si nouveau fichier)
         if (isset($filesData['logo']) && $filesData['logo']['error'] === UPLOAD_ERR_OK) {
             $uploadDir = __DIR__ . '/../assets/img/partners/';
             if (!file_exists($uploadDir)) mkdir($uploadDir, 0755, true);

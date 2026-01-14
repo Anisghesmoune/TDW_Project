@@ -1,23 +1,16 @@
 <?php
-// Imports des dépendances
 require_once __DIR__ . '/../views/public/View.php';
 require_once __DIR__ . '/../views/public/components/UIHeader.php';
 require_once __DIR__ . '/../views/public/components/UIFooter.php';
-// Import du composant Table
 require_once __DIR__ . '/../views/Table.php';
 
 class DashboardAdminView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
     public function render() {
-        // Extraction des données globales
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         $pageTitle = $this->data['title'] ?? 'Administration';
 
-        // CSS spécifiques
         $customCss = [
             'views/admin_dashboard.css',
             'views/modelAddUser.css',
@@ -25,25 +18,17 @@ class DashboardAdminView extends View {
             'assets/css/public.css'
         ];
 
-        // 1. Rendu du Header
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu Principal
         echo '<main style="width: 100%; padding: 40px 20px; box-sizing: border-box; background-color: #f8f9fc; min-height: 80vh;">';
         echo $this->content();
         echo '</main>';
 
-        // 3. Rendu du Footer
-        $footer = new UIFooter($config, $menuData);
-        echo $footer->render();
+        
     }
 
-    /**
-     * Contenu spécifique du Dashboard
-     */
     protected function content() {
-        // Extraction des données métier
         $users = $this->data['users'] ?? [];
         $projects = $this->data['projects'] ?? [];
         $events = $this->data['events'] ?? [];
@@ -52,12 +37,8 @@ class DashboardAdminView extends View {
         ob_start();
         ?>
         
-        <!-- Styles internes spécifiques au Dashboard -->
         <style>
-            /* Container principal */
             .dashboard-container { max-width: 1400px; margin: 0 auto; }
-
-            /* Stats Grid (Surcharge pour l'affichage sans sidebar) */
             .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
             .stat-card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; border-bottom: 4px solid #ddd; }
             .stat-card:nth-child(1) { border-color: #4e73df; }
@@ -66,29 +47,20 @@ class DashboardAdminView extends View {
             .stat-card:nth-child(4) { border-color: #f6c23e; }
             .stat-card h3 { font-size: 0.9rem; text-transform: uppercase; color: #888; margin-bottom: 10px; letter-spacing: 1px; }
             .stat-card .number { font-size: 2.2rem; font-weight: 700; color: #333; }
-
-            /* Filtres */
             .filters-section { background: white; padding: 25px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
             .filters-row { display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; }
             .filter-group { flex: 1; min-width: 200px; }
             .filter-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #4e73df; font-size: 0.9em; }
             .filter-group input, .filter-group select { width: 100%; padding: 12px; border: 1px solid #e3e6f0; border-radius: 5px; font-size: 14px; background-color: #f8f9fc; }
             .filter-group input:focus, .filter-group select:focus { border-color: #4e73df; outline: none; background-color: #fff; }
-            
             .filter-buttons { display: flex; gap: 10px; }
             .btn-filter { padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
             .btn-reset { background: #858796; color: white; display: flex; align-items: center; gap: 5px; }
             .btn-reset:hover { background: #60616f; transform: translateY(-1px); }
-
-            /* Table Section */
             .content-section { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
             .content-section h2 { margin-top: 0; color: #2e384d; border-bottom: 2px solid #f8f9fc; padding-bottom: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-            
-            /* Boutons */
             .btn-primary { background: #4e73df; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: 600; cursor: pointer; transition: 0.2s; }
             .btn-primary:hover { background: #224abe; }
-            
-            /* Modal Fixes */
             .modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5); backdrop-filter: blur(3px); }
             .modal.active { display: flex; align-items: center; justify-content: center; }
             .modal-content { background:white; width:600px; padding:30px; border-radius:10px; max-height:90vh; overflow-y:auto; box-shadow: 0 15px 30px rgba(0,0,0,0.2); }
@@ -99,7 +71,6 @@ class DashboardAdminView extends View {
 
         <div class="dashboard-container">
             
-            <!-- En-tête Interne -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
                 <div>
                     <h1 style="margin: 0; color: #2c3e50;">Tableau de bord administrateur</h1>
@@ -107,7 +78,6 @@ class DashboardAdminView extends View {
                 </div>
             </div>
             
-            <!-- Stats -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <h3>Total Utilisateurs</h3>
@@ -130,7 +100,6 @@ class DashboardAdminView extends View {
                 </div>
             </div>
 
-            <!-- Section Filtres et Recherche -->
             <div class="filters-section">
                 <h3 style="margin-top: 0; margin-bottom: 20px; color: #4e73df; display: flex; align-items: center; gap: 10px;">
                     🔍 Recherche et Filtres
@@ -179,7 +148,6 @@ class DashboardAdminView extends View {
                 </div>
             </div>
             
-            <!-- Tableau Utilisateurs -->
             <div class="content-section">
                 <h2>
                     <span>Gestion des utilisateurs</span>
@@ -188,14 +156,14 @@ class DashboardAdminView extends View {
                     </button>
                 </h2>
                 <?php
-                // Utilisation de votre classe Table existante
                 $userTable = new Table([
                     'id' => 'usersTable',
-                    'headers' => ['ID', 'Nom complet', 'Admin', 'Email', 'Rôle', 'Statut'],
+                    'headers' => ['ID', 'Nom complet', 'Username', 'Admin', 'Email', 'Rôle', 'Statut'],
                     'data' => $users,
                     'columns' => [
                         ['key' => 'id'],
                         ['key' => function($row) { return htmlspecialchars($row['nom'] . ' ' . $row['prenom']); }],
+                        ['key' => 'username'], 
                         ['key' => function($row) {
                             return ($row['is_admin'] == 1) 
                                 ? '<span class="badge" style="background:#6f42c1; color:white; padding:3px 8px; border-radius:10px; font-size:0.8em;">OUI</span>' 
@@ -214,12 +182,7 @@ class DashboardAdminView extends View {
                         ]]
                     ],
                     'actions' => [
-                        [
-                            'icon' => '👁️',
-                            'class' => 'btn-sm btn-view',
-                            'onclick' => 'viewUser({id})',
-                            'label' => ' Voir'
-                        ],
+                      
                         [
                             'icon' => '✏️',
                             'class' => 'btn-sm btn-edit',
@@ -250,7 +213,6 @@ class DashboardAdminView extends View {
             
         </div>
         
-        <!-- Modal (Copiée et adaptée) -->
         <div id="userModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -271,6 +233,11 @@ class DashboardAdminView extends View {
                                 <label for="prenom">Prénom <span class="required">*</span></label>
                                 <input type="text" class="form-control" id="prenom" name="prenom" required>
                             </div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom:15px;">
+                            <label for="username">Nom d'utilisateur <span class="required">*</span></label>
+                            <input type="text" class="form-control" id="username" name="username" required>
                         </div>
 
                         <div class="form-group" style="background:#f8f9fc; padding:10px; border-radius:5px; margin-bottom:15px;">
@@ -335,10 +302,8 @@ class DashboardAdminView extends View {
         </div>
 
         <script>
-            // Variable globale initialisée avec les données PHP
             let allUsersData = <?php echo json_encode($users); ?>;
 
-            // --- HELPERS ---
             function ucfirst(str) {
                 if (!str) return '';
                 return str.charAt(0).toUpperCase() + str.slice(1);
@@ -362,7 +327,6 @@ class DashboardAdminView extends View {
                 setTimeout(() => div.remove(), 3000);
             }
 
-            // --- FILTRAGE ---
             function filterUsers() {
                 const searchTerm = document.getElementById('searchInput').value.toLowerCase();
                 const filterRole = document.getElementById('filterRole').value.toLowerCase();
@@ -373,6 +337,7 @@ class DashboardAdminView extends View {
                     const matchSearch = !searchTerm || 
                         user.nom.toLowerCase().includes(searchTerm) ||
                         user.prenom.toLowerCase().includes(searchTerm) ||
+                        user.username.toLowerCase().includes(searchTerm) ||
                         user.email.toLowerCase().includes(searchTerm);
                     
                     const matchRole = !filterRole || user.role.toLowerCase() === filterRole;
@@ -391,17 +356,15 @@ class DashboardAdminView extends View {
                 displayUsers(allUsersData);
             }
 
-            // --- AFFICHAGE TABLEAU ---
             function displayUsers(users) {
                 let tbody = document.querySelector('#usersTable tbody');
-                // Fallback si l'ID n'est pas trouvé
                 if (!tbody) tbody = document.querySelector('table tbody');
                 if (!tbody) return;
 
                 tbody.innerHTML = '';
 
                 if (users.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">Aucun utilisateur trouvé</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#999;">Aucun utilisateur trouvé</td></tr>';
                     return;
                 }
 
@@ -423,6 +386,7 @@ class DashboardAdminView extends View {
                     tr.innerHTML = `
                         <td style="padding:10px;">${user.id}</td>
                         <td style="padding:10px;">${user.nom} ${user.prenom}</td>
+                        <td style="padding:10px;">${user.username}</td>
                         <td style="padding:10px;">${isAdmin}</td>
                         <td style="padding:10px;">${user.email}</td>
                         <td style="padding:10px;">${ucfirst(user.role)}</td>
@@ -440,7 +404,6 @@ class DashboardAdminView extends View {
                 });
             }
 
-            // --- GESTION MODALE ---
             function openModal(editMode = false, userId = null) {
                 const modal = document.getElementById('userModal');
                 const title = document.getElementById('modalTitle');
@@ -464,7 +427,6 @@ class DashboardAdminView extends View {
                 document.body.style.overflow = 'auto';
             }
 
-            // --- AJAX CRUD ACTIONS ---
             async function loadUsers() {
                 try {
                     const res = await fetch('../controllers/api.php?action=getUsers');
@@ -483,7 +445,10 @@ class DashboardAdminView extends View {
                 const formData = new FormData(form);
                 formData.set('is_admin', document.getElementById('is_admin').checked ? 1 : 0);
                 
-                fetch('../controllers/api.php?action=createUser', {
+                const id = document.getElementById('userId').value;
+                const action = id ? 'updateUser&id=' + id : 'createUser';
+
+                fetch('../controllers/api.php?action=' + action, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(Object.fromEntries(formData))
@@ -491,7 +456,7 @@ class DashboardAdminView extends View {
                 .then(r => r.json())
                 .then(data => {
                     if(data.success) {
-                        showAlert('Utilisateur enregistré !', 'success');
+                        showAlert('Opération réussie !', 'success');
                         closeModal();
                         loadUsers();
                     } else {
@@ -509,6 +474,7 @@ class DashboardAdminView extends View {
                         document.getElementById('userId').value = u.id;
                         document.getElementById('nom').value = u.nom;
                         document.getElementById('prenom').value = u.prenom;
+                        document.getElementById('username').value = u.username;
                         document.getElementById('email').value = u.email;
                         document.getElementById('is_admin').checked = (u.is_admin == 1);
                         document.getElementById('role').value = u.role;
@@ -521,7 +487,7 @@ class DashboardAdminView extends View {
             }
 
             function editUser(id) { openModal(true, id); }
-            function viewUser(id) { openModal(true, id); /* Peut-être une vue lecture seule plus tard */ }
+            function viewUser(id) { openModal(true, id); }
 
             function ActivateUser(id) {
                 if(confirm('Activer cet utilisateur ?')) {
@@ -544,7 +510,6 @@ class DashboardAdminView extends View {
                 }
             }
 
-            // Fermeture au clic dehors
             window.onclick = function(e) {
                 if (e.target == document.getElementById('userModal')) closeModal();
             }

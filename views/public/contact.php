@@ -3,31 +3,23 @@ require_once __DIR__ . '/../../views/public/View.php';
 require_once __DIR__ . '/../../views/public/components/UIHeader.php';
 require_once __DIR__ . '/../../views/public/components/UIFooter.php';
 
-// CORRECTION ICI : "class ContactView" (un seul mot) au lieu de "class contact view"
 class ContactView extends View {
 
     public function render() {
-        // Récupération sécurisée des données
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
 
-        // Définition des CSS
       $customCss = [
             '../../views/landingPage.css',
             
-          
-            
         ];
-        // 1. HEADER
         $header = new UIHeader("Contact", $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. CONTENU
         echo '<main class="main-content">';
         echo $this->content();
         echo '</main>';
 
-        // 3. FOOTER
         $footer = new UIFooter($config, $menuData);
         echo $footer->render();
     }
@@ -35,7 +27,6 @@ class ContactView extends View {
     protected function content() {
         $config = $this->data['config'] ?? [];
         
-        // --- 1. EN-TÊTE DE SECTION ---
         $html = <<<HTML
         <section class="container" style="text-align:center; padding: 40px 20px;">
             <h1 class="page-title" style="color:var(--primary-color);">Nous Contacter</h1>
@@ -45,13 +36,10 @@ class ContactView extends View {
         <div class="container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 60px;">
 HTML;
 
-        // --- 2. COLONNE GAUCHE (INFOS) ---
-        // Préparation des valeurs pour éviter les erreurs si vide
         $adresse = htmlspecialchars($config['lab_address'] ?? 'Adresse non définie');
         $tel = htmlspecialchars($config['lab_phone'] ?? 'Non défini');
         $email = htmlspecialchars($config['lab_email'] ?? 'Non défini');
         
-        // Liens réseaux sociaux (affichage conditionnel)
         $socialLinks = '';
         if(!empty($config['social_facebook'])) {
             $socialLinks .= '<a href="'.htmlspecialchars($config['social_facebook']).'" target="_blank" style="color:#3b5998;"><i class="fab fa-facebook"></i></a>';
@@ -84,7 +72,7 @@ HTML;
                     </div>
                 </div>
 
-                <!-- Map -->
+               <!-- map -->
                 <div style="margin-top:30px; border-radius:10px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
                     <iframe 
                         src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3197.669146200276!2d3.170884315609439!3d36.70502997996818!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x128e522f3f7283eb%3A0x6296b02672533036!2sEcole%20nationale%20Sup%C3%A9rieure%20d&#39;Informatique%20(ESI%20ex.%20INI)!5e0!3m2!1sfr!2sdz!4v1625582745821!5m2!1sfr!2sdz" 
@@ -94,8 +82,6 @@ HTML;
             </div>
 HTML;
 
-        // --- 3. COLONNE DROITE (FORMULAIRE) ---
-        // Le script JS est ajouté en heredoc aussi pour être propre
         $html .= <<<HTML
             <div class="contact-form">
                 <div class="generic-card" style="padding:30px; background:white; border-radius:10px; border:1px solid #eee;">

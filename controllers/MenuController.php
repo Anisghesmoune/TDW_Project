@@ -5,21 +5,16 @@ class MenuController {
     private $menuModel;
 
     public function __construct() {
-        $this->menuModel = new Menu(); // On utilise le MODEL, pas un autre controller
+        $this->menuModel = new Menu(); 
     }
 
-    /**
-     * Récupérer le menu complet pour une vue
-     */
+ 
     public function index() {
         $menuTree = $this->menuModel->getMenuTree();
-        include 'views/menu.php'; // Vue qui affichera le menu
+        include 'views/menu.php'; 
     }
 
-    /**
-     * Pour LandingController ou d'autres controllers
-     * Retourne directement le menu en tableau
-     */
+   
     public function getMenuTree() {
         return $this->menuModel->getMenuTree();
     }

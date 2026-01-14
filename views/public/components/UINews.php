@@ -3,7 +3,6 @@ require_once __DIR__ . '/Component.php';
 require_once __DIR__ . '/UICard.php'; 
 
 class UINews extends Component {
-    // Configuration des icônes
     private $typeIcons = [
         'conférence' => '🎤',
         'atelier' => '🛠️',
@@ -20,7 +19,6 @@ class UINews extends Component {
 
     public function render() {
        
-        // Début de la section (HTML string)
         $html = '<section class="events-section">';
        $html .= '<h2 class="section-title">À la une</h2>';
        $html .= '<p class="section-subtitle">Découvrez les dernières avancées du laboratoire</p>';
@@ -29,37 +27,30 @@ class UINews extends Component {
         if (!empty($this->data)) {
             foreach ($this->data as $newsItem) {
                 
-                // 1. Préparation des données brutes
                 $icon = $this->getTypeIcon($newsItem['type'] ?? 'default');
                 $typeLabel = ucfirst($newsItem['type'] ?? 'Événement');
                 
-                // Gestion de la date pour le tableau ['day', 'month']
                 $timestamp = strtotime($newsItem['date_debut'] ?? $newsItem['date_publication'] ?? 'now');
                 $dayStr = date('d', $timestamp);
                 $monthStr = date('M', $timestamp); // Jan, Feb...
                 
-                // Lieu et Heure pour les métadonnées
                 $timeStr = date('H:i', $timestamp);
                 $lieuStr = $newsItem['lieu'] ?? 'ESI';
 
-                // 2. Création de la Carte avec le tableau d'options correct
                 $card = new UICard([
                     'title'       => $newsItem['titre'],
                     'description' => substr($newsItem['description'] ?? $newsItem['resume'] ?? '', 0, 100) . '...',
                     
-                    // Tableau Date pour renderDate()
                     'date'        => [
                         'day'   => $dayStr,
                         'month' => $monthStr
                     ],
                     
-                    // Tableau Badge pour renderBadge()
                     'badge'       => [
                         'icon' => $icon,
                         'text' => $typeLabel
                     ],
                     
-                    // Tableau Metadata pour renderMetadata()
                     'metadata'    => [
                         "📍 $lieuStr",
                         "⏰ $timeStr"
@@ -68,14 +59,13 @@ class UINews extends Component {
                     'class'       => ' generic-card'
                 ]);
 
-                // Concaténation du rendu de la carte
                 $html .= $card->render();
             }
         } else {
             $html .= '<p style="text-align:center; width:100%;">Aucune actualité pour le moment.</p>';
         }
 
-        $html .= '</div>'; // Fin grid
+        $html .= '</div>'; 
         $html .= '</section>';
 
         return $html;

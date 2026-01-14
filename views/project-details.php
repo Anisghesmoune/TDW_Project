@@ -6,44 +6,33 @@ require_once __DIR__ . '/../views/public/components/UIFooter.php';
 
 class ProjectDetailsView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
+   
     public function render() {
-        // Extraction des données globales
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         $pageTitle = $this->data['title'] ?? 'Statistiques Projets';
 
-        // CSS spécifiques (incluant Chart.js)
         $customCss = [
             'views/admin_dashboard.css',
             'views/landingPage.css',
             'https://cdn.jsdelivr.net/npm/chart.js'
         ];
 
-        // 1. Rendu du Header
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu Principal
         echo '<main style="width: 100%; padding: 40px 20px; box-sizing: border-box; background-color: #f8f9fc; min-height: 80vh;">';
         echo $this->content();
         echo '</main>';
 
-        // 3. Rendu du Footer
         $footer = new UIFooter($config, $menuData);
         echo $footer->render();
     }
 
-    /**
-     * Contenu spécifique : Stats, Graphiques, Formulaire PDF
-     */
+   
     protected function content() {
-        // Extraction des données statistiques passées par le contrôleur
         extract($this->data);
 
-        // Initialisation par défaut pour éviter les erreurs si variables vides
         $advancedStats = $advancedStats ?? [];
         $recentProjects = $recentProjects ?? [];
         $statsByResponsable = $statsByResponsable ?? [];
@@ -56,9 +45,7 @@ class ProjectDetailsView extends View {
         ob_start();
         ?>
         
-        <!-- Styles internes (conservés intégralement) -->
         <style>
-            /* Container principal */
             .dashboard-container { max-width: 1400px; margin: 0 auto; }
 
             .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
@@ -85,7 +72,6 @@ class ProjectDetailsView extends View {
 
         <div class="dashboard-container">
             
-            <!-- Top Bar -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
                 <div>
                     <h1 style="margin: 0; color: #2c3e50;">Tableau de bord statistique</h1>
@@ -96,13 +82,11 @@ class ProjectDetailsView extends View {
                 </div>
             </div>
 
-            <!-- Formulaire Export PDF -->
             <div class="chart-box" style="margin-bottom: 20px; padding: 25px;">
                 <h3 style="margin-bottom: 20px;">📄 Exporter un Rapport PDF</h3>
                 
                 <form action="../controllers/api.php?action=generateProjectReport" method="POST" target="_blank" onsubmit="prepareLabel()" style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
                      <input type="hidden" name="filterLabel" id="filterLabel" value="">
-                    <!-- Sélection du type de filtre -->
                     <div style="flex: 1; min-width: 200px;">
                         <label for="filter_type" style="display:block; margin-bottom:5px; font-weight:bold; color: #5a5c69;">Type de rapport :</label>
                         <select name="filterType" id="filter_type" class="form-control" onchange="toggleInputs(this.value)">
@@ -113,13 +97,11 @@ class ProjectDetailsView extends View {
                         </select>
                     </div>
 
-                    <!-- Input Année (caché par défaut) -->
                     <div id="year_input" style="display:none; flex: 1; min-width: 200px;">
                         <label for="year_val" style="display:block; margin-bottom:5px; font-weight:bold; color: #5a5c69;">Année :</label>
                         <input type="number" name="filterValue" id="year_val" value="<?php echo date('Y'); ?>" min="2000" max="2030" class="form-control" disabled>
                     </div>
 
-                    <!-- Input Responsable (caché par défaut) -->
                     <div id="resp_input" style="display:none; flex: 1; min-width: 200px;">
                         <label for="resp_val" style="display:block; margin-bottom:5px; font-weight:bold; color: #5a5c69;">Choisir Encadrant :</label>
                         <select name="filterValue" id="resp_val" class="form-control" disabled>
@@ -132,7 +114,6 @@ class ProjectDetailsView extends View {
                         </select>
                     </div>
 
-                    <!-- Input Thématique (caché par défaut) -->
                     <div id="them_input" style="display:none; flex: 1; min-width: 200px;">
                         <label for="them_val" style="display:block; margin-bottom:5px; font-weight:bold; color: #5a5c69;">Choisir Thématique :</label>
                         <select name="filterValue" id="them_val" class="form-control" disabled>
@@ -151,7 +132,6 @@ class ProjectDetailsView extends View {
                 </form>
             </div>
 
-            <!-- Cartes statistiques -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <h4>Total Projets</h4>
@@ -175,7 +155,6 @@ class ProjectDetailsView extends View {
                 </div>
             </div>
 
-            <!-- Rangée 1 : Thématiques & Années -->
             <div class="charts-wrapper">
                 <div class="chart-box">
                     <h3>📈 Répartition par Thématique</h3>
@@ -187,13 +166,11 @@ class ProjectDetailsView extends View {
                 </div>
             </div>
 
-            <!-- Rangée 2 : Responsables -->
             <div class="chart-box" style="margin-bottom: 30px;">
                 <h3>👥 Top Encadrants (Projets totaux vs Actifs)</h3>
                 <div style="height: 350px;"><canvas id="responsableChart"></canvas></div>
             </div>
 
-            <!-- Rangée 3 : Financement & Équipes -->
             <div class="charts-wrapper">
                 <div class="chart-box">
                     <h3>💰 Sources de Financement</h3>
@@ -205,7 +182,6 @@ class ProjectDetailsView extends View {
                 </div>
             </div>
 
-            <!-- Top Projets -->
             <div class="chart-box">
                 <h3>🏆 Projets avec le plus grand nombre de membres</h3>
                 <ul class="list-group">
@@ -233,7 +209,6 @@ class ProjectDetailsView extends View {
 
     if (type === 'responsable') {
         const sel = document.getElementById('resp_val');
-        // Récupère le texte de l'option sélectionnée (ex: "Jean Dupont")
         if(sel.selectedIndex >= 0) label = sel.options[sel.selectedIndex].text;
     } 
     else if (type === 'thematique') {
@@ -244,23 +219,18 @@ class ProjectDetailsView extends View {
         label = document.getElementById('year_val').value;
     }
 
-    // On met ce texte dans l'input caché
     document.getElementById('filterLabel').value = label;
 }
             
-            // Fonction pour afficher/cacher les inputs selon le type de filtre
             function toggleInputs(val) {
-                // Cacher tous les inputs
                 document.getElementById('year_input').style.display = 'none';
                 document.getElementById('resp_input').style.display = 'none';
                 document.getElementById('them_input').style.display = 'none';
                 
-                // Désactiver tous les inputs
                 document.getElementById('year_val').disabled = true;
                 document.getElementById('resp_val').disabled = true;
                 document.getElementById('them_val').disabled = true;
                 
-                // Afficher et activer le bon input
                 if(val === 'year') {
                     document.getElementById('year_input').style.display = 'block';
                     document.getElementById('year_val').disabled = false;
@@ -275,17 +245,14 @@ class ProjectDetailsView extends View {
                 }
             }
 
-            // Palette de couleurs
             const colors = ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796', '#5a5c69'];
 
-            // Injection des données PHP vers JS
             const themData = <?php echo json_encode($statsByThematic); ?>;
             const yearData = <?php echo json_encode($statsByYear); ?>;
             const respData = <?php echo json_encode(array_slice($statsByResponsable, 0, 10)); ?>;
             const finData  = <?php echo json_encode($statsByFinancement); ?>;
             const teamData = <?php echo json_encode($statsByTeam); ?>;
 
-            // 1. Graphique Thématiques
             if(themData.length > 0) {
                 new Chart(document.getElementById('thematicChart'), {
                     type: 'bar',
@@ -303,7 +270,6 @@ class ProjectDetailsView extends View {
                 });
             }
 
-            // 2. Graphique Années (Line)
             if(yearData.length > 0) {
                 new Chart(document.getElementById('yearChart'), {
                     type: 'line',
@@ -331,7 +297,6 @@ class ProjectDetailsView extends View {
                 });
             }
 
-            // 3. Graphique Responsables (Barre Horizontale)
             if(respData.length > 0) {
                 new Chart(document.getElementById('responsableChart'), {
                     type: 'bar',
@@ -358,7 +323,6 @@ class ProjectDetailsView extends View {
                 });
             }
 
-            // 4. Financement (Doughnut)
             if(finData.length > 0) {
                 new Chart(document.getElementById('financementChart'), {
                     type: 'doughnut',
@@ -373,7 +337,6 @@ class ProjectDetailsView extends View {
                 });
             }
 
-            // 5. Équipes (Pie)
             if(teamData.length > 0) {
                 new Chart(document.getElementById('teamChart'), {
                     type: 'pie',

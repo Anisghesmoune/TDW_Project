@@ -1,92 +1,66 @@
 <?php
-// Imports des dépendances
 require_once __DIR__ . '/../views/public/View.php';
 require_once __DIR__ . '/../views/public/components/UIHeader.php';
 require_once __DIR__ . '/../views/public/components/UIFooter.php';
 
 class TeamDetailsView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
     public function render() {
-        // Extraction des données globales
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         $pageTitle = $this->data['title'] ?? 'Détails de l\'équipe';
 
-        // CSS spécifiques
         $customCss = [
             'views/admin_dashboard.css',
             'views/teamManagement.css',
             'views/landingPage.css'
         ];
 
-        // 1. Rendu du Header
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu Principal
         echo '<main style="width: 100%; padding: 40px 20px; box-sizing: border-box; background-color: #f8f9fc; min-height: 80vh;">';
         echo $this->content();
         echo '</main>';
 
-        // 3. Rendu du Footer
-        $footer = new UIFooter($config, $menuData);
-        echo $footer->render();
+        
     }
 
-    /**
-     * Contenu spécifique : Détails, Membres, Pubs, Équipements, Modales, JS
-     */
     protected function content() {
-        // Extraction des données métier
         $team = $this->data['team'];
         $members = $this->data['members'] ?? [];
         $publications = $this->data['publications'] ?? [];
         $equipments = $this->data['equipments'] ?? [];
         
-        $teamId = $team['id']; // ID pour le JS
+        $teamId = $team['id'];
+        
+        $isAdmin = isset($_SESSION['is_admin']) && $_SESSION['is_admin'] == 1;
 
         ob_start();
         ?>
         
-        <!-- Styles internes -->
         <style>
-            /* Ajustements Layout */
             .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
             .top-left { display: flex; align-items: center; gap: 15px; }
-            
-            /* Cartes et Sections */
             .details-section { background:white; padding:20px; border-radius:8px; margin-bottom:20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-            
-            /* Grilles */
             .grid-container { display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap:20px; }
             .card-item { background:white; padding:15px; border-radius:8px; border:1px solid #eee; position:relative; transition: transform 0.2s; }
             .card-item:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-            
-            /* Modales */
             .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
             .modal.active { display: flex; align-items: center; justify-content: center; }
             .modal-dialog { background: white; padding: 20px; border-radius: 8px; width: 400px; max-width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
             .modal-header { display: flex; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
             .close-btn { cursor: pointer; border: none; background: none; font-size: 1.5rem; color: #aaa; }
-            
-            /* Alertes */
             .alert { padding: 10px; margin-top: 10px; border-radius: 4px; display: none; }
             .alert.show { display: block; }
             .alert-success { background: #d4edda; color: #155724; }
             .alert-error { background: #f8d7da; color: #721c24; }
-            
-            /* Boutons & Formulaires */
             .btn { padding: 8px 15px; border-radius: 4px; cursor: pointer; border: 1px solid transparent; font-weight: 500; }
             .btn-primary { background: #4e73df; color: white; }
             .btn-secondary { background: #858796; color: white; }
             .btn-danger { background: #e74a3b; color: white; }
             .form-group { margin-bottom: 15px; }
             .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-            
-            /* Table */
             .table { width:100%; background:white; border-collapse:collapse; border-radius:8px; overflow:hidden; }
             .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
             .table th { background: #f8f9fa; font-weight: 600; color: #4e73df; }
@@ -94,7 +68,6 @@ class TeamDetailsView extends View {
 
         <div class="container" style="max-width: 1400px; margin: 0 auto;">
             
-            <!-- Barre supérieure -->
             <div class="top-bar">
                 <div class="top-left">
                     <a href="index.php?route=teams-admin" class="btn-secondary" style="text-decoration:none;">⬅ Retour</a>
@@ -102,7 +75,6 @@ class TeamDetailsView extends View {
                 </div>
             </div>
 
-            <!-- Carte principale de l'équipe -->
             <div class="details-section">
                 <div style="display:flex; justify-content:space-between; align-items:start;">
                     <div>
@@ -123,13 +95,14 @@ class TeamDetailsView extends View {
                 </p>
             </div>
 
-            <!-- Membres de l'équipe -->
             <div class="details-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                     <h3 style="margin:0; color: #2c3e50;">👥 Membres de l'équipe (<?php echo count($members); ?>)</h3>
+                    <?php if ($isAdmin): ?>
                     <button class="btn btn-primary" onclick="openAddMemberModal(<?php echo $teamId; ?>)">
                         ➕ Ajouter un membre
                     </button>
+                    <?php endif; ?>
                 </div>
                 
                 <?php if (empty($members)): ?>
@@ -139,7 +112,6 @@ class TeamDetailsView extends View {
                         <?php foreach ($members as $member): ?>
                             <div class="card-item member-card">
                                 <div style="display:flex; align-items:center; gap:15px;">
-                                    <!-- Avatar -->
                                     <div style="width:50px; height:50px; background:#f0f2f5; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; overflow:hidden; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                                         <?php if (!empty($member['photo_profil'])): ?>
                                             <img src="<?php echo htmlspecialchars($member['photo_profil']); ?>" alt="Photo" style="width:100%; height:100%; object-fit:cover;">
@@ -148,7 +120,6 @@ class TeamDetailsView extends View {
                                         <?php endif; ?>
                                     </div>
 
-                                    <!-- Infos principales -->
                                     <div>
                                         <h4 style="margin:0; font-size:1rem; color: #333;"><?php echo htmlspecialchars($member['prenom'] . ' ' . $member['nom']); ?></h4>
                                         <small style="color:#666;"><?php echo htmlspecialchars($member['role'] ?? 'Membre'); ?></small>
@@ -158,8 +129,7 @@ class TeamDetailsView extends View {
                                     </div>
                                 </div>
 
-                                <!-- Bouton supprimer (sauf pour le chef) -->
-                                <?php if (($member['role'] ?? '') !== 'Chef' && $member['id'] != ($team['chef_equipe_id'] ?? 0)): ?>
+                                <?php if ($isAdmin && ($member['role'] ?? '') !== 'Chef' && $member['id'] != ($team['chef_equipe_id'] ?? 0)): ?>
                                     <button onclick="removeMember(<?php echo $member['id']; ?>, <?php echo $teamId; ?>)"
                                             style="position:absolute; top:10px; right:10px; background:none; border:none; color:#e74a3b; cursor:pointer; font-size:1.2rem; opacity: 0.7;"
                                             title="Retirer de l'équipe">
@@ -172,7 +142,6 @@ class TeamDetailsView extends View {
                 <?php endif; ?>
             </div>
 
-            <!-- Publications -->
             <div class="details-section">
                 <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">📚 Publications (<?php echo count($publications); ?>)</h3>
                 <?php if (empty($publications)): ?>
@@ -192,13 +161,14 @@ class TeamDetailsView extends View {
                 <?php endif; ?>
             </div>
 
-            <!-- Équipements -->
             <div class="details-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                     <h3 style="margin:0; color: #2c3e50;">🖥️ Équipements (<?php echo count($equipments); ?>)</h3>
+                    <?php if ($isAdmin): ?>
                     <button class="btn btn-primary" onclick="openAddEquipmentModal(<?php echo $teamId; ?>)">
                         ➕ Assigner un équipement
                     </button>
+                    <?php endif; ?>
                 </div>
                 
                 <?php if (empty($equipments)): ?>
@@ -211,7 +181,9 @@ class TeamDetailsView extends View {
                                 <th>Type</th>
                                 <th>État</th>
                                 <th>Date Attribution</th>
+                                <?php if ($isAdmin): ?>
                                 <th style="text-align:center;">Actions</th>
+                                <?php endif; ?>
                             </tr>
                         </thead>
                         <tbody>
@@ -233,12 +205,14 @@ class TeamDetailsView extends View {
                                         </span>
                                     </td>
                                     <td><?php echo !empty($eq['date_attribution']) ? date('d/m/Y', strtotime($eq['date_attribution'])) : '-'; ?></td>
+                                    <?php if ($isAdmin): ?>
                                     <td style="text-align:center;">
                                         <button onclick="removeEquipment(<?php echo $eq['id']; ?>, <?php echo $teamId; ?>)" 
                                                 class="btn btn-danger" style="padding:5px 10px; font-size:0.8rem;">
                                             🗑️ Retirer
                                         </button>
                                     </td>
+                                    <?php endif; ?>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -247,7 +221,7 @@ class TeamDetailsView extends View {
             </div>
         </div>
 
-        <!-- Modal Ajouter Membre -->
+        <?php if ($isAdmin): ?>
         <div id="addMemberModal" class="modal">
             <div class="modal-dialog">
                 <div class="modal-header">
@@ -273,7 +247,6 @@ class TeamDetailsView extends View {
             </div>
         </div>
 
-        <!-- Modal Assigner Équipement -->
         <div id="addEquipmentModal" class="modal">
             <div class="modal-dialog">
                 <div class="modal-header">
@@ -299,10 +272,10 @@ class TeamDetailsView extends View {
                 </div>
             </div>
         </div>
+        <?php endif; ?>
 
         <script>
-        // --- GESTION DU MODAL MEMBRES ---
-
+        <?php if ($isAdmin): ?>
         function openAddMemberModal(teamId) {
             const modal = document.getElementById('addMemberModal');
             const select = document.getElementById('userSelect');
@@ -312,7 +285,6 @@ class TeamDetailsView extends View {
             modal.classList.add('active');
             document.getElementById('memberAlert').className = 'alert';
 
-            // API: getAvailableUsers
             fetch(`../controllers/api.php?action=getAvailableUsers&teamid=${teamId}`)
                 .then(res => res.json())
                 .then(data => {
@@ -389,8 +361,6 @@ class TeamDetailsView extends View {
             .then(res => res.json())
             .then(data => {
                 if(data.success) {
-                    // Petit feedback visuel avant reload
-                    // alert('✅ Membre retiré avec succès');
                     location.reload();
                 } else {
                     alert('❌ Erreur: ' + (data.message || 'Inconnue'));
@@ -407,8 +377,6 @@ class TeamDetailsView extends View {
             div.textContent = msg;
             div.className = 'alert show ' + (type === 'success' ? 'alert-success' : 'alert-error');
         }
-
-        // --- GESTION DU MODAL ÉQUIPEMENTS ---
 
         function openAddEquipmentModal(teamId) {
             const modal = document.getElementById('addEquipmentModal');
@@ -512,7 +480,6 @@ class TeamDetailsView extends View {
             div.className = 'alert show ' + (type === 'success' ? 'alert-success' : 'alert-error');
         }
 
-        // Fermeture modals au clic extérieur
         window.onclick = function(event) {
             const memberModal = document.getElementById('addMemberModal');
             const equipmentModal = document.getElementById('addEquipmentModal');
@@ -524,6 +491,7 @@ class TeamDetailsView extends View {
                 closeAddEquipmentModal();
             }
         }
+        <?php endif; ?>
         </script>
         <?php
         return ob_get_clean();

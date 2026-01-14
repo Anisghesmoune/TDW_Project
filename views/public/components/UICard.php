@@ -11,7 +11,6 @@ class UICard extends Component {
     private $date;
     private $customClass;
     
-    // Le constructeur attend un tableau d'options
     public function __construct($options = []) {
         $this->title = $options['title'] ?? '';
         $this->description = $options['description'] ?? '';
@@ -24,18 +23,14 @@ class UICard extends Component {
     }
 
     private function renderDate() {
-        // CORRECTION 1: Si pas de date, on retourne vide (logique inversée corrigée)
         if (empty($this->date)) {
             return '';
         }
 
-        // Extraction propre des variables
         $day = $this->date['day'] ?? '';
         $month = $this->date['month'] ?? '';
 
-        // CORRECTION 2: Utilisation de <<<HTML (Heredoc) au lieu de <<<'HTML' (Nowdoc)
-        // Les variables $day et $month seront maintenant interprétées correctement.
-        return <<<HTML
+      return <<<HTML
         <div class="">
             <span class="day">{$day}</span>   
             <span class="month">{$month}</span> 
@@ -91,7 +86,6 @@ HTML;
         $title = htmlspecialchars($this->title);
         $description = htmlspecialchars($this->description);
         
-        // Construction du contenu interne
         $cardContent = <<<HTML
         
         <div class="event-card">
@@ -105,7 +99,6 @@ HTML;
         </div>
 HTML;
         
-        // Si un lien est fourni, toute la carte devient un lien
         if ($this->link) {
             return <<<HTML
             <a href="{$this->link}" class="{$this->customClass}" style="text-decoration:none; color:inherit;">

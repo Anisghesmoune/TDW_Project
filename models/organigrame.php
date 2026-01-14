@@ -36,9 +36,7 @@ class OrganigrammeModel {
         }
     }
     
-    /**
-     * Mettre à jour une entrée de l'organigramme
-     */
+   
      public function update($id, $data) {
         try {
             $query = "UPDATE {$this->table} 
@@ -62,9 +60,7 @@ class OrganigrammeModel {
         }
     }
     
-    /**
-     * Supprimer une entrée de l'organigramme
-     */
+ 
     public function delete($id) {
         try {
             $query = "DELETE FROM {$this->table} WHERE id = :id";
@@ -77,9 +73,7 @@ class OrganigrammeModel {
         }
     }
     
-    /**
-     * Récupérer l'organigramme complet avec les informations des utilisateurs
-     */
+   
     public function getFullHierarchy() {
         try {
             $query = "SELECT 
@@ -111,30 +105,23 @@ class OrganigrammeModel {
         }
     }
     
-    /**
-     * Récupérer l'organigramme sous forme d'arbre hiérarchique
-     */
+    
     public function getHierarchyTree() {
         try {
             $allMembers = $this->getFullHierarchy();
             
-            // Construire l'arbre hiérarchique
             $tree = [];
             $indexed = [];
             
-            // Indexer tous les membres par leur ID
             foreach ($allMembers as $member) {
                 $member['subordinates'] = [];
                 $indexed[$member['id_utilisateur']] = $member;
             }
             
-            // Construire l'arbre
             foreach ($indexed as $id => $member) {
                 if ($member['superieur_id'] && isset($indexed[$member['superieur_id']])) {
-                    // Ajouter comme subordonné
                     $indexed[$member['superieur_id']]['subordinates'][] = &$indexed[$id];
                 } else {
-                    // C'est un nœud racine (directeur)
                     $tree[] = &$indexed[$id];
                 }
             }
@@ -146,9 +133,7 @@ class OrganigrammeModel {
         }
     }
     
-    /**
-     * Récupérer le directeur du laboratoire
-     */
+  
     public function getDirector() {
         try {
             $query = "SELECT 
@@ -177,9 +162,7 @@ class OrganigrammeModel {
         }
     }
     
-    /**
-     * Récupérer les membres par niveau hiérarchique
-     */
+ 
     public function getByLevel($level) {
         try {
             $query = "SELECT 
@@ -207,9 +190,7 @@ class OrganigrammeModel {
         }
     }
     
-    /**
-     * Récupérer les subordonnés d'un utilisateur
-     */
+   
     public function getSubordinates($userId) {
         try {
             $query = "SELECT 
@@ -237,9 +218,7 @@ class OrganigrammeModel {
         }
     }
     
-    /**
-     * Récupérer le supérieur d'un utilisateur
-     */
+  
     public function getSuperior($userId) {
         try {
             $query = "SELECT 
@@ -265,10 +244,7 @@ class OrganigrammeModel {
             return false;
         }
     }
-    
-    /**
-     * Récupérer l'entrée organigramme d'un utilisateur
-     */
+   
     public function getByUserId($userId) {
         try {
             $query = "SELECT 
@@ -296,9 +272,7 @@ class OrganigrammeModel {
         }
     }
     
-    /**
-     * Vérifier si un utilisateur existe déjà dans l'organigramme
-     */
+   
     public function userExists($userId) {
         try {
             $query = "SELECT COUNT(*) as count FROM {$this->table} WHERE id_utilisateur = :user_id";
@@ -313,9 +287,7 @@ class OrganigrammeModel {
         }
     }
     
-    /**
-     * Récupérer les postes disponibles
-     */
+   
     public function getAvailablePositions() {
         return [
             'Directeur du laboratoire',
@@ -329,9 +301,7 @@ class OrganigrammeModel {
         ];
     }
     
-    /**
-     * Récupérer les statistiques de l'organigramme
-     */
+  
     public function getStats() {
         try {
             $query = "SELECT 
@@ -350,9 +320,7 @@ class OrganigrammeModel {
         }
     }
     
-    /**
-     * Mettre à jour le poste d'un utilisateur
-     */
+  
     public function updatePosition($userId, $newPoste, $newLevel = null) {
         try {
             if ($newLevel !== null) {
@@ -378,10 +346,7 @@ class OrganigrammeModel {
         }
     }
     
-    /**
-     * Obtenir le chemin hiérarchique complet d'un utilisateur
-     * (du directeur jusqu'à l'utilisateur)
-     */
+   
     public function getHierarchyPath($userId) {
         try {
             $path = [];
@@ -409,9 +374,7 @@ class OrganigrammeModel {
         }
     }
     
-    /**
-     * Vérifier si un utilisateur est supérieur d'un autre
-     */
+  
     public function isSuperiorOf($superiorId, $subordinateId) {
         try {
             $path = $this->getHierarchyPath($subordinateId);
@@ -429,9 +392,7 @@ class OrganigrammeModel {
         }
     }
     
-    /**
-     * Récupérer tous les membres sous un supérieur (récursif)
-     */
+   
     public function getAllSubordinatesRecursive($userId) {
         try {
             $allSubordinates = [];

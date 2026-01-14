@@ -9,9 +9,7 @@ class SlideModel {
         $this->db = Database::getInstance()->getConnection();
     }
     
-    /**
-     * Récupérer tous les slides actifs pour le diaporama public
-     */
+  
     public function getActiveSlides() {
         try {
             $today = date('Y-m-d');
@@ -33,9 +31,7 @@ class SlideModel {
         }
     }
     
-    /**
-     * Récupérer tous les slides (pour l'admin)
-     */
+ 
     public function getAll() {
         try {
             $query = "SELECT * FROM {$this->table} 
@@ -51,9 +47,7 @@ class SlideModel {
         }
     }
     
-    /**
-     * Récupérer un slide par ID
-     */
+  
     public function getById($id) {
         try {
             $query = "SELECT * FROM {$this->table} WHERE id = :id LIMIT 1";
@@ -69,9 +63,7 @@ class SlideModel {
         }
     }
     
-    /**
-     * Créer un nouveau slide
-     */
+   
     public function create($data) {
         try {
             $query = "INSERT INTO {$this->table} 
@@ -103,9 +95,7 @@ class SlideModel {
         }
     }
     
-    /**
-     * Mettre à jour un slide
-     */
+   
     public function update($id, $data) {
         try {
             $query = "UPDATE {$this->table} 
@@ -137,12 +127,9 @@ class SlideModel {
         }
     }
     
-    /**
-     * Supprimer un slide
-     */
+  
     public function delete($id) {
         try {
-            // Supprimer d'abord l'image si elle existe
             $slide = $this->getById($id);
             if ($slide && !empty($slide['image']) && file_exists($slide['image'])) {
                 unlink($slide['image']);
@@ -159,9 +146,7 @@ class SlideModel {
         }
     }
     
-    /**
-     * Activer/Désactiver un slide
-     */
+   
     public function toggleActive($id) {
         try {
             $query = "UPDATE {$this->table} 
@@ -178,9 +163,7 @@ class SlideModel {
         }
     }
     
-    /**
-     * Réorganiser l'ordre des slides
-     */
+  
     public function updateOrder($slidesOrder) {
         try {
             $this->db->beginTransaction();
@@ -203,35 +186,28 @@ class SlideModel {
         }
     }
     
-    /**
-     * Uploader une image
-     */
+  
     public function uploadImage($file) {
         try {
             $uploadDir = 'assets/slides/';
             
-            // Créer le dossier s'il n'existe pas
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0755, true);
             }
             
-            // Valider le fichier
             $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
             if (!in_array($file['type'], $allowedTypes)) {
                 return ['success' => false, 'message' => 'Type de fichier non autorisé'];
             }
             
-            // Vérifier la taille (max 5MB)
             if ($file['size'] > 5 * 1024 * 1024) {
                 return ['success' => false, 'message' => 'Fichier trop volumineux (max 5MB)'];
             }
             
-            // Générer un nom unique
             $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
             $filename = 'slide_' . time() . '_' . uniqid() . '.' . $extension;
             $filepath = $uploadDir . $filename;
             
-            // Déplacer le fichier
             if (move_uploaded_file($file['tmp_name'], $filepath)) {
                 return [
                     'success' => true, 

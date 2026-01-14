@@ -2,21 +2,17 @@
 require_once __DIR__ . '/Component.php';
 
 class UIProjectCard extends Component {
-    // $data correspond à une ligne de la base de données (un projet)
 
     public function render() {
         $id = $this->data['id'];
         $titre = htmlspecialchars($this->data['titre']);
-        // Description courte
         $desc = htmlspecialchars(substr($this->data['description'] ?? '', 0, 100)) . '...';
         
-        // Données jointes
         $chef = htmlspecialchars($this->data['responsable_nom'] ?? 'Non assigné');
         $membres = $this->data['nb_membres'] ?? 0;
         $financement = htmlspecialchars($this->data['type_financement'] ?? 'Non spécifié');
         $themes = htmlspecialchars($this->data['thematiques_list'] ?? 'Général');
         
-        // Gestion visuelle du statut (Enum)
         $statut = $this->data['statut'];
         $badgeClass = 'badge-secondary';
         $statutLabel = $statut;

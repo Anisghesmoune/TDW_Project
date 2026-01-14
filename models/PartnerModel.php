@@ -4,14 +4,7 @@ require_once __DIR__ . '/Model.php';
 class ThematicModel extends Model {
     protected $table = 'thematics';
     
-    /**
-     * Récupérer toutes les thématiques
-     */
    
-    
-    /**
-     * Récupérer une thématique par ID
-     */
     public function getById($id) {
         $query = "SELECT * FROM {$this->table} WHERE id = :id";
         $stmt = $this->conn->prepare($query);
@@ -20,9 +13,7 @@ class ThematicModel extends Model {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Créer une nouvelle thématique
-     */
+  
     public function create($data) {
         $query = "INSERT INTO {$this->table} (nom, description) 
                   VALUES (:nom, :description)";
@@ -34,9 +25,7 @@ class ThematicModel extends Model {
         return $stmt->execute();
     }
     
-    /**
-     * Mettre à jour une thématique
-     */
+  
     public function update($id, $data) {
         $query = "UPDATE {$this->table} 
                   SET nom = :nom, 
@@ -51,17 +40,13 @@ class ThematicModel extends Model {
         return $stmt->execute();
     }
     
-    /**
-     * Supprimer une thématique
-     */
+   
     public function delete($id) {
-        // D'abord supprimer les associations
         $queryAssoc = "DELETE FROM project_thematique WHERE thematic_id = :id";
         $stmtAssoc = $this->conn->prepare($queryAssoc);
         $stmtAssoc->bindParam(':id', $id, PDO::PARAM_INT);
         $stmtAssoc->execute();
         
-        // Puis supprimer la thématique
         $query = "DELETE FROM {$this->table} WHERE id = :id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
@@ -69,9 +54,7 @@ class ThematicModel extends Model {
         return $stmt->execute();
     }
     
-    /**
-     * Compter les projets associés à une thématique
-     */
+ 
     public function countProjects($thematicId) {
         $query = "SELECT COUNT(*) as count 
                   FROM project_thematique 
@@ -85,9 +68,7 @@ class ThematicModel extends Model {
         return $result['count'] ?? 0;
     }
     
-    /**
-     * Rechercher des thématiques
-     */
+  
     public function search($keyword) {
         $query = "SELECT * FROM {$this->table} 
                   WHERE nom LIKE :keyword 
@@ -102,9 +83,7 @@ class ThematicModel extends Model {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Récupérer les thématiques les plus utilisées
-     */
+  
     public function getMostUsed($limit = 10) {
         $query = "SELECT 
                     t.*,

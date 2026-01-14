@@ -15,7 +15,6 @@ class EventController {
     }
     
 public function index() {
-        // 1. Vérification Session & Admin
         if (session_status() === PHP_SESSION_NONE) session_start();
         
         if (!isset($_SESSION['user_id'])) {
@@ -23,26 +22,17 @@ public function index() {
             exit;
         }
 
-        // Vérification rôle (Admin ou Directeur)
-        // $isAdmin = isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'directeur');
-        // if (!$isAdmin) {
-        //     header('Location: index.php?route=dashboard-user'); 
-        //     exit;
-        // }
+       
 
         try {
-            // 2. Paramètres de tri (optionnel, utilisé par le modèle)
             $orderBy = $_GET['orderBy'] ?? 'date_debut';
             $order = $_GET['order'] ?? 'DESC';
             
-            // 3. Récupération des données métier
             $events = $this->eventModel->getAllEvents($orderBy, $order);
             $this->eventModel->autoUpdateStatuses();
-            // 4. Récupération des données globales (Header/Footer)
             $config = $this->settingsModel->getAllSettings();
             $menu = $this->menuModel->getMenuTree();
 
-            // 5. Préparation des données pour la vue
             $data = [
                 'title' => 'Gestion des Événements',
                 'config' => $config,
@@ -51,13 +41,11 @@ public function index() {
                 'total' => count($events)
             ];
 
-            // 6. Chargement de la Vue Classe
             require_once __DIR__ . '/../views/event-management.php';
             $view = new EventAdminView($data);
             $view->render();
 
         } catch (Exception $e) {
-            // Gestion d'erreur basique
             echo "Erreur lors du chargement des événements : " . $e->getMessage();
         }
     }
@@ -70,21 +58,18 @@ public function getALL(){
                 throw new Exception("Méthode non autorisée");
             }
 
-            // Validation des données
             $this->validateEventData($_POST);
 
-            // Assigner les valeurs
             $this->eventModel->titre = $this->sanitize($_POST['titre']);
             $this->eventModel->description = $this->sanitize($_POST['description']);
             $this->eventModel->id_type = (int)$_POST['id_type'];
             $this->eventModel->date_debut = $_POST['date_debut'];
             $this->eventModel->date_fin = $_POST['date_fin'] ?? null;
-            $this->eventModel->lieu = $this->sanitize($_POST['lieu']);
+            $this->eventModel->localisation = $this->sanitize($_POST['localisation']);
             $this->eventModel->organisateur_id = $_POST['organisateur_id'] ?? null;
             $this->eventModel->statut = $_POST['statut'] ?? 'programmé';
             $this->eventModel->capacite_max = $_POST['capacite_max'] ?? null;
 
-            // Créer l'événement
             if ($this->eventModel->create()) {
                 $_SESSION['success'] = "Événement créé avec succès";
                 exit();
@@ -101,6 +86,7 @@ public function getALL(){
     public function show($id) {
         try {
             $event = $this->eventModel->getById($id);
+            
             
             if (!$event) {
                 throw new Exception("Événement non trouvé");
@@ -136,30 +122,25 @@ public function getALL(){
                 throw new Exception("Méthode non autorisée");
             }
 
-            // Vérifier si l'événement existe
             if (!$this->eventModel->exists($id)) {
                 throw new Exception("Événement non trouvé");
             }
 
-            // Validation des données
             $this->validateEventData($_POST);
 
-            // Assigner les valeurs
             $this->eventModel->id = $id;
             $this->eventModel->titre = $this->sanitize($_POST['titre']);
             $this->eventModel->description = $this->sanitize($_POST['description']);
             $this->eventModel->id_type = (int)$_POST['id_type'];
             $this->eventModel->date_debut = $_POST['date_debut'];
             $this->eventModel->date_fin = $_POST['date_fin'] ?? null;
-            $this->eventModel->lieu = $this->sanitize($_POST['lieu']);
+            $this->eventModel->localisation = $this->sanitize($_POST['localisation']);
             $this->eventModel->organisateur_id = $_POST['organisateur_id'] ?? null;
             $this->eventModel->statut = $_POST['statut'] ?? 'programmé';
             $this->eventModel->capacite_max = $_POST['capacite_max'] ?? null;
 
-            // Mettre à jour l'événement
             if ($this->eventModel->update()) {
                 $_SESSION['success'] = "Événement mis à jour avec succès";
-                header('Location: /events/' . $id);
                 exit();
             } else {
                 throw new Exception("Erreur lors de la mise à jour de l'événement");
@@ -171,9 +152,7 @@ public function getALL(){
         }
     }
 
-    /**
-     * Supprimer un événement
-     */
+  
     public function delete($id) {
         try {
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -196,9 +175,7 @@ public function getALL(){
         exit();
     }
 
-    /**
-     * Rechercher des événements par type
-     */
+   
     public function getByType($id_type) {
         try {
             $events = $this->eventModel->getByType($id_type);
@@ -208,9 +185,7 @@ public function getALL(){
         }
     }
 
-    /**
-     * Rechercher des événements par statut
-     */
+    
     public function getByStatut($statut) {
         try {
             $events = $this->eventModel->getByStatut($statut);
@@ -220,9 +195,7 @@ public function getALL(){
         }
     }
 
-    /**
-     * Rechercher des événements par organisateur
-     */
+    
     public function getByOrganisateur($organisateur_id) {
         try {
             $events = $this->eventModel->getByOrganisateur($organisateur_id);
@@ -231,20 +204,15 @@ public function getALL(){
         }
     }
 
-    /**
-     * Rechercher des événements par lieu
-     */
-    public function getByLieu($lieu) {
+   
+    public function getByLieu($localisation) {
         try {
-            $events = $this->eventModel->getByLieu($lieu);
+            $events = $this->eventModel->getByLieu($localisation);
         } catch (Exception $e) {
             $this->handleError($e->getMessage());
         }
     }
 
-    /**
-     * Afficher les événements à venir
-     */
     public function upcoming() {
         try {
             $limit = $_GET['limit'] ?? null;
@@ -254,9 +222,7 @@ public function getALL(){
         }
     }
 
-    /**
-     * Afficher les événements passés
-     */
+   
     public function past() {
         try {
             $limit = $_GET['limit'] ?? null;
@@ -266,9 +232,7 @@ public function getALL(){
         }
     }
 
-    /**
-     * Afficher les événements en cours
-     */
+  
     public function ongoing() {
         try {
             $events = $this->eventModel->getOngoingEvents();
@@ -277,9 +241,6 @@ public function getALL(){
         }
     }
 
-    /**
-     * Afficher les statistiques des événements
-     */
     public function statistics() {
         try {
             $stats = [
@@ -298,16 +259,14 @@ public function getALL(){
         }
     }
 
-    /**
-     * Recherche avancée
-     */
+    
     public function search() {
         try {
             $filters = [
                 'titre' => $_GET['titre'] ?? '',
                 'id_type' => $_GET['id_type'] ?? '',
                 'statut' => $_GET['statut'] ?? '',
-                'lieu' => $_GET['lieu'] ?? '',
+                'localisation' => $_GET['localisation'] ?? '',
                 'organisateur_id' => $_GET['organisateur_id'] ?? '',
                 'date_debut_min' => $_GET['date_debut_min'] ?? '',
                 'date_debut_max' => $_GET['date_debut_max'] ?? ''
@@ -319,9 +278,7 @@ public function getALL(){
         }
     }
 
-    /**
-     * Pagination des événements
-     */
+ 
     public function paginate() {
         try {
             $page = $_GET['page'] ?? 1;
@@ -339,9 +296,7 @@ public function getALL(){
         }
     }
 
-    /**
-     * API - Retourner tous les événements en JSON
-     */
+   
     public function apiGetAll() {
         try {
             header('Content-Type: application/json');
@@ -389,38 +344,49 @@ public function getALL(){
                 'message' => $e->getMessage()
             ]);
         }
+        exit();
     }
 
-    /**
-     * API - Créer un événement via JSON
-     */
-    public function apiCreate() {
+   
+   public function apiCreate() {
+        if (ob_get_length()) ob_clean();
+        
+        header('Content-Type: application/json');
+
         try {
-            header('Content-Type: application/json');
-            
-            $data = json_decode(file_get_contents('php://input'), true);
-            
-            if (!$data) {
-                http_response_code(400);
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Données invalides'
-                ]);
-                return;
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                http_response_code(405); 
+                echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
+                exit;
             }
 
-            $this->validateEventData($data);
+            $json = file_get_contents('php://input');
+            $data = json_decode($json, true);
+            
+            if (!$data) {
+                $data = $_POST;
+            }
+            
+            if (empty($data)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Aucune donnée reçue']);
+                exit;
+            }
+if (method_exists($this, 'validateEventData')) {
+                $this->validateEventData($data);
+            }
 
-            $this->eventModel->titre = $this->sanitize($data['titre']);
-            $this->eventModel->description = $this->sanitize($data['description']);
-            $this->eventModel->id_type = (int)$data['id_type'];
+            $this->eventModel->titre = htmlspecialchars(strip_tags($data['titre'] ?? ''));
+            $this->eventModel->description = htmlspecialchars(strip_tags($data['description'] ?? ''));
+            $this->eventModel->id_type = (int)($data['id_type'] ?? 0);
             $this->eventModel->date_debut = $data['date_debut'];
-            $this->eventModel->date_fin = $data['date_fin'] ?? null;
-            $this->eventModel->lieu = $this->sanitize($data['lieu']);
-            $this->eventModel->organisateur_id = $data['organisateur_id'] ?? null;
+            $this->eventModel->date_fin = !empty($data['date_fin']) ? $data['date_fin'] : null;
+            $this->eventModel->localisation = htmlspecialchars(strip_tags($data['localisation'] ?? ''));
+            $this->eventModel->organisateur_id = !empty($data['organisateur_id']) ? (int)$data['organisateur_id'] : null;
             $this->eventModel->statut = $data['statut'] ?? 'programmé';
-            $this->eventModel->capacite_max = $data['capacite_max'] ?? null;
+            $this->eventModel->capacite_max = !empty($data['capacite_max']) ? (int)$data['capacite_max'] : null;
 
+            
             if ($this->eventModel->create()) {
                 http_response_code(201);
                 echo json_encode([
@@ -428,8 +394,9 @@ public function getALL(){
                     'message' => 'Événement créé avec succès'
                 ]);
             } else {
-                throw new Exception("Erreur lors de la création");
+                throw new Exception("Erreur lors de l'insertion en base de données");
             }
+
         } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
@@ -437,11 +404,9 @@ public function getALL(){
                 'message' => $e->getMessage()
             ]);
         }
+        
+        exit;
     }
-
-    /**
-     * API - Mettre à jour un événement via JSON
-     */
     public function apiUpdate($id) {
         try {
             header('Content-Type: application/json');
@@ -474,7 +439,7 @@ public function getALL(){
             $this->eventModel->id_type = (int)$data['id_type'];
             $this->eventModel->date_debut = $data['date_debut'];
             $this->eventModel->date_fin = $data['date_fin'] ?? null;
-            $this->eventModel->lieu = $this->sanitize($data['lieu']);
+            $this->eventModel->localisation = $this->sanitize($data['localisation']);
             $this->eventModel->organisateur_id = $data['organisateur_id'] ?? null;
             $this->eventModel->statut = $data['statut'] ?? 'programmé';
             $this->eventModel->capacite_max = $data['capacite_max'] ?? null;
@@ -484,6 +449,7 @@ public function getALL(){
                     'success' => true,
                     'message' => 'Événement mis à jour avec succès'
                 ]);
+                exit;
             } else {
                 throw new Exception("Erreur lors de la mise à jour");
             }
@@ -493,12 +459,12 @@ public function getALL(){
                 'success' => false,
                 'message' => $e->getMessage()
             ]);
+            exit;
         }
+        
     }
 
-    /**
-     * API - Supprimer un événement
-     */
+    
     public function apiDelete($id) {
         try {
             header('Content-Type: application/json');
@@ -529,9 +495,7 @@ public function getALL(){
         }
     }
 
-    /**
-     * API - Obtenir les statistiques
-     */
+    
     public function apiGetStatistics() {
         try {
             header('Content-Type: application/json');
@@ -559,9 +523,7 @@ public function getALL(){
         }
     }
 
-    /**
-     * Valider les données de l'événement
-     */
+    
     private function validateEventData($data) {
         $errors = [];
 
@@ -577,11 +539,10 @@ public function getALL(){
             $errors[] = "La date de début est requise";
         }
 
-        if (empty($data['lieu'])) {
-            $errors[] = "Le lieu est requis";
+        if (empty($data['localisation'])) {
+            $errors[] = "Le localisation est requis";
         }
 
-        // Valider les dates
         if (!empty($data['date_debut']) && !empty($data['date_fin'])) {
             $dateDebut = strtotime($data['date_debut']);
             $dateFin = strtotime($data['date_fin']);
@@ -591,7 +552,6 @@ public function getALL(){
             }
         }
 
-        // Valider la capacité
         if (isset($data['capacite_max']) && $data['capacite_max'] !== '' && $data['capacite_max'] < 0) {
             $errors[] = "La capacité maximale doit être positive";
         }
@@ -601,7 +561,6 @@ public function getALL(){
         }
     }
     public function apiRegisterParticipant() {
-        // JSON Input : { "event_id": 1, "user_id": 5 }
         $data = json_decode(file_get_contents('php://input'), true);
         
         if (empty($data['event_id']) || empty($data['user_id'])) {
@@ -612,11 +571,10 @@ public function getALL(){
 
         $result = $this->eventModel->addParticipant($data['event_id'], $data['user_id']);
         echo json_encode($result);
+                exit; 
     }
 
-    /**
-     * API - Désinscrire un utilisateur
-     */
+    
     public function apiUnregisterParticipant() {
         $data = json_decode(file_get_contents('php://input'), true);
         
@@ -625,21 +583,16 @@ public function getALL(){
         } else {
             echo json_encode(['success' => false, 'message' => 'Erreur lors de la désinscription']);
         }
+        exit;
     }
 
-    /**
-     * API - Liste des participants pour un événement
-     */
     public function apiGetParticipants($eventId) {
         $participants = $this->eventModel->getParticipants($eventId);
         echo json_encode(['success' => true, 'data' => $participants]);
+        exit;
     }
 
-    /**
-     * API - Envoyer les rappels (Simulation d'envoi d'email)
-     */
     public function apiSendReminders() {
-        // Récupère les événements qui commencent dans 24h
         $events = $this->eventModel->getEventsStartingSoon(24);
         $log = [];
 
@@ -647,7 +600,6 @@ public function getALL(){
             $participants = $this->eventModel->getParticipants($event['id']);
             $count = 0;
             
-            // Simulation d'envoi de mail
             foreach ($participants as $p) {
                 mail($p['email'], "Rappel : " . $event['titre'], "L'événement commence demain...");
                 $count++;
@@ -661,36 +613,28 @@ public function getALL(){
         }
 
         echo json_encode(['success' => true, 'message' => implode(" ", $log)]);
+        exit;
     }
 
-    /**
-     * Sanitize input
-     */
+  
     private function sanitize($data) {
         return htmlspecialchars(strip_tags(trim($data)));
     }
 
-    /**
-     * Gérer les erreurs
-     */
+    
     private function handleError($message) {
         $_SESSION['error'] = $message;
         exit();
     }
      public function indexPublic() {
-        // Chargement des dépendances globales si pas déjà fait dans le constructeur
         if (!$this->settingsModel) $this->settingsModel = new Settings();
         if (!$this->menuModel) $this->menuModel = new Menu();
 
-        // Récupération des événements (triés par date début ASC pour l'affichage public)
-        // Vous pouvez aussi filtrer pour ne montrer que les événements "programmés"
         $events = $this->eventModel->getAllEvents('date_debut', 'ASC');
         $this->eventModel->autoUpdateStatuses();
-        // Configuration globale
         $config = $this->settingsModel->getAllSettings();
         $menu = $this->menuModel->getMenuTree();
 
-        // Préparation des données
         $data = [
             'title' => 'Agenda des Événements',
             'config' => $config,
@@ -698,7 +642,6 @@ public function getALL(){
             'events' => $events
         ];
 
-        // Chargement de la vue
         require_once __DIR__ . '/../views/public/EventListView.php';
         $view = new EventListView($data);
         $view->render();

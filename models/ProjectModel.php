@@ -18,9 +18,7 @@ class Project extends Model {
         parent::__construct();
     }
   
-    /**
-     * Compter les projets actifs
-     */
+   
    public function countActive() {
     $query = "SELECT COUNT(*) AS total 
               FROM {$this->table} 
@@ -34,16 +32,13 @@ class Project extends Model {
 }
 
     
-    /**
-     * Compter par statut
-     */
+  
     public function countByStatus($statut) {
         return $this->getByColumn('statut', $statut, 'id', 'DESC', null);
     }
 
     public function getAll($orderBy = 'id', $order = 'DESC', $limit = null)
     {
-        // 1. Sécurisation de la direction du tri (pour éviter les injections SQL)
         $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
 
         
@@ -54,29 +49,23 @@ class Project extends Model {
                 LEFT JOIN users u ON t.responsable_id = u.id
                 ORDER BY t.{$orderBy} {$order}";
 
-        // 3. Ajout de la limite si elle est définie
         if ($limit !== null) {
             $sql .= " LIMIT :limit";
         }
 
-        // 4. Préparation de la requête
         $stmt = $this->conn->prepare($sql);
 
-        // 5. Binding de la limite (sécurité int)
         if ($limit !== null) {
             $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
         }
 
-        // 6. Exécution et retour des résultats
         $stmt->execute();
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
     
-    /**
-     * Créer un projet
-     */
+   
     public function create() {
     $query = "INSERT INTO {$this->table}
         (titre, description, type_financement, statut, date_debut, date_fin, responsable_id, id_equipe)
@@ -95,23 +84,19 @@ class Project extends Model {
 
     return $stmt->execute();
 }
-// Dans ProjectModel.php ou Model.php
     
     public function getLastInsertedId() {
         return $this->conn->lastInsertId();
     }
     
-    // Assurez-vous que addUserToProject existe et est correcte
     public function addUserToProject($projectId, $userId) {
-        // On vérifie si l'association existe déjà pour éviter les doublons
         $check = $this->conn->prepare("SELECT COUNT(*) FROM user_project WHERE user_id = :uid AND project_id = :pid");
         $check->execute([':uid' => $userId, ':pid' => $projectId]);
         
         if ($check->fetchColumn() > 0) {
-            return true; // Déjà membre
+            return true; 
         }
 
-        // Ajout avec un rôle par défaut (ex: 'responsable' ou 'membre')
         $query = "INSERT INTO user_project (project_id, user_id, role) VALUES (:pid, :uid, 'responsable')";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':pid', $projectId);
@@ -119,9 +104,7 @@ class Project extends Model {
         
         return $stmt->execute();
     }
-// =====================
-// SETTERS
-// =====================
+
 
 public function setId($id) {
     $this->id = $id;
@@ -160,9 +143,7 @@ public function setIdEquipe($id_equipe) {
 }
 
     
-    /**
-     * Mettre à jour un projet
-     */
+    
    public function update() {
     $query = "UPDATE {$this->table}
               SET titre = :titre,
@@ -200,7 +181,6 @@ public function getById($id) {
     return $this->getByColumn('id', $id, 'id', 'DESC', null);
 }
 public function getByResponsableId($responsable_id) {
-    // On écrit une requête SQL manuelle pour joindre la table utilisateurs
     $query = "SELECT p.*, 
             CONCAT(u.nom, ' ', u.prenom) as responsable_name,
             u.email as responsable_email
@@ -248,18 +228,14 @@ public function removeUserFromProject($projectId, $userId) {
 }
 
 public function getAllProjectsWithUsers($orderBy = 'id', $order = 'DESC', $limit = null) {
-    // Liste blanche des colonnes autorisées pour ORDER BY (sécurité)
     $allowedOrderBy = ['id', 'title', 'description', 'start_date', 'end_date', 'status', 'budget', 'responsable_id', 'created_at'];
     
-    // Valider $orderBy avec une liste blanche
     if (!in_array($orderBy, $allowedOrderBy)) {
         $orderBy = 'id'; // Valeur par défaut si invalide
     }
     
-    // Valider $order
     $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
     
-    // Construire la requête (pas besoin de quote() car validé par liste blanche)
     $query = "SELECT 
                 p.*,
                 CONCAT(u.prenom, ' ', u.nom) as responsable_name,
@@ -277,7 +253,6 @@ public function getAllProjectsWithUsers($orderBy = 'id', $order = 'DESC', $limit
     $stmt->execute();
     $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Ajouter tous les utilisateurs du projet
     foreach ($projects as &$project) {
         $project['users'] = $this->getProjectUsers($project['id']);
     }
@@ -286,19 +261,23 @@ public function getAllProjectsWithUsers($orderBy = 'id', $order = 'DESC', $limit
 }
 public function searchProjects($keyword, $orderBy = 'id', $order = 'DESC', $limit = null) {
     $query = "SELECT * FROM {$this->table} 
-              WHERE titre LIKE :keyword OR description LIKE :keyword 
+              WHERE titre LIKE :keyword1 OR description LIKE :keyword2 
               ORDER BY {$orderBy} {$order}";
     
     if ($limit) {
-        $query .= " LIMIT {$limit}";
+        $query .= " LIMIT " . (int)$limit;
     }
     
     $stmt = $this->conn->prepare($query);
+    
     $likeKeyword = '%' . $keyword . '%';
-    $stmt->bindParam(':keyword', $likeKeyword);
+    
+    $stmt->bindValue(':keyword1', $likeKeyword);
+    $stmt->bindValue(':keyword2', $likeKeyword);
+    
     $stmt->execute();
     
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);   
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 public function getProjectsPublications($projectId) {
     $query = "SELECT p.* FROM publications p
@@ -377,9 +356,7 @@ public function getProjectsByThematic() {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-/**
- * Statistiques par encadrant (responsable)
- */
+
 public function getProjectsByResponsable() {
     $query = "SELECT 
                 u.id,
@@ -400,9 +377,7 @@ public function getProjectsByResponsable() {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-/**
- * Statistiques par année
- */
+
 public function getProjectsByYear() {
     $query = "SELECT 
                 YEAR(date_debut) as year,
@@ -420,9 +395,7 @@ public function getProjectsByYear() {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-/**
- * Get projects by thematic ID with full details
- */
+
 public function getProjectsByThematicId($thematicId) {
     $query = "SELECT DISTINCT
                 p.*,
@@ -441,9 +414,7 @@ public function getProjectsByThematicId($thematicId) {
     
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
-/**
- * Statistiques par type de financement
- */
+
 public function getProjectsByFinancement() {
     $query = "SELECT 
                 type_financement,
@@ -458,13 +429,7 @@ public function getProjectsByFinancement() {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-/**
- * Statistiques par équipe
- */
 
-/**
- * Statistiques globales avancées
- */
 public function getAdvancedStats() {
     $query = "SELECT 
                 COUNT(*) as total_projects,
@@ -482,9 +447,6 @@ public function getAdvancedStats() {
     return $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
-/**
- * Top 5 des projets avec le plus de membres
- */
 public function getTopProjectsByMembers() {
     $query = "SELECT 
                 p.id,
@@ -503,9 +465,7 @@ public function getTopProjectsByMembers() {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-/**
- * Projets récents (30 derniers jours)
- */
+
 public function getRecentProjects($days = 30) {
     $query = "SELECT 
                 COUNT(*) as count
@@ -518,78 +478,61 @@ public function getRecentProjects($days = 30) {
     return $stmt->fetch(PDO::FETCH_ASSOC);
 }
 public function getAllThematics() {
-        // Vérifiez que la table s'appelle bien 'thematiques' ou 'thematics'
         try {
             $stmt = $this->conn->query("SELECT * FROM thematiques ORDER BY nom");
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
-            return []; // Retourne vide si la table n'existe pas encore
+            return []; 
         }
     }
-     public function getPublicProjects($filters = []) {
-        $params = [];
-        $conditions = ["1=1"]; // Condition de base toujours vraie
+    public function getPublicProjects($filters = []) {
+    $sql = "SELECT p.*, 
+                   CONCAT(u.nom, ' ', u.prenom) as responsable_nom 
+            FROM " . $this->table . " p
+            LEFT JOIN users u ON p.responsable_id = u.id
+            WHERE 1=1"; 
 
-        // --- FILTRES ---
+    $params = [];
+
+    if (!empty($filters['search'])) {
+        $sql .= " AND (p.titre LIKE :search1 OR p.description LIKE :search2)";
+        $term = '%' . $filters['search'] . '%';
+        $params[':search1'] = $term;
+        $params[':search2'] = $term;
+    }
+
+    if (!empty($filters['thematique'])) {
+        $sql .= " AND FIND_IN_SET(:theme, p.thematiques)";
+        $params[':theme'] = $filters['thematique']; 
+    }
+
+    if (!empty($filters['responsable'])) {
+        $sql .= " AND p.responsable_id = :resp";
+        $params[':resp'] = $filters['responsable'];
+    }
+
+    if (!empty($filters['statut'])) {
+        $sql .= " AND p.statut = :statut";
+        $params[':statut'] = $filters['statut'];
+    }
+
+    $sql .= " ORDER BY p.date_debut DESC";
+
+    try {
+        $stmt = $this->conn->prepare($sql);
         
-        // 1. Statut (Enum: en_cours, termine, soumis)
-        if (!empty($filters['statut'])) {
-            $conditions[] = "p.statut = :statut";
-            $params[':statut'] = $filters['statut'];
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
         }
-
-        // 2. Responsable
-        if (!empty($filters['responsable'])) {
-            $conditions[] = "p.responsable_id = :resp";
-            $params[':resp'] = $filters['responsable'];
-        }
-
-        // 3. Recherche (Titre ou Description)
-        if (!empty($filters['search'])) {
-            $conditions[] = "(p.titre LIKE :q OR p.description LIKE :q)";
-            $params[':q'] = '%' . $filters['search'] . '%';
-        }
-
-        // 4. Thématique (Via table de liaison project_thematique)
-        // Assurez-vous d'avoir la table 'thematiques' et 'project_thematique'
-        if (!empty($filters['thematique'])) {
-            $conditions[] = "p.id IN (SELECT project_id FROM project_thematique WHERE thematic_id = :them)";
-            $params[':them'] = $filters['thematique'];
-        }
-
-        $whereClause = implode(' AND ', $conditions);
-
-        // --- REQUÊTE ---
-        // On utilise des sous-requêtes pour le comptage et le group_concat pour éviter les doublons de lignes
-        $query = "SELECT 
-                    p.*,
-                    CONCAT(u.nom, ' ', u.prenom) as responsable_nom,
-                    u.photo_profil as responsable_photo,
-                    
-                    -- Compter les membres associés au projet
-                    (SELECT COUNT(*) FROM user_project up WHERE up.project_id = p.id) as nb_membres,
-                    
-                    -- Récupérer les noms des thématiques séparés par des virgules
-                    (
-                        SELECT GROUP_CONCAT(t.nom SEPARATOR ', ') 
-                        FROM thematiques t 
-                        JOIN project_thematique pt ON t.id = pt.thematic_id 
-                        WHERE pt.project_id = p.id
-                    ) as thematiques_list
-                    
-                  FROM {$this->table} p
-                  LEFT JOIN users u ON p.responsable_id = u.id
-                  WHERE $whereClause
-                  ORDER BY p.date_creation DESC";
-
-        $stmt = $this->conn->prepare($query);
-        foreach ($params as $key => $val) {
-            $stmt->bindValue($key, $val);
-        }
+        
         $stmt->execute();
-        
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+    } catch(PDOException $e) {
+        error_log("Erreur SQL getPublicProjects: " . $e->getMessage());
+        return [];
     }
+}
      public function getProjectDetails($id) {
         $query = "SELECT 
                     p.*,
@@ -605,11 +548,9 @@ public function getAllThematics() {
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
         
-        // On récupère aussi les thématiques
         $project = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($project) {
-            // Récupération des thématiques
             $stmtThemes = $this->conn->prepare("
                 SELECT t.nom 
                 FROM thematiques t
@@ -624,11 +565,8 @@ public function getAllThematics() {
         return $project;
     }
 
-    /**
-     * Récupérer les membres d'un projet (via user_project)
-     */
+  
    public function getProjectMembers($id) {
-        // CONCAT permet de fusionner nom et prénom en une seule chaine 'membre_nom'
         $query = "SELECT 
                     u.id, 
                     CONCAT(u.nom, ' ', u.prenom) as membre_nom, 
@@ -646,9 +584,7 @@ public function getAllThematics() {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Récupérer les publications associées (via project_publication)
-     */
+  
     public function getProjectPublications($id) {
         $query = "SELECT pub.* 
                   FROM publications pub
@@ -662,15 +598,9 @@ public function getAllThematics() {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 public function getProjectsByUserId($userId) {
-        // Cette version évite l'erreur "only_full_group_by"
-        // 1. On sélectionne les projets
-        // 2. On récupère le rôle via une sous-requête spécifique à l'utilisateur
-        // 3. On filtre via une clause WHERE claire
-        
+    
         $query = "SELECT p.*, 
-                         -- Sous-requête pour récupérer le rôle de l'utilisateur courant
                          (SELECT role FROM user_project WHERE project_id = p.id AND user_id = :uid1 LIMIT 1) as role_dans_projet,
-                         -- Sous-requête pour compter le nombre total de membres
                          (SELECT COUNT(*) FROM user_project WHERE project_id = p.id) as nb_membres
                   FROM projects p
                   WHERE p.responsable_id = :uid2
@@ -679,7 +609,6 @@ public function getProjectsByUserId($userId) {
         
         $stmt = $this->conn->prepare($query);
         
-        // On lie les paramètres (3 fois le même ID pour les 3 endroits où il est utilisé)
         $stmt->bindValue(':uid1', $userId, PDO::PARAM_INT);
         $stmt->bindValue(':uid2', $userId, PDO::PARAM_INT);
         $stmt->bindValue(':uid3', $userId, PDO::PARAM_INT);

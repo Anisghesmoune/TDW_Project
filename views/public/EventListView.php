@@ -1,5 +1,4 @@
 <?php
-// Imports des dépendances
 require_once __DIR__ . '/View.php';
 require_once __DIR__ . '/components/UIHeader.php';
 require_once __DIR__ . '/components/UIFooter.php';
@@ -11,10 +10,9 @@ class EventListView extends View {
         $menuData = $this->data['menu'] ?? [];
         $pageTitle = $this->data['title'] ?? 'Agenda';
 
-        // CSS spécifiques
         $customCss = [
             'assets/css/public.css',
-            'views/landingPage.css' // Pour réutiliser le style des cartes/grilles
+            'views/landingPage.css'
         ];
 
         // Header
@@ -26,7 +24,6 @@ class EventListView extends View {
         echo $this->content();
         echo '</main>';
 
-        // Footer
         $footer = new UIFooter($config, $menuData);
         echo $footer->render();
     }
@@ -38,7 +35,6 @@ class EventListView extends View {
         ?>
         <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
             
-            <!-- En-tête de section -->
             <div style="text-align: center; margin-bottom: 50px;">
                 <h1 style="color: #2c3e50; font-size: 2.5em; margin-bottom: 15px;">📅 Agenda du Laboratoire</h1>
                 <p style="color: #666; font-size: 1.1em; max-width: 800px; margin: 0 auto;">
@@ -46,7 +42,6 @@ class EventListView extends View {
                 </p>
             </div>
 
-            <!-- Liste des événements -->
             <?php if (empty($events)): ?>
                 <div style="text-align: center; padding: 50px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
                     <p style="font-size: 1.2em; color: #888;">Aucun événement programmé pour le moment.</p>
@@ -61,24 +56,20 @@ class EventListView extends View {
                             $mois = $this->getMoisFrancais($dateDebut->format('m'));
                             $heure = $dateDebut->format('H:i');
                             
-                            // Badge type
-                            $typeColor = '#4e73df'; // Bleu par défaut
+                            $typeColor = '#4e73df'; 
                             if (stripos($evt['type_nom'] ?? '', 'conférence') !== false) $typeColor = '#e74a3b'; // Rouge
                             if (stripos($evt['type_nom'] ?? '', 'soutenance') !== false) $typeColor = '#1cc88a'; // Vert
                             
-                            // Lien google maps pour le lieu (optionnel)
                             $lieuLink = 'https://www.google.com/maps/search/?api=1&query=' . urlencode($evt['localisation'] ?? '');
                         ?>
                         
                         <div class="event-card" style="display: flex; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: transform 0.2s;">
                             
-                            <!-- Date (Côté gauche) -->
                             <div class="event-date" style="background: <?= $typeColor ?>; color: white; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 80px;">
                                 <span style="font-size: 1.8em; font-weight: bold;"><?= $jour ?></span>
                                 <span style="text-transform: uppercase; font-size: 0.9em;"><?= $mois ?></span>
                             </div>
 
-                            <!-- Contenu -->
                             <div class="event-content" style="padding: 20px; flex: 1;">
                                 <div style="margin-bottom: 10px;">
                                     <span style="color: <?= $typeColor ?>; font-weight: bold; text-transform: uppercase; font-size: 0.8em; letter-spacing: 1px;">
@@ -108,7 +99,6 @@ class EventListView extends View {
                                 </div>
                             </div>
 
-                            <!-- Action (Côté droit) -->
                             <div class="event-action" style="padding: 20px; display: flex; align-items: center; border-left: 1px solid #f0f0f0; background: #fafafa;">
                                 <button onclick="alert('Détails bientôt disponibles')" class="btn-details" style="padding: 10px 20px; border: 1px solid #ddd; background: white; border-radius: 5px; cursor: pointer; color: #555; transition: 0.2s;">
                                     Détails
@@ -133,7 +123,6 @@ class EventListView extends View {
         return ob_get_clean();
     }
 
-    // Helper pour les mois
     private function getMoisFrancais($num) {
         $mois = [
             '01' => 'Jan', '02' => 'Fév', '03' => 'Mar', '04' => 'Avr',

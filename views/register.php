@@ -1,11 +1,25 @@
+<?php
+
+class RegisterView {
+    
+    private $data;
+
+   
+    public function __construct($data = []) {
+        $this->data = $data;
+    }
+
+  
+    public function render() {
+        $csrfToken = $this->data['csrfToken'] ?? '';
+        ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inscription - Laboratoire</title>
-    <link rel="stylesheet" href="/views/register.css">
-</head>
+    <link rel="stylesheet" href="views/register.css"> 
 </head>
 <body>
     <div class="register-container">
@@ -16,9 +30,14 @@
         
         <div id="alert" class="alert"></div>
         
-        <form id="registerForm" method="POST" action="register_process.php">
+        <form id="registerForm" method="POST">
             <input type="hidden" name="csrf_token" value="<?php echo $csrfToken ?? ''; ?>">
             
+            <div class="form-group">
+                <label for="username">Nom d'utilisateur *</label>
+                <input type="text" id="username" name="username" required placeholder="3 à 20 caractères alphanumériques">
+            </div>
+
             <div class="form-row">
                 <div class="form-group">
                     <label for="nom">Nom *</label>
@@ -37,8 +56,6 @@
             </div>
             
             <div class="form-row">
-              
-                
                 <div class="form-group">
                     <label for="role">Rôle *</label>
                     <select id="role" name="role" required>
@@ -54,7 +71,7 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="password">Mot de passe *</label>
-                    <input type="password" id="password" name="password" required minlength="8">
+                    <input type="password" id="password" name="password" required minlength="4">
                 </div>
                 
                 <div class="form-group">
@@ -76,7 +93,7 @@
             <button type="submit" class="btn">S'inscrire</button>
             
             <div class="login-link">
-                Déjà un compte ? <a href="login.php">Se connecter</a>
+                Déjà un compte ? <a href="index.php?route=login.php">Se connecter</a>
             </div>
         </form>
     </div>
@@ -98,7 +115,7 @@
             const formData = new FormData(e.target);
             
             try {
-                const response = await fetch('../register_process.php', {
+                const response = await fetch('index.php?route=register', { 
                     method: 'POST',
                     body: formData
                 });
@@ -109,13 +126,14 @@
                     alert.className = 'alert alert-success show';
                     alert.textContent = data.message;
                     setTimeout(() => {
-                        window.location.href = 'login.php';
+                        window.location.href = 'index.php?route=login';
                     }, 2000);
                 } else {
                     alert.className = 'alert alert-error show';
                     alert.textContent = data.message;
                 }
             } catch (error) {
+                console.error(error);
                 alert.className = 'alert alert-error show';
                 alert.textContent = 'Erreur lors de l\'inscription';
             }
@@ -123,3 +141,7 @@
     </script>
 </body>
 </html>
+<?php
+    }
+}
+?>

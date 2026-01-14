@@ -2,9 +2,7 @@
 class Equipment extends Model {
     protected $table = 'equipment';
     
-    /**
-     * Create a new equipment
-     */
+  
     public function create($data) {
         $query = "INSERT INTO " . $this->table . " 
                   (nom, id_type, etat, description, localisation, derniere_maintenance, prochaine_maintenance) 
@@ -21,10 +19,7 @@ class Equipment extends Model {
         
         return $stmt->execute();
     }
-    
-    /**
-     * Update equipment
-     */
+ 
     public function update($id, $data) {
         $query = "UPDATE " . $this->table . " 
                   SET nom = :nom, 
@@ -49,9 +44,7 @@ class Equipment extends Model {
         return $stmt->execute();
     }
     
-    /**
-     * Get equipment with type information (JOIN)
-     */
+  
     public function getAllWithTypes($orderBy = 'id', $order = 'DESC') {
         $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
         $query = "SELECT e.*, et.nom as type_nom, et.description as type_description, et.icone 
@@ -64,23 +57,17 @@ class Equipment extends Model {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Get equipment by status
-     */
+ 
     public function getByStatus($etat, $orderBy = 'id', $order = 'DESC') {
         return $this->getByColumn('etat', $etat, $orderBy, $order);
     }
     
-    /**
-     * Get equipment by type
-     */
+   
     public function getByType($id_type, $orderBy = 'id', $order = 'DESC') {
         return $this->getByColumn('id_type', $id_type, $orderBy, $order);
     }
     
-    /**
-     * Get equipment needing maintenance (upcoming or overdue)
-     */
+  
     public function getMaintenanceNeeded($daysAhead = 30) {
         $query = "SELECT e.*, et.nom as type_nom 
                   FROM " . $this->table . " e 
@@ -94,10 +81,7 @@ class Equipment extends Model {
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    
-    /**
-     * Update equipment status
-     */
+
     public function updateStatus($id, $etat) {
         $query = "UPDATE " . $this->table . " SET etat = :etat WHERE id = :id";
         $stmt = $this->conn->prepare($query);
@@ -106,9 +90,7 @@ class Equipment extends Model {
         return $stmt->execute();
     }
     
-    /**
-     * Update maintenance dates
-     */
+   
     public function updateMaintenance($id, $derniere_maintenance, $prochaine_maintenance) {
         $query = "UPDATE " . $this->table . " 
                   SET derniere_maintenance = :derniere_maintenance, 
@@ -122,9 +104,7 @@ class Equipment extends Model {
         return $stmt->execute();
     }
     
-    /**
-     * Get equipment statistics by status
-     */
+   
     public function getStatsByStatus() {
         $query = "SELECT etat, COUNT(*) as count 
                   FROM " . $this->table . " 
@@ -135,9 +115,7 @@ class Equipment extends Model {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Get equipment statistics by type
-     */
+  
     public function getStatsByType() {
         $query = "SELECT et.nom as type_nom, et.icone, COUNT(e.id) as count 
                   FROM equipment_types et 
@@ -150,9 +128,7 @@ class Equipment extends Model {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Search equipment by name or location
-     */
+  
     public function search($searchTerm, $orderBy = 'id', $order = 'DESC') {
         $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
         $query = "SELECT e.*, et.nom as type_nom, et.icone 
@@ -169,17 +145,12 @@ class Equipment extends Model {
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    
-    /**
-     * Get available equipment (libre status)
-     */
+  
     public function getAvailable($orderBy = 'nom', $order = 'ASC') {
         return $this->getByStatus('libre', $orderBy, $order);
     }
     
-    /**
-     * Check if equipment is available (no status check, only reservation check)
-     */
+  
     public function isAvailable($id) {
         $query = "SELECT etat FROM " . $this->table . " WHERE id = :id";
         $stmt = $this->conn->prepare($query);
@@ -189,12 +160,8 @@ class Equipment extends Model {
         return $result && $result['etat'] === 'libre';
     }
     
-    /**
-     * Check if equipment is available for a specific date range
-     * Returns array with 'available' boolean and 'conflicts' array if any
-     */
+ 
     public function isAvailableForPeriod($id, $date_debut, $date_fin) {
-        // 1. Vérifier si l'équipement existe et n'est pas en maintenance
         $equipment = $this->getById($id);
         
         if (!$equipment || $equipment['etat'] === 'en_maintenance') {
@@ -205,11 +172,7 @@ class Equipment extends Model {
             ];
         }
         
-        // 2. Vérifier les conflits de dates
-        // Note : J'ai simplifié la logique de chevauchement. 
-        // Cette formule couvre tous les cas (dedans, autour, chevauchement partiel)
-        // et n'utilise les paramètres qu'une seule fois, ce qui corrige le bug PDO.
-        
+      
         $query = "SELECT r.*, 
                          u.nom as user_nom, 
                          u.prenom as user_prenom,
@@ -225,7 +188,6 @@ class Equipment extends Model {
         
         $stmt = $this->conn->prepare($query);
         
-        // Utilisation de bindValue (plus sûr ici)
         $stmt->bindValue(':id_equipement', $id, PDO::PARAM_INT);
         $stmt->bindValue(':date_debut', $date_debut);
         $stmt->bindValue(':date_fin', $date_fin);
@@ -240,9 +202,7 @@ class Equipment extends Model {
             'equipment' => $equipment
         ];
     }
-    /**
-     * Get equipment with current reservation status
-     */
+   
     public function getWithReservationStatus($id) {
         $query = "SELECT e.*, 
                          et.nom as type_nom,
@@ -268,9 +228,7 @@ class Equipment extends Model {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Get all equipment with their current reservation status
-     */
+ 
     public function getAllWithReservationStatus($orderBy = 'id', $order = 'DESC') {
         $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
         
@@ -295,17 +253,11 @@ class Equipment extends Model {
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    
-    /**
-     * Reserve equipment (create reservation and update status)
-     * Returns array with success status and message
-     */
+  
     public function reserve($id_equipement, $id_utilisateur, $date_debut, $date_fin, $notes = null) {
         try {
-            // Start transaction
             $this->conn->beginTransaction();
             
-            // Check availability
             $availability = $this->isAvailableForPeriod($id_equipement, $date_debut, $date_fin);
             
             if (!$availability['available']) {
@@ -317,7 +269,6 @@ class Equipment extends Model {
                 ];
             }
             
-            // Create reservation
             $query = "INSERT INTO reservations 
                       (id_equipement, id_utilisateur, date_debut, date_fin, statut, notes) 
                       VALUES (:id_equipement, :id_utilisateur, :date_debut, :date_fin, 'en_attente', :notes)";
@@ -339,7 +290,6 @@ class Equipment extends Model {
             
             $reservation_id = $this->conn->lastInsertId();
             
-            // Update equipment status to 'réserve'
             $this->updateStatus($id_equipement, 'réservé');
             
             $this->conn->commit();
@@ -359,14 +309,11 @@ class Equipment extends Model {
         }
     }
     
-    /**
-     * Cancel reservation and update equipment status
-     */
+ 
     public function cancelReservation($reservation_id) {
         try {
             $this->conn->beginTransaction();
             
-            // Get reservation details
             $query = "SELECT id_equipement FROM reservations WHERE id = :id";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':id', $reservation_id, PDO::PARAM_INT);
@@ -378,13 +325,11 @@ class Equipment extends Model {
                 return false;
             }
             
-            // Update reservation status
             $query = "UPDATE reservations SET statut = 'annulé' WHERE id = :id";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':id', $reservation_id, PDO::PARAM_INT);
             $stmt->execute();
             
-            // Check if equipment has other active reservations
             $query = "SELECT COUNT(*) as count FROM reservations 
                       WHERE id_equipement = :id_equipement 
                       AND statut IN ('confirmé') 
@@ -396,7 +341,6 @@ class Equipment extends Model {
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            // If no other reservations, set equipment to libre
             if ($result['count'] == 0) {
                 $this->updateStatus($reservation['id_equipement'], 'libre');
             }
@@ -410,9 +354,7 @@ class Equipment extends Model {
         }
     }
     
-    /**
-     * Get equipment availability calendar for a date range
-     */
+   
     public function getAvailabilityCalendar($id, $start_date, $end_date) {
         $query = "SELECT 
                     date_debut,

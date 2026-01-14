@@ -62,9 +62,7 @@ private function renderMetadata() {
         </p>
 HTML;
     }
-    /**
-     * Générer le HTML de la carte
-     */
+    
     public function render() {
         $dateHtml = $this->renderDate();
         $imageHtml = $this->renderImage();
@@ -85,7 +83,6 @@ HTML;
         </div>
 HTML;
         
-        // Si un lien est fourni, envelopper dans un <a>
         if ($this->link) {
             return <<<HTML
             <a href="{$this->link}" class="{$this->customClass}">
@@ -100,16 +97,12 @@ HTML;
         </div>
 HTML;
     }
-    /**
-     * Afficher directement la carte
-     */
+ 
     public function display() {
         echo $this->render();
     }
     
-    /**
-     * Méthode statique pour créer et afficher rapidement une carte
-     */
+  
     public static function create($options) {
         $card = new self($options);
         return $card->render();

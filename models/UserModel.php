@@ -1,57 +1,64 @@
 <?php
 require_once __DIR__ . '/../config/Database.php'; 
+
 class UserModel {
     private $db;
- private $table = 'users';
- public function __construct(){
-            $this->db = Database::getInstance()->getConnection(); // <-- Ici
- }
+    private $table = 'users';
 
+    public function __construct(){
+        $this->db = Database::getInstance()->getConnection(); 
+    }
 
-//Authentifier un utilisateur
+    public function authentificate($username, $password){
+        try{
+            $querry = "SELECT id, username, password, nom, prenom, email, photo_profil, role, is_admin, grade, domaine_recherche, statut 
+                       FROM " . $this->table . " 
+                       WHERE username = :username AND statut = 'actif' LIMIT 1";
+        
+            $stmt = $this->db->prepare($querry);
+            $stmt->bindParam(':username', $username, PDO::PARAM_STR);
+            $stmt->execute();
+            $user = $stmt->fetch();
 
- public function authentificate($email, $password){
+            if ($user && password_verify($password, $user['password'])) {
+                $this->updateLastLogin($user['id']);
+                unset($user['password']);
+                return $user;
+            } 
+            return false;
 
-    try{
-        $querry = "SELECT id ,password ,nom ,prenom ,email ,photo_profil,role,is_admin,grade,domaine_recherche,statut FROM " . $this->table . " WHERE email = :email And statut = 'actif' limit 1 ";
-    
-    $stmt=$this->db->prepare($querry);
-    $stmt->bindParam(':email', $email, PDO::PARAM_STR);
-    $stmt->execute();
-    $user = $stmt->fetch();
+        } catch (PDOException $e) {
+            echo "Error: " . $e->getMessage();
+            return false;
+        }
+    }
 
-   if ($user && password_verify($password, $user['password'])) {
-    $this->updateLastLogin($user['id']);
-    unset($user['password']); // Supprimer le mot de passe avant de retourner les données
-    return $user;
-} 
- return false;
+    public function create($data){
+        try{
+            if($this->usernameExists($data['username'])){
+                return ['success' => false, 'message' => "Ce nom d'utilisateur est déjà pris"];
+            }
+            if($this->emailExists($data['email'])){
+                return ['success' => false, 'message' => "Cet email est déjà utilisé"];
+            }
 
-
-
-}catch (PDOException $e) {
-    echo "Error: " . $e->getMessage();
-    return false;
-}
- }
-public function create($data){
-    try{
-       if($this->emailExists($data['email'])){
-    return ['success'=>false,'message'=> "Cet utilisateur existe déjà"];
-}
-            $hashedPassword=password_hash($data['password'],PASSWORD_DEFAULT);
+            $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
+            
             $query = "INSERT INTO {$this->table} 
-            (password, nom, prenom, email, role,is_admin,grade, domaine_recherche, statut) 
-             VALUES (:password, :nom, :prenom, :email, :role, :is_admin, :grade, :domaine_recherche, 'actif')";
-             $stmt = $this->db->prepare($query);
-            // $stmt->bindParam(':username', $data['username']);
+            (username, password, nom, prenom, email, role, is_admin, grade, domaine_recherche, statut) 
+             VALUES (:username, :password, :nom, :prenom, :email, :role, :is_admin, :grade, :domaine_recherche, 'actif')";
+             
+            $stmt = $this->db->prepare($query);
+            
+            $stmt->bindParam(':username', $data['username']);
             $stmt->bindParam(':password', $hashedPassword);
             $stmt->bindParam(':nom', $data['nom']);
             $stmt->bindParam(':prenom', $data['prenom']);
             $stmt->bindParam(':email', $data['email']);
             $stmt->bindParam(':role', $data['role']);
-             $isAdmin = !empty($data['is_admin']) ? 1 : 0;
-           $stmt->bindParam(':is_admin', $isAdmin, PDO::PARAM_INT);
+            
+            $isAdmin = !empty($data['is_admin']) ? 1 : 0;
+            $stmt->bindParam(':is_admin', $isAdmin, PDO::PARAM_INT);
             $stmt->bindParam(':grade', $data['grade']);
             $stmt->bindParam(':domaine_recherche', $data['domaine_recherche']);
             
@@ -64,12 +71,11 @@ public function create($data){
             error_log("Erreur création utilisateur : " . $e->getMessage());
             return ['success' => false, 'message' => 'Erreur système'];
         }
-}
+    }
         
-  
-        public function getById($id) {
+    public function getById($id) {
         try {
-            $query = "SELECT id,nom, prenom, email, photo_profil, role, grade, 
+            $query = "SELECT id, username, nom, prenom, email, photo_profil, role, grade, 
                             domaine_recherche, specialite, statut, date_creation, derniere_connexion
                      FROM {$this->table} 
                      WHERE id = :id LIMIT 1";
@@ -84,59 +90,53 @@ public function create($data){
             return false;
         }
     }
+
     public function delete($id) {
-    try {
-        $query = "UPDATE {$this->table} SET statut = 'supprimé' WHERE id = :id";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-        return $stmt->execute();
-    } catch(PDOException $e) {
-        error_log("Erreur suppression utilisateur : " . $e->getMessage());
-        return false;
-    }
-}
-public function getAllWithPublicationCount($filters = []) {
-    try {
-        $query = "SELECT u.id, u.username, u.nom, u.prenom, u.email, u.role, u.statut,
-                         COUNT(up.publication_id) AS nb_publications
-                  FROM {$this->table} u
-                  LEFT JOIN user_publication up ON u.id = up.user_id
-                  WHERE u.statut != 'supprimé'";
-
-        // filtres dynamiques
-        if (!empty($filters['role'])) {
-            $query .= " AND u.role = :role";
+        try {
+            $query = "UPDATE {$this->table} SET statut = 'supprimé' WHERE id = :id";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            return $stmt->execute();
+        } catch(PDOException $e) {
+            error_log("Erreur suppression utilisateur : " . $e->getMessage());
+            return false;
         }
-
-        $query .= " GROUP BY u.id ORDER BY nb_publications DESC";
-
-        $stmt = $this->db->prepare($query);
-
-        if (!empty($filters['role'])) {
-            $stmt->bindParam(':role', $filters['role']);
-        }
-
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    } catch (PDOException $e) {
-        error_log("Erreur récupération utilisateurs avec publications : " . $e->getMessage());
-        return [];
     }
-}
 
-    
-    /**
-     * Mettre à jour le profil utilisateur
-     */
+    public function getAllWithPublicationCount($filters = []) {
+        try {
+            $query = "SELECT u.id, u.username, u.nom, u.prenom, u.email, u.role, u.statut,
+                            COUNT(up.publication_id) AS nb_publications
+                    FROM {$this->table} u
+                    LEFT JOIN user_publication up ON u.id = up.user_id
+                    WHERE u.statut != 'supprimé'";
+
+            if (!empty($filters['role'])) {
+                $query .= " AND u.role = :role";
+            }
+
+            $query .= " GROUP BY u.id ORDER BY nb_publications DESC";
+
+            $stmt = $this->db->prepare($query);
+
+            if (!empty($filters['role'])) {
+                $stmt->bindParam(':role', $filters['role']);
+            }
+
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        } catch (PDOException $e) {
+            error_log("Erreur récupération utilisateurs avec publications : " . $e->getMessage());
+            return [];
+        }
+    }
+
    public function updateProfile($id, $data) {
         try {
-            // 1. Construction dynamique de la requête
-            // On ne met à jour que les champs qui sont envoyés
             $fields = [];
             $params = [':id' => $id];
 
-            // Champs standards
             if (isset($data['nom'])) { 
                 $fields[] = "nom = :nom"; 
                 $params[':nom'] = $data['nom']; 
@@ -149,8 +149,20 @@ public function getAllWithPublicationCount($filters = []) {
                 $fields[] = "email = :email"; 
                 $params[':email'] = $data['email']; 
             }
+            if (isset($data['username'])) { 
+                $fields[] = "username = :username"; 
+                $params[':username'] = $data['username']; 
+            }
             
-            // --- LES NOUVEAUX CHAMPS ---
+            if (isset($data['role'])) { 
+                $fields[] = "role = :role"; 
+                $params[':role'] = $data['role']; 
+            }
+            if (isset($data['grade'])) { 
+                $fields[] = "grade = :grade"; 
+                $params[':grade'] = $data['grade']; 
+            }
+
             if (isset($data['telephone'])) { 
                 $fields[] = "telephone = :telephone"; 
                 $params[':telephone'] = $data['telephone']; 
@@ -167,61 +179,32 @@ public function getAllWithPublicationCount($filters = []) {
                 $fields[] = "photo_profil = :photo"; 
                 $params[':photo'] = $data['photo_profil']; 
             }
+            if (isset($data['statut'])) { 
+                $fields[] = "statut = :statut"; 
+                $params[':statut'] = $data['statut']; 
+            }
+            if (isset($data['is_admin'])) { 
+                $fields[] = "is_admin = :is_admin"; 
+                $params[':is_admin'] = $data['is_admin']; 
+            }
 
-            // Gestion sécurisée du mot de passe
-            // On ne le met à jour QUE s'il n'est pas vide
             if (!empty($data['password'])) {
                 $fields[] = "password = :password";
                 $params[':password'] = password_hash($data['password'], PASSWORD_DEFAULT);
             }
 
-            // Si aucun champ à mettre à jour, on arrête
             if (empty($fields)) {
                 return true; 
             }
 
-            // 2. Exécution de la requête
             $query = "UPDATE {$this->table} SET " . implode(', ', $fields) . " WHERE id = :id";
-            
-            // Attention : utilisez $this->conn ou $this->db selon votre classe Model parente
-            $stmt = $this->db->prepare($query); 
+           $stmt = $this->db->prepare($query); 
             
             return $stmt->execute($params);
 
         } catch(PDOException $e) {
             error_log("Erreur mise à jour profil : " . $e->getMessage());
             return false;
-        }
-    }
-
-    public function changePassword($id, $oldPassword, $newPassword) {
-        try {
-            // Vérifier l'ancien mot de passe
-            $query = "SELECT password FROM {$this->table} WHERE id = :id LIMIT 1";
-            $stmt = $this->db->prepare($query);
-            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-            $stmt->execute();
-            $user = $stmt->fetch();
-            
-            if (!$user || !password_verify($oldPassword, $user['password'])) {
-                return ['success' => false, 'message' => 'Ancien mot de passe incorrect'];
-            }
-            
-            // Mettre à jour avec le nouveau mot de passe
-            $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
-            $query = "UPDATE {$this->table} SET password = :password WHERE id = :id";
-            $stmt = $this->db->prepare($query);
-            $stmt->bindParam(':password', $hashedPassword);
-            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-            
-            if ($stmt->execute()) {
-                return ['success' => true, 'message' => 'Mot de passe modifié avec succès'];
-            }
-            
-            return ['success' => false, 'message' => 'Erreur lors de la modification'];
-        } catch(PDOException $e) {
-            error_log("Erreur changement mot de passe : " . $e->getMessage());
-            return ['success' => false, 'message' => 'Erreur système'];
         }
     }
     public function updatePhoto($id, $photoPath) {
@@ -238,7 +221,7 @@ public function getAllWithPublicationCount($filters = []) {
         }
     }
 
-     private function usernameExists($username) {
+    private function usernameExists($username) {
         $query = "SELECT id FROM {$this->table} WHERE username = :username LIMIT 1";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(':username', $username);
@@ -246,9 +229,6 @@ public function getAllWithPublicationCount($filters = []) {
         return $stmt->fetch() !== false;
     }
     
-    /**
-     * Vérifier si l'email existe
-     */
     private function emailExists($email) {
         $query = "SELECT id FROM {$this->table} WHERE email = :email LIMIT 1";
         $stmt = $this->db->prepare($query);
@@ -268,9 +248,6 @@ public function getAllWithPublicationCount($filters = []) {
         }
     }
     
-    /**
-     * Suspendre un utilisateur (Admin)
-     */
     public function suspend($id) {
         try {
             $query = "UPDATE {$this->table} SET statut = 'suspendu' WHERE id = :id";
@@ -283,9 +260,6 @@ public function getAllWithPublicationCount($filters = []) {
         }
     }
     
-    /**
-     * Activer un utilisateur (Admin)
-     */
     public function activate($id) {
         try {
             $query = "UPDATE {$this->table} SET statut = 'actif' WHERE id = :id";
@@ -298,13 +272,9 @@ public function getAllWithPublicationCount($filters = []) {
         }
     }
     
-    /**
-     * Récupérer tous les utilisateurs (Admin)
-     */
     public function getAll($filters = []) {
         try {
-            $query = "SELECT *
-                     FROM {$this->table} WHERE 1=1";
+            $query = "SELECT * FROM {$this->table} WHERE 1=1";
             
             if (!empty($filters['role'])) {
                 $query .= " AND role = :role";
@@ -331,4 +301,5 @@ public function getAllWithPublicationCount($filters = []) {
             return [];
         }
     }
-}?>
+}
+?>

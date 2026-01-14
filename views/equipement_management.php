@@ -1,21 +1,16 @@
 <?php
-// Imports des dépendances de la structure de vue
 require_once __DIR__ . '/../views/public/View.php';
 require_once __DIR__ . '/../views/public/components/UIHeader.php';
 require_once __DIR__ . '/../views/public/components/UIFooter.php';
 
 class EquipementAdminView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
+   
     public function render() {
-        // Extraction des données
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         $pageTitle = $this->data['title'] ?? 'Gestion des Équipements';
 
-        // CSS spécifiques (ceux que vous aviez dans le <head>)
         $customCss = [
             'views/admin_dashboard.css',
             'views/modelAddUser.css',
@@ -23,28 +18,21 @@ class EquipementAdminView extends View {
             'views/landingPage.css',
         ];
 
-        // 1. Rendu du Header (Remplace la Sidebar)
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu Principal
         echo '<main style="width: 100%; padding: 40px 20px; box-sizing: border-box; background-color: #f8f9fc; min-height: 80vh;">';
         echo $this->content();
         echo '</main>';
 
-        // 3. Rendu du Footer
-        $footer = new UIFooter($config, $menuData);
-        echo $footer->render();
+        
     }
 
-    /**
-     * Contenu spécifique : C'est ici que se trouve TOUT votre code HTML/JS original
-     */
+  
     protected function content() {
         ob_start();
         ?>
         
-        <!-- Styles internes spécifiques -->
         <style>
             .reservation-badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.75em; margin-left: 5px; }
             .reserved-equipment { background-color: #fef3c7 !important; }
@@ -58,19 +46,16 @@ class EquipementAdminView extends View {
             .conflict-item { background: white; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #f59e0b; }
             .conflict-actions { display: flex; gap: 10px; margin-top: 10px; }
 
-            /* Ajustements Layout sans Sidebar */
             .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
             .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 4px solid #ddd; }
             .stat-card .number { font-size: 2em; font-weight: bold; margin-top: 10px; }
             
-            /* Modale */
             .modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
             .modal.active { display: flex; align-items: center; justify-content: center; }
             .modal-content { background:white; padding:30px; border-radius:10px; max-height:90vh; overflow-y:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 90%; }
             .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
             .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #aaa; }
             
-            /* Formulaires */
             .form-group { margin-bottom: 15px; }
             .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
             .btn { padding: 10px 20px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; }
@@ -81,7 +66,6 @@ class EquipementAdminView extends View {
             .btn-success { background: #1cc88a; color: white; }
         </style>
 
-        <!-- Top Bar Interne -->
         <div class="top-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
             <div>
                 <h1 style="margin: 0; color: #2c3e50;">Gestion des Équipements</h1>
@@ -89,7 +73,6 @@ class EquipementAdminView extends View {
             </div>
         </div>
         
-        <!-- Stats Grid -->
         <div class="stats-grid">
             <div class="stat-card" style="border-bottom-color: #4e73df;">
                 <h3>Total Équipements</h3>
@@ -118,7 +101,6 @@ class EquipementAdminView extends View {
             </div>
         </div>
 
-        <!-- Filtres et recherche -->
         <div class="content-section" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 30px;">
             <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
                 <input type="text" id="searchInput" placeholder="🔍 Rechercher un équipement..." 
@@ -143,7 +125,6 @@ class EquipementAdminView extends View {
             </div>
         </div>
         
-        <!-- Tableau des Équipements -->
         <div class="content-section" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
             <h2 style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f8f9fa; padding-bottom: 20px; margin-bottom: 20px;">
                 <span>Liste des Équipements</span>
@@ -188,7 +169,6 @@ class EquipementAdminView extends View {
             </div>
         </div>
     
-        <!-- Modal Ajouter/Modifier Équipement -->
         <div id="equipmentModal" class="modal">
             <div class="modal-content" style="max-width: 800px;">
                 <div class="modal-header">
@@ -258,7 +238,6 @@ class EquipementAdminView extends View {
             </div>
         </div>
         
-        <!-- Modal Ajouter Type d'Équipement -->
         <div id="typeEquipmentModal" class="modal">
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
@@ -296,7 +275,6 @@ class EquipementAdminView extends View {
             </div>
         </div>
 
-        <!-- Modal Réservation avec gestion de conflit -->
         <div id="reservationModal" class="modal">
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
@@ -364,7 +342,6 @@ class EquipementAdminView extends View {
             </div>
         </div>
 
-        <!-- Modal Gestion des Conflits -->
         <div id="conflictsModal" class="modal">
             <div class="modal-content" style="max-width: 1000px;">
                 <div class="modal-header">
@@ -380,7 +357,6 @@ class EquipementAdminView extends View {
             </div>
         </div>
 
-        <!-- Modal Voir Réservations -->
         <div id="viewReservationsModal" class="modal">
             <div class="modal-content" style="max-width: 900px;">
                 <div class="modal-header">
@@ -397,18 +373,14 @@ class EquipementAdminView extends View {
         </div>
 
         <script>
-        // ============================================
-        // VARIABLES GLOBALES
-        // ============================================
+      
         let allEquipments = [];
         let allTypes = [];
         let currentEquipmentReservations = [];
         let conflictReservations = [];
         let cachedUsers = [];
 
-        // ============================================
-        // CHARGEMENT INITIAL
-        // ============================================
+      
         function setMinDates() {
             const today = new Date().toISOString().split('T')[0];
             const dateDebut = document.getElementById('reservation_date_debut');
@@ -730,10 +702,7 @@ class EquipementAdminView extends View {
             });
         }
 
-        // ============================================
-        // GESTION DES MODALS
-        // ============================================
-
+       
         function openModal(editMode = false, equipmentId = null) {
             const modal = document.getElementById('equipmentModal');
             const modalTitle = document.getElementById('modalTitle');
@@ -776,13 +745,9 @@ class EquipementAdminView extends View {
         }
 
         function openStatusModal(equipmentId) {
-            // Note: Si vous utilisez le modal statut séparé, sinon on peut gérer via le modal edit
-            // Pour l'instant, on peut utiliser updateEquipmentStatus via API
-            const newStatus = prompt("Nouveau statut (libre, réserve, en_maintenance) ?");
+          const newStatus = prompt("Nouveau statut (libre, réserve, en_maintenance) ?");
             if(newStatus) {
-                // Appel API direct ou modal
-                // Ici pour simplifier j'appelle saveStatus si vous avez un modal dédié, 
-                // sinon on peut le faire via editEquipment
+                
             }
         }
 
@@ -991,9 +956,7 @@ class EquipementAdminView extends View {
             container.appendChild(table);
         }
 
-        // ============================================
-        // ACTIONS CRUD ÉQUIPEMENT
-        // ============================================
+      
 
         function editEquipment(id) {
             openModal(true, id);
@@ -1079,9 +1042,7 @@ class EquipementAdminView extends View {
             }
         }
 
-        // ============================================
-        // ACTIONS TYPE D'ÉQUIPEMENT
-        // ============================================
+       
 
         async function saveEquipmentType() {
             const nom = document.getElementById('type_nom').value;
@@ -1115,15 +1076,10 @@ class EquipementAdminView extends View {
             }
         }
 
-        // ============================================
-        // ACTIONS STATUT
-        // ============================================
 
         function updateStatus(id) {
             const newStatus = prompt("Nouveau statut (libre, réserve, en_maintenance) ?");
             if (newStatus) {
-                // Implémentation rapide via API, ou ouvrir modal dédiée si besoin
-                // Ici, assumons que le user entre le texte exact
                 fetch('../controllers/api.php?action=updateEquipmentStatus', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1137,9 +1093,7 @@ class EquipementAdminView extends View {
             }
         }
 
-        // ============================================
-        // GESTION RÉSERVATIONS
-        // ============================================
+     
 
         document.getElementById('reservation_date_debut').addEventListener('change', checkConflicts);
         document.getElementById('reservation_date_fin').addEventListener('change', checkConflicts);
@@ -1267,9 +1221,7 @@ class EquipementAdminView extends View {
             }
         }
 
-        // ============================================
-        // FILTRES ET RECHERCHE
-        // ============================================
+       
 
         document.getElementById('searchInput').addEventListener('input', function(e) {
             const term = e.target.value.toLowerCase();
@@ -1304,15 +1256,12 @@ class EquipementAdminView extends View {
             renderEquipmentTable(allEquipments);
         }
 
-        // ============================================
-        // UTILITAIRES
-        // ============================================
+     
 
         function showAlert(message, type = 'success', containerId = null) {
             if (containerId) {
                 const container = document.getElementById(containerId);
                 const alertClass = type === 'warning' ? 'conflict-info' : `alert alert-${type}`;
-                // Style inline pour simuler les classes si bootstrap manquant
                 let color = type === 'success' ? '#065f46' : (type === 'error' ? '#b91c1c' : '#92400e');
                 let bg = type === 'success' ? '#d1fae5' : (type === 'error' ? '#fee2e2' : '#fef3c7');
                 

@@ -1,18 +1,13 @@
 <?php
-// Imports des dépendances
 require_once __DIR__ . '/../views/public/View.php';
 require_once __DIR__ . '/../views/public/components/UIHeader.php';
 require_once __DIR__ . '/../views/public/components/UIFooter.php';
-// Import du composant Table
 require_once __DIR__ . '/../views/Table.php';
 
 class ProjectAdminView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
+  
     public function render() {
-        // Extraction des données globales
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         $pageTitle = $this->data['title'] ?? 'Gestion des Projets';
@@ -25,25 +20,18 @@ class ProjectAdminView extends View {
             'views/landingPage.css',
         ];
 
-        // 1. Rendu du Header
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu Principal
         echo '<main style="width: 100%; padding: 40px 20px; box-sizing: border-box; background-color: #f8f9fc; min-height: 80vh;">';
         echo $this->content();
         echo '</main>';
 
-        // 3. Rendu du Footer
-        $footer = new UIFooter($config, $menuData);
-        echo $footer->render();
+     
     }
 
-    /**
-     * Contenu spécifique : Stats, Tableau, Modale, JS
-     */
+   
     protected function content() {
-        // Extraction des données métier
         $projects = $this->data['projects'] ?? [];
         $nbProjetsActifs = $this->data['nbProjetsActifs'] ?? 0;
         $publications = $this->data['publications'] ?? [];
@@ -53,9 +41,7 @@ class ProjectAdminView extends View {
         ob_start();
         ?>
         
-        <!-- Styles internes -->
         <style>
-            /* Ajustements Layout */
             .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
             .stat-card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center; border-bottom: 4px solid #ddd; }
             .stat-card:nth-child(1) { border-color: #4e73df; }
@@ -63,18 +49,15 @@ class ProjectAdminView extends View {
             .stat-card:nth-child(3) { border-color: #36b9cc; }
             .stat-card .number { font-size: 2.2em; font-weight: bold; margin-top: 10px; color: #333; }
             
-            /* Table Section */
             .content-section { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
             .content-section h2 { margin-top: 0; color: #2e384d; border-bottom: 2px solid #f8f9fc; padding-bottom: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
             
-            /* Modale */
             .modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
             .modal.active { display: flex; align-items: center; justify-content: center; }
             .modal-content { background:white; padding:30px; border-radius:10px; max-height:90vh; overflow-y:auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 90%; max-width: 800px; }
             .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
             .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #aaa; }
             
-            /* Formulaires */
             .form-group { margin-bottom: 15px; }
             .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
             .btn-primary { background: #4e73df; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; transition: 0.2s; }
@@ -83,14 +66,12 @@ class ProjectAdminView extends View {
             .btn-secondary:hover { background: #6c757d; }
             .required { color: #e74a3b; }
             
-            /* Badges */
             .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; }
             .badge-info { background: #dbeafe; color: #1e40af; }
             .badge-success { background: #d1fae5; color: #065f46; }
             .badge-secondary { background: #f3f4f6; color: #374151; }
         </style>
 
-        <!-- Top Bar interne -->
         <div class="top-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
             <div>
                 <h1 style="margin: 0; color: #2c3e50;">Gestion des Projets de Recherche</h1>
@@ -98,7 +79,6 @@ class ProjectAdminView extends View {
             </div>
         </div>
         
-        <!-- Stats Grid -->
         <div class="stats-grid">
             <div class="stat-card">
                 <h3>Total Projets</h3>
@@ -116,7 +96,6 @@ class ProjectAdminView extends View {
             </div>
         </div>
         
-        <!-- Tableau des Projets -->
         <div class="content-section">
             <h2>
                 <span>Liste des Projets</span>
@@ -125,7 +104,6 @@ class ProjectAdminView extends View {
                 </button>
             </h2>
             <?php
-            // Utilisation de la classe Table
             $projectTable = new Table([
                 'id' => 'ProjectsTable',
                 'headers' => ['ID', 'Titre', 'Responsable', 'Équipe', 'Type', 'Statut', 'Début', 'Fin'],
@@ -186,7 +164,6 @@ class ProjectAdminView extends View {
             ?>
         </div>
     
-        <!-- Modal Ajouter/Modifier Projet -->
         <div id="projectModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -258,7 +235,6 @@ class ProjectAdminView extends View {
                                 <select class="form-control" id="id_equipe" name="id_equipe">
                                     <option value="">-- Aucune équipe --</option>
                                     <?php foreach ($teams as $team): ?>
-                                        <!-- Gestion de la structure parfois imbriquée des équipes -->
                                         <option value="<?php echo $team['info']['id'] ?? $team['id']; ?>">
                                             <?php echo htmlspecialchars($team['info']['nom'] ?? $team['nom']); ?>
                                         </option>
@@ -276,10 +252,7 @@ class ProjectAdminView extends View {
         </div>
 
         <script>
-        // ============================================
-        // GESTION DU MODAL
-        // ============================================
-
+     
         function openModal(editMode = false, projectId = null) {
             const modal = document.getElementById('projectModal');
             const modalTitle = document.getElementById('modalTitle');
@@ -307,13 +280,11 @@ class ProjectAdminView extends View {
             if (alertContainer) { alertContainer.innerHTML = ''; }
         }
 
-        // Fermer avec clic extérieur
         window.onclick = function(event) {
             const modal = document.getElementById('projectModal');
             if (event.target == modal) closeModal();
         }
 
-        // Fermer avec la touche Échap
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 const modal = document.getElementById('projectModal');
@@ -323,10 +294,7 @@ class ProjectAdminView extends View {
             }
         });
 
-        // ============================================
-        // CRUD PROJETS
-        // ============================================
-
+     
         function saveProject() {
             const form = document.getElementById('projectForm');
             const formData = new FormData(form);
@@ -346,7 +314,6 @@ class ProjectAdminView extends View {
                 ? `../controllers/api.php?action=${action}&id=${projectId}`
                 : `../controllers/api.php?action=${action}`;
             
-            // UI Feedback
             const saveBtn = event.target;
             const originalText = saveBtn.textContent;
             saveBtn.disabled = true;
@@ -433,9 +400,6 @@ class ProjectAdminView extends View {
             openModal(true, id);
         }
 
-        // ============================================
-        // UTILITAIRES
-        // ============================================
 
         function showAlert(message, type = 'info') {
             const container = document.getElementById('alertContainer');

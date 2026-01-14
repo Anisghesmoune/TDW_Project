@@ -10,9 +10,7 @@ class News extends Model {
   
       
     
-    /**
-     * Récupérer toutes les actualités avec pagination
-     */
+   
     public function getRecent($limit = 3) {
         return $this->getAll('date_publication', 'DESC', $limit);
     }
@@ -20,13 +18,7 @@ class News extends Model {
         return $this->getByColumn('type', $type, 'date_publication', 'DESC', $limit);
     }
     
-    /**
-     * Compter le total des actualités
-     */
-  
-    /**
-     * Récupérer les actualités pour le slider
-     */
+    
     public function getForSlider() {
         try {
             $query = "SELECT * FROM " . $this->table . " 

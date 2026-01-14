@@ -1,7 +1,6 @@
 <?php
 session_start();
 
-// Contrôleurs existants
 require_once __DIR__ . '/UserController.php';
 require_once __DIR__ . '/TeamController.php';
 require_once __DIR__ . '/ProjectController.php';
@@ -11,14 +10,9 @@ require_once __DIR__ . '/../models/equipementType.php';
 require_once __DIR__ . '/SettingsControllers.php';
 require_once __DIR__ . '/OpportunityController.php';
 require_once __DIR__ . '/PartnerController.php';
-
-
-
-// NOUVEAU : Réservations
 require_once __DIR__ . '/../controllers/reservationController.php';
 require_once __DIR__ . '/../models/reservationModel.php';
 
-// Publications & Events
 require_once __DIR__ . '/../models/Publications.php';
 require_once __DIR__ . '/../controllers/PublicationController.php';
 require_once __DIR__ . '/../controllers/EventController.php';
@@ -26,9 +20,7 @@ require_once __DIR__ . '/../models/Event.php';
 require_once __DIR__ . '/../controllers/EventTypeController.php';
 require_once __DIR__ . '/../models/EventType.php';
 require_once __DIR__. '/../controllers/memberController.php';
-// ============================================
-// FONCTIONS HELPERS ULTRA-GÉNÉRIQUES
-// ============================================
+
 $memberController = new MemberController();
 
 function sendJson($data, $statusCode = 200) {
@@ -85,12 +77,11 @@ function requireAuth() {
     }
 }
 
+
 function requireAdmin() {
     if (session_status() === PHP_SESSION_NONE) session_start();
     
-    // On vérifie le flag booléen
     if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
-        // Redirection ou Erreur JSON
         header('HTTP/1.1 403 Forbidden');
         echo json_encode(['success' => false, 'message' => 'Accès réservé aux administrateurs']);
         exit;
@@ -183,9 +174,7 @@ function crudAction($action, $controller, $id = null) {
     }
 }
 
-// ============================================
-// INSTANCIATION DES CONTRÔLEURS ET MODÈLES
-// ============================================
+
 
 $controllers = [
     'user' => new UserController(),
@@ -211,9 +200,7 @@ $action = getParam('action', 'GET', '');
 $id = getParam('id');
 $teamid = getParam('teamid');
 
-// ============================================
-// ROUTES UTILISATEURS
-// ============================================
+
 
 if ($action === 'activateUser' && $id) {
     $controllers['user']->activate($id);
@@ -241,9 +228,7 @@ elseif ($action === 'updateUser' && $id) {
     sendSuccess(null, 'Utilisateur mis à jour');
 } 
 
-// ============================================
-// ROUTES ÉQUIPES
-// ============================================
+
 
 elseif ($action === 'createTeam') {
     executeController(function() use ($controllers) {
@@ -295,14 +280,14 @@ elseif ($action === 'getAvailableUsers' && $teamid) {
         return ['success' => true, 'users' => $controllers['team']->getAvailableUsers($teamid)];
     });
 }
-elseif ($action === 'removeMember' && $teamid) {
+elseif ($action === 'removeMember') {
+    $teamid = requireId('team_id');
     $user_id = requireId('user_id');
-    $controllers['team']->removeMember($teamid, $user_id);
+executeController(function() use ($controllers, $teamid, $user_id) {
+        return $controllers['team']->removeMember($teamid, $user_id);
+    });
 } 
 
-// ============================================
-// ROUTES PROJETS
-// ============================================
 
 elseif ($action === 'createProject') {
     crudAction('create', $controllers['project']);
@@ -317,7 +302,7 @@ elseif ($action === 'getProject' && $id) {
     simpleAction($controllers['project'], 'show');
 }
 elseif ($action === 'getProjects') {
-    executeController(fn() => $controllers['project']->index());
+    executeController(fn() => $controllers['project']->apiGetProjects());
 }
 elseif ($action === 'getProjectsWithUsers') {
     executeController(fn() => $controllers['project']->indexWithUsers());
@@ -366,22 +351,17 @@ elseif ($action === 'generateProjectReport') {
     $controllers['project']->generatePDF();
 }
 
-// ============================================
-// ROUTES ÉQUIPEMENTS
-// ============================================
+
 
 elseif ($action === 'createEquipment') {
     $data = getJsonInput();
-    // Validation déjà faite dans EquipmentController::store, mais pour l'API pure:
     $validation = validate($data, [
         'nom' => ['required' => true, 'label' => 'Le nom'],
         'id_type' => ['required' => true, 'positive' => true, 'label' => 'Le type']
     ]);
     if ($validation !== true) sendJson(['success' => false, 'errors' => $validation]);
     
-    // Si vous utilisez la méthode du contrôleur qui attend $_POST, assurez-vous de l'adapter.
-    // Ici on appelle le modèle directement pour l'API pure comme dans l'ancien code, 
-    // ou la méthode create du controller si elle est adaptée API.
+  
     sendJson($models['equipment']->create($data)
         ? ['success' => true, 'message' => 'Équipement créé avec succès']
         : ['success' => false, 'message' => 'Erreur lors de la création']);
@@ -414,15 +394,14 @@ elseif ($action === 'getEquipments') {
 }
 elseif ($action === 'updateEquipmentStatus') {
     $data = getJsonInput();
-    $equipmentId = $data['id'] ?? $id; // Peut venir du body ou de l'URL
+    $equipmentId = $data['id'] ?? $id; 
     $etat = $data['etat'] ?? null;
     
     if (!$etat || !in_array($etat, ['libre', 'réserve', 'en_maintenance'])) {
         sendError('Statut invalide');
     }
     
-    // Appel via le controller pour gérer la logique métier (vérif réservations actives)
-    // Astuce : On simule les données POST pour le contrôleur s'il les lit via $_POST
+   
     $_POST['id'] = $equipmentId;
     $_POST['etat'] = $etat;
     executeController(fn() => $controllers['equipment']->updateStatus());
@@ -444,9 +423,6 @@ elseif ($action === 'getEquipmentStats') {
     ]);
 }
 
-// ============================================
-// ROUTES TYPES D'ÉQUIPEMENTS
-// ============================================
 
 elseif ($action === 'createEquipmentType') {
     $data = getJsonInput();
@@ -476,9 +452,7 @@ elseif ($action === 'getEquipmentTypes') {
     sendSuccess($models['equipmentType']->getAllWithCounts('nom', 'ASC'));
 }
 
-// ============================================
-// ROUTES RÉSERVATIONS (NOUVEAU)
-// ============================================
+
 
 elseif ($action === 'createReservation') {
     // requireAuth();
@@ -501,7 +475,6 @@ elseif ($action === 'deleteReservation' && $id) {
     executeController(fn() => $controllers['reservation']->delete($id));
 }
 elseif ($action === 'getEquipmentReservations') {
-    // Le JS envoie ?action=getEquipmentReservations&id=XXX
     executeController(fn() => $controllers['reservation']->getByEquipment());
 }
 elseif ($action === 'getUserReservations') {
@@ -516,17 +489,13 @@ elseif ($action === 'getReservationStats') {
 elseif ($action === 'getAllReservations') {
     executeController(fn() => $controllers['reservation']->list());
 }elseif ($action === 'getConflictReservations') {
-    // Appel à la nouvelle méthode
     executeController(fn() => $controllers['reservation']->getConflictReservations());
 }
 elseif ($action === 'resolveConflict') {
-    // Pour l'action "Accepter/Rejeter"
     executeController(fn() => $controllers['reservation']->resolveConflict());
 }
 
-// ============================================
-// ROUTES PUBLICATIONS
-// ============================================
+
 
 elseif ($action === 'getPublications') {
     executeController(fn() => $controllers['publication']->apiGetPublications());
@@ -604,9 +573,7 @@ elseif ($action === 'getPublicationsByType') {
 elseif ($action === 'generateReport') {
     $controllers['publication']->generateReport();
 }
-// ============================================
 // ROUTES ÉVÉNEMENTS
-// ============================================
 
 elseif ($action === 'getEvents') {
     executeController(fn() => $controllers['event']->apiGetAll());
@@ -654,15 +621,11 @@ elseif ($action === 'unregisterParticipant') {
 elseif ($action === 'getEventParticipants' && $id) {
     executeController(fn() => $controllers['event']->apiGetParticipants($id));
 }
-// Système d'alerte
 elseif ($action === 'sendEventReminders') {
-    // Peut être appelé par un Cron Job ou manuellement par l'admin
     executeController(fn() => $controllers['event']->apiSendReminders());
 }
 
-// ============================================
-// ROUTES ÉQUIPES DÉTAILS
-// ============================================
+
 
 elseif ($action === 'getAvailaibleForTeam' && $teamid) {
     executeController(function() use ($controllers, $teamid) {
@@ -703,7 +666,6 @@ elseif ($action === 'getAvailableUsersForProject' && isset($_GET['project_id']))
     executeController(fn() => $controllers['reservation']->getReportStats());
 }
 elseif ($action === 'downloadReservationReport') {
-    // Note: Utiliser POST pour le téléchargement PDF
     $controllers['reservation']->downloadReport(); 
 }
 // --- ROUTES PARAMÈTRES ---
@@ -711,37 +673,28 @@ elseif ($action === 'getSettings') {
     executeController(fn() => $controllers['settings']->apiGetSettings());
 }
 elseif ($action === 'updateSettings') {
-   // requireAdmin();
+   requireAdmin();
     executeController(fn() => $controllers['settings']->updateConfig($_POST, $_FILES));
 }
 elseif ($action === 'downloadBackup') {
-   // requireAdmin();
+   requireAdmin();
     $controllers['settings']->downloadBackup(); 
 }
 elseif ($action === 'restoreBackup') {
-   // requireAdmin();
+   requireAdmin();
     executeController(fn() => $controllers['settings']->restoreBackup($_FILES));
 }elseif ($action === 'updateProfile') {
-    requireAuth(); // Vérifie juste si connecté
+    requireAuth(); 
     executeController(fn() => $memberController->apiUpdateProfile($_POST, $_FILES));
-}// 5. Récupérer la liste des menus (JSON pour le tableau JS)
+}
 elseif ($action === 'getMenu') {
-    // Accessible à tous ou admin seulement selon votre besoin. 
-    // Ici on laisse ouvert pour que le Sidebar puisse aussi l'utiliser si besoin.
     executeController(fn() => $controllers['settings']->apiGetMenu());
 }
 
-// 6. Mettre à jour le menu (Sauvegarde du tableau JS)
 elseif ($action === 'updateMenu') {
-    // requireAdmin();
-    // Note : Les données JSON sont lues via php://input dans le contrôleur
+    requireAdmin();
     executeController(fn() => $controllers['settings']->apiUpdateMenu());
 }
-// ...
-
-// ============================================
-// ROUTES OPPORTUNITÉS
-// ============================================
 
 require_once __DIR__ . '/OpportunityController.php';
 $controllers['opportunity'] = new OpportunityController();
@@ -753,14 +706,17 @@ elseif ($action === 'getOpportunity' && $id) {
     executeController(fn() => $controllers['opportunity']->apiGetById($id));
 }
 elseif ($action === 'createOpportunity') {
+    requireAdmin() ;
     $data = getJsonInput();
     executeController(fn() => $controllers['opportunity']->apiCreate($data));
 }
 elseif ($action === 'updateOpportunity' && $id) {
+    requireAdmin();
     $data = getJsonInput();
     executeController(fn() => $controllers['opportunity']->apiUpdate($id, $data));
 }
 elseif ($action === 'deleteOpportunity' && $id) {
+    requireAdmin();
     executeController(fn() => $controllers['opportunity']->apiDelete($id));
 }
 // ROUTES PARTENAIRES
@@ -768,22 +724,22 @@ if ($action === 'getPartners') {
     executeController(fn() => $controllers['partner']->apiGetAll());
 }
 elseif ($action === 'createPartner') {
-    // Note: Utilisation de $_POST et $_FILES pour l'upload
-    requireAuth(); // Seulement connecté (ou requireAdmin)
+    requireAuth(); 
+    requireAdmin();
     executeController(fn() => $controllers['partner']->apiCreate($_POST, $_FILES));
 }
 elseif ($action === 'updatePartner' && $id) {
     requireAuth();
+    requireAdmin();
     executeController(fn() => $controllers['partner']->apiUpdate($id, $_POST, $_FILES));
 }
 elseif ($action === 'deletePartner' && $id) {
     requireAuth();
+    requireAdmin();
     executeController(fn() => $controllers['partner']->apiDelete($id));
 }
 
-// ============================================
 // ROUTE PAR DÉFAUT
-// ============================================
 
 else {
     sendError('Action invalide', 404);

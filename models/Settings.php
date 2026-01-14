@@ -8,10 +8,7 @@ class Settings extends Model {
         parent::__construct();
     }
 
-    /**
-     * Récupère tous les paramètres sous forme de tableau associatif
-     * [ 'site_name' => 'Mon Labo', 'primary_color' => '#...', ... ]
-     */
+  
     public function getAllSettings() {
         $query = "SELECT * FROM " . $this->table;
         $stmt = $this->conn->prepare($query);
@@ -25,9 +22,7 @@ class Settings extends Model {
         return $settings;
     }
 
-    /**
-     * Met à jour ou insère un paramètre
-     */
+  
     public function updateSetting($key, $value) {
        
         
@@ -44,9 +39,7 @@ class Settings extends Model {
         return $stmt->execute();
     }
 
-    /**
-     * GÉNÉRATION DU BACKUP (DUMP SQL)
-     */
+  
     public function generateBackup() {
         $tables = [];
         $query = $this->conn->query("SHOW TABLES");
@@ -58,11 +51,9 @@ class Settings extends Model {
         $sqlScript .= "SET FOREIGN_KEY_CHECKS=0;\n";
 
         foreach ($tables as $table) {
-            // Structure de la table
             $row2 = $this->conn->query("SHOW CREATE TABLE $table")->fetch(PDO::FETCH_NUM);
             $sqlScript .= "\n\n" . $row2[1] . ";\n\n";
 
-            // Données de la table
             $query = $this->conn->query("SELECT * FROM $table");
             while ($row = $query->fetch(PDO::FETCH_NUM)) {
                 $sqlScript .= "INSERT INTO $table VALUES(";
@@ -86,22 +77,17 @@ class Settings extends Model {
         return $sqlScript;
     }
 
-    /**
-     * RESTAURATION DU BACKUP
-     */
+  
     public function restoreBackup($filePath) {
         if (!file_exists($filePath)) return false;
         
-        // Lire le fichier complet
         $sql = file_get_contents($filePath);
         
         try {
             $this->conn->beginTransaction();
             
-            // Désactiver les clés étrangères temporairement
             $this->conn->exec("SET FOREIGN_KEY_CHECKS=0");
             
-            // Exécution multiple
             $stmt = $this->conn->prepare($sql);
             $stmt->execute();
             
@@ -113,16 +99,13 @@ class Settings extends Model {
             throw $e;
         }
     }
-    // models/Menu.php
 
 public function replaceAll($items) {
     try {
         $this->conn->beginTransaction();
         
-        // 1. On vide la table
         $this->conn->exec("TRUNCATE TABLE menu_items"); // Ou DELETE FROM
         
-        // 2. On réinsère tout
         $sql = "INSERT INTO menu_items (title, url, ordre) VALUES (:title, :url, :ordre)";
         $stmt = $this->conn->prepare($sql);
         
@@ -140,7 +123,6 @@ public function replaceAll($items) {
         return false;
     }
 }
-// Dans models/Menu.php
 
 public function delete($id) {
     $stmt = $this->conn->prepare("DELETE FROM menu WHERE id = :id");

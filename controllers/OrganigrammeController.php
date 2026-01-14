@@ -1,9 +1,5 @@
 <?php
-/**
- * ============================================
- * CONTRÔLEUR - OrganigrammeController.php
- * ============================================
- */
+
 class OrganigrammeController {
     private $organigrammeModel;
     private $userModel;
@@ -13,40 +9,27 @@ class OrganigrammeController {
         $this->userModel = new UserModel();
     }
     
-    /**
-     * Afficher l'organigramme public
-     */
+   
     public function index() {
-        // Récupérer les données
         $director = $this->organigrammeModel->getDirector();
         $hierarchyTree = $this->organigrammeModel->getHierarchyTree();
         $stats = $this->organigrammeModel->getStats();
         
-        // Debug (à retirer en production)
-        // echo "<pre>Director: "; print_r($director); echo "</pre>";
-        // echo "<pre>Tree: "; print_r($hierarchyTree); echo "</pre>";
-        // echo "<pre>Stats: "; print_r($stats); echo "</pre>";
-        
-        // Charger la vue
+     
         include 'views/organigramme.php';
     }
     
-    /**
-     * Afficher la section organigramme (pour homepage)
-     */
+  
     public function renderSection() {
         $director = $this->organigrammeModel->getDirector();
         $hierarchyTree = $this->organigrammeModel->getHierarchyTree();
         $stats = $this->organigrammeModel->getStats();
         
-        // Créer et afficher la vue
         $view = new OrganigrammeSectionView($director, $hierarchyTree, $stats);
         $view->render();
     }
     
-    /**
-     * Afficher l'organigramme admin
-     */
+   
     public function admin() {
         AuthController::requireAdmin();
         
@@ -58,9 +41,7 @@ class OrganigrammeController {
         include 'views/admin/organigramme_manage.php';
     }
     
-    /**
-     * Ajouter un membre à l'organigramme
-     */
+ 
     public function add() {
         AuthController::requireAdmin();
         
@@ -73,7 +54,6 @@ class OrganigrammeController {
                 'superieur_id' => !empty($_POST['superieur_id']) ? intval($_POST['superieur_id']) : null
             ];
             
-            // Vérifier si l'utilisateur existe déjà
             if ($this->organigrammeModel->userExists($data['id_utilisateur'])) {
                 echo json_encode(['success' => false, 'message' => 'Cet utilisateur est déjà dans l\'organigramme']);
                 exit;
@@ -85,9 +65,7 @@ class OrganigrammeController {
         }
     }
     
-    /**
-     * Mettre à jour un membre de l'organigramme
-     */
+ 
     public function update() {
         AuthController::requireAdmin();
         
@@ -111,9 +89,7 @@ class OrganigrammeController {
         }
     }
     
-    /**
-     * Supprimer un membre de l'organigramme
-     */
+   
     public function delete() {
         AuthController::requireAdmin();
         

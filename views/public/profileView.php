@@ -20,38 +20,26 @@ class ProfileView extends View {
             'views/admin_dashboard.css',
             'views/landingPage.css',
             'assets/css/profile.css',
-            'assets/css/public.css'
         ];
 
-        // 1. Header
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu
         echo '<main class="main-content" style="margin-left: 0; width: 100%; padding: 40px; box-sizing: border-box; background-color: #f8f9fc;">';
         echo $this->content();
         echo '</main>';
 
-        // 3. Footer
         $footer = new UIFooter($config, $menuData);
         echo $footer->render();
     }
 
-    /**
-     * Contenu spécifique du Profil
-     */
+ 
     protected function content() {
-        // Extraction sécurisée des données
         $user = $this->data['user'] ?? [];
-        
-        // Sécurisation affichage image
         $userPhoto = !empty($user['photo_profil']) ? $user['photo_profil'] : 'assets/img/default-avatar.png';
-        // Correction chemin si nécessaire (selon votre structure de dossiers)
-        // Si l'image est stockée comme "assets/...", on s'assure qu'elle est accessible depuis la racine
+         
         if (strpos($userPhoto, 'http') === false && strpos($userPhoto, '/') !== 0) {
-             // Ajustez ce préfixe si nécessaire selon où se trouve index.php
-             // $userPhoto = $userPhoto; 
-        }
+          }
 
         ob_start();
         ?>
@@ -82,7 +70,6 @@ class ProfileView extends View {
             <div class="profile-card">
                 <form id="profileForm" enctype="multipart/form-data">
                     
-                    <!-- PHOTO DE PROFIL -->
                     <div style="text-align:center; margin-bottom: 30px;">
                         <div style="position: relative; width: 150px; margin: 0 auto;">
                             <img src="<?= htmlspecialchars($userPhoto) ?>" class="avatar-preview" id="previewImg" alt="Avatar">
@@ -95,7 +82,6 @@ class ProfileView extends View {
                         <p style="color: #888; font-size: 0.9em; margin-top: 10px;">Cliquez sur l'icône caméra pour changer</p>
                     </div>
 
-                    <!-- INFOS PRINCIPALES -->
                     <div class="form-group">
                         <label>Nom & Prénom</label>
                         <input type="text" value="<?= htmlspecialchars(($user['nom'] ?? '') . ' ' . ($user['prenom'] ?? '')) ?>" class="form-control" disabled style="background:#f0f0f0; cursor:not-allowed; color: #666;">
@@ -126,7 +112,6 @@ class ProfileView extends View {
 
                     <hr style="margin:30px 0; border:0; border-top:1px solid #eee;">
 
-                    <!-- CHANGEMENT DE MOT DE PASSE -->
                     <h3 style="font-size:1.2em; margin-bottom:20px; color:#4e73df; display:flex; align-items:center;">
                         <i class="fas fa-lock" style="margin-right:10px;"></i> Sécurité
                     </h3>
@@ -152,7 +137,6 @@ class ProfileView extends View {
         </div>
 
         <script>
-            // Prévisualisation photo
             function previewFile() {
                 const preview = document.getElementById('previewImg');
                 const file = document.getElementById('photoInput').files[0];
@@ -161,14 +145,12 @@ class ProfileView extends View {
                 if (file) reader.readAsDataURL(file);
             }
 
-            // Sauvegarde AJAX
             async function saveProfile() {
                 const form = document.getElementById('profileForm');
                 const pass1 = document.getElementById('password').value;
                 const pass2 = document.getElementById('password_confirm').value;
                 const errorSpan = document.getElementById('passError');
 
-                // 1. Validation Mot de passe côté client
                 if (pass1 !== "" || pass2 !== "") {
                     if (pass1 !== pass2) {
                         errorSpan.style.display = 'block';
@@ -183,7 +165,6 @@ class ProfileView extends View {
 
                 const formData = new FormData(form);
 
-                // UI Feedback
                 const btn = document.querySelector('.btn-primary');
                 const originalText = btn.innerText;
                 btn.disabled = true;
@@ -191,13 +172,11 @@ class ProfileView extends View {
                 btn.style.opacity = "0.7";
 
                 try {
-                    // Ajustez le chemin vers votre contrôleur API si nécessaire
                     const response = await fetch('../../controllers/api.php?action=updateProfile', {
                         method: 'POST',
                         body: formData
                     });
                     
-                    // Vérification si la réponse est bien du JSON
                     const contentType = response.headers.get("content-type");
                     if (!contentType || !contentType.includes("application/json")) {
                         throw new Error("Réponse serveur invalide (pas de JSON)");
@@ -206,7 +185,6 @@ class ProfileView extends View {
                     const json = await response.json();
                     
                     if(json.success) {
-                        // Petit délai pour l'UX
                         setTimeout(() => {
                             alert('✅ Profil mis à jour avec succès !');
                             location.reload();

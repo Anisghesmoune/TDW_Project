@@ -38,10 +38,8 @@ class Database {
         return $this->conn;
     }
 
-    // Empêcher le clonage
     private function __clone() {}
     
-    // Empêcher la désérialisation
     public function __wakeup() {
         throw new Exception("Cannot unserialize singleton");
     }

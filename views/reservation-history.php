@@ -1,50 +1,37 @@
 <?php
-// Imports des dépendances
 require_once __DIR__ . '/../views/public/View.php';
 require_once __DIR__ . '/../views/public/components/UIHeader.php';
 require_once __DIR__ . '/../views/public/components/UIFooter.php';
 
 class ReservationHistoryView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
+   
     public function render() {
-        // Extraction des données globales
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         $pageTitle = $this->data['title'] ?? 'Historique des Réservations';
 
-        // CSS spécifiques
         $customCss = [
             'views/admin_dashboard.css',
             'views/landingPage.css'    
         ];
 
-        // 1. Rendu du Header
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu Principal
         echo '<main style="width: 100%; padding: 40px 20px; box-sizing: border-box; background-color: #f8f9fc; min-height: 80vh;">';
         echo $this->content();
         echo '</main>';
 
-        // 3. Rendu du Footer
-        $footer = new UIFooter($config, $menuData);
-        echo $footer->render();
+      
     }
 
-    /**
-     * Contenu spécifique : Filtres, Tableau, JS AJAX
-     */
+   
     protected function content() {
         ob_start();
         ?>
         
-        <!-- Styles internes spécifiques -->
         <style>
-            /* Container principal */
             .content-section {
                 background: white;
                 padding: 30px;
@@ -55,7 +42,6 @@ class ReservationHistoryView extends View {
                 margin: 0 auto;
             }
             
-            /* Barre de filtres */
             .filters-bar {
                 display: flex;
                 gap: 20px;
@@ -80,7 +66,6 @@ class ReservationHistoryView extends View {
                 font-size: 14px;
             }
 
-            /* Tableau */
             .data-table {
                 width: 100%;
                 border-collapse: collapse;
@@ -101,7 +86,6 @@ class ReservationHistoryView extends View {
                 font-size: 0.85em;
             }
 
-            /* Badges */
             .badge { padding: 5px 10px; border-radius: 15px; font-size: 0.8em; font-weight: 600; }
             .badge-success { background: #d1fae5; color: #065f46; } /* Confirmée */
             .badge-warning { background: #fef3c7; color: #92400e; } /* En attente */
@@ -109,7 +93,6 @@ class ReservationHistoryView extends View {
             .badge-info { background: #dbeafe; color: #1e40af; }    /* En conflit */
             .badge-secondary { background: #f3f4f6; color: #374151; } /* Terminée */
 
-            /* Pagination */
             .pagination {
                 display: flex;
                 justify-content: center;
@@ -138,12 +121,10 @@ class ReservationHistoryView extends View {
                 background-color: #f8f9fa;
             }
 
-            /* Boutons */
             .btn-secondary { background: #858796; color: white; padding: 10px 20px; border-radius: 5px; border: none; cursor: pointer; text-decoration: none; display: inline-block; }
             .btn-secondary:hover { background: #6c757d; }
         </style>
 
-        <!-- Top Bar Interne -->
         <div class="top-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; max-width: 1400px; margin: 0 auto 30px auto;">
             <div>
                 <h1 style="margin: 0; color: #2c3e50;">Historique des Réservations</h1>
@@ -154,10 +135,8 @@ class ReservationHistoryView extends View {
             </div>
         </div>
 
-        <!-- Section Principale -->
         <div class="content-section">
             
-            <!-- Filtres -->
             <div class="filters-bar">
                 <div class="filter-group">
                     <label>Statut :</label>
@@ -173,7 +152,6 @@ class ReservationHistoryView extends View {
                     <label>Équipement :</label>
                     <select id="filterEquipment" class="form-control" onchange="loadReservations(1)">
                         <option value="0">Tous les équipements</option>
-                        <!-- Rempli par JS -->
                     </select>
                 </div>
 
@@ -181,7 +159,6 @@ class ReservationHistoryView extends View {
                     <label>Utilisateur :</label>
                     <select id="filterUser" class="form-control" onchange="loadReservations(1)">
                         <option value="0">Tous les utilisateurs</option>
-                        <!-- Rempli par JS -->
                     </select>
                 </div>
 
@@ -214,7 +191,6 @@ class ReservationHistoryView extends View {
                 </table>
             </div>
 
-            <!-- Pagination -->
             <div class="pagination" id="pagination"></div>
         </div>
 
@@ -222,14 +198,12 @@ class ReservationHistoryView extends View {
             let currentPage = 1;
             
             document.addEventListener('DOMContentLoaded', () => {
-                loadFiltersData(); // Charge les listes déroulantes
-                loadReservations(1); // Charge la table
+                loadFiltersData(); 
+                loadReservations(1); 
             });
 
-            // 1. Charger les données pour les filtres (Equipements et Users)
             async function loadFiltersData() {
                 try {
-                    // Charger Équipements
                     const respEq = await fetch('../controllers/api.php?action=getEquipments');
                     const dataEq = await respEq.json();
                     if(dataEq.success) {
@@ -239,10 +213,8 @@ class ReservationHistoryView extends View {
                         });
                     }
 
-                    // Charger Utilisateurs
                     const respUser = await fetch('../controllers/api.php?action=getUsers');
                     const dataUser = await respUser.json();
-                    // Gestion structure API (parfois 'data', parfois 'users', parfois racine)
                     const users = dataUser.users || dataUser.data || (Array.isArray(dataUser) ? dataUser : []);
                     
                     if(Array.isArray(users)) {
@@ -256,7 +228,6 @@ class ReservationHistoryView extends View {
                 }
             }
 
-            // 2. Charger les réservations avec filtres
             async function loadReservations(page) {
                 currentPage = page;
                 const status = document.getElementById('filterStatus').value;
@@ -267,7 +238,6 @@ class ReservationHistoryView extends View {
                 document.getElementById('reservationsTable').style.display = 'none';
                 document.getElementById('pagination').innerHTML = '';
 
-                // Construction de l'URL
                 let url = `../controllers/api.php?action=getAllReservations&page=${page}`;
                 if(status) url += `&status=${status}`;
                 if(equipment != 0) url += `&equipment=${equipment}`;
@@ -278,8 +248,6 @@ class ReservationHistoryView extends View {
                     const result = await response.json();
 
                     if(result) {
-                        // Le contrôleur renvoie souvent un objet avec {reservations: [...], totalPages: X, currentPage: Y}
-                        // Adaptez selon le retour exact de votre API getAllReservations
                         const list = result.reservations || result.data || [];
                         const total = result.totalPages || 1;
                         const current = result.currentPage || 1;
@@ -314,11 +282,9 @@ class ReservationHistoryView extends View {
                     let badgeClass = 'badge-secondary';
                     if(res.statut === 'confirmé') badgeClass = 'badge-success';
                     if(res.statut === 'annulé') badgeClass = 'badge-danger';
-                    if(res.statut === 'en_conflit') badgeClass = 'badge-warning'; // Ou info
+                    if(res.statut === 'en_conflit') badgeClass = 'badge-warning'; 
 
-                    // Actions possibles
                     let actions = '-';
-                    // Si on veut permettre l'annulation depuis l'historique
                     if(res.statut === 'confirmé' || res.statut === 'en_conflit') {
                         actions = `<button class="btn-sm" style="background:none; border:none; cursor:pointer;" title="Annuler" onclick="cancelReservation(${res.id})">❌</button>`;
                     }
@@ -343,7 +309,6 @@ class ReservationHistoryView extends View {
                 
                 if(totalPages <= 1) return;
 
-                // Bouton Précédent
                 if(current > 1) {
                     const prev = document.createElement('button');
                     prev.textContent = '«';
@@ -351,9 +316,7 @@ class ReservationHistoryView extends View {
                     container.appendChild(prev);
                 }
 
-                // Pages
                 for(let i = 1; i <= totalPages; i++) {
-                    // Affichage intelligent si trop de pages (1, 2, ..., 5, 6, 7, ..., 10)
                     if (i === 1 || i === totalPages || (i >= current - 2 && i <= current + 2)) {
                         const btn = document.createElement('button');
                         btn.textContent = i;
@@ -368,7 +331,6 @@ class ReservationHistoryView extends View {
                     }
                 }
 
-                // Bouton Suivant
                 if(current < totalPages) {
                     const next = document.createElement('button');
                     next.textContent = '»';
@@ -384,9 +346,7 @@ class ReservationHistoryView extends View {
                     const response = await fetch(`../controllers/api.php?action=cancelReservation&id=${id}`, {method: 'POST'});
                     const result = await response.json();
                     if(result.success) {
-                        loadReservations(currentPage); // Recharger la page courante
-                        // Petit toast ou alert
-                        // alert("Réservation annulée.");
+                        loadReservations(currentPage); 
                     } else {
                         alert("Erreur: " + result.message);
                     }

@@ -17,19 +17,11 @@ class Publication extends Model {
         $this->table = 'publications';
         parent::__construct();
     }
-    
-    /**
-     * Créer une nouvelle publication
-     */
+ 
     public function create() {
         try {
-            // 1. Démarrer une transaction (Pour que tout s'exécute ou rien du tout)
             $this->conn->beginTransaction();
 
-            // ---------------------------------------------------------
-            // ÉTAPE A : Insérer la publication
-            // ---------------------------------------------------------
-            // J'ai rajouté projet_id car il est souvent nécessaire dans votre contexte
             $query = "INSERT INTO " . $this->table . " 
                       (titre, resume, type, date_publication, doi, lien_telechargement, 
                        domaine, statut_validation, soumis_par) 
@@ -38,7 +30,6 @@ class Publication extends Model {
             
             $stmt = $this->conn->prepare($query);
             
-            // Nettoyage basique
             $this->titre = htmlspecialchars(strip_tags($this->titre));
 
             $stmt->bindParam(':titre', $this->titre);
@@ -55,48 +46,37 @@ class Publication extends Model {
                 throw new Exception("Erreur lors de l'insertion de la publication");
             }
 
-            // ---------------------------------------------------------
-            // ÉTAPE B : Récupérer l'ID de la nouvelle publication
-            // ---------------------------------------------------------
             $newPublicationId = $this->conn->lastInsertId();
 
-            // ---------------------------------------------------------
-            // ÉTAPE C : Lier l'auteur (celui qui soumet) dans user_publication
-            // ---------------------------------------------------------
+          
             $queryLink = "INSERT INTO user_publication 
                           (user_id, id_publication, ordre_auteur, auteur_correspondant) 
                           VALUES (:uid, :pid, :ordre, :correspondant)";
             
             $stmtLink = $this->conn->prepare($queryLink);
             
-            // On lie l'utilisateur courant (celui qui soumet)
             $stmtLink->bindValue(':uid', $this->soumis_par, PDO::PARAM_INT);
             $stmtLink->bindValue(':pid', $newPublicationId, PDO::PARAM_INT);
-            $stmtLink->bindValue(':ordre', 1, PDO::PARAM_INT); // Il est l'auteur n°1 par défaut
-            $stmtLink->bindValue(':correspondant', 1, PDO::PARAM_INT); // Il est l'auteur correspondant par défaut
+            $stmtLink->bindValue(':ordre', 1, PDO::PARAM_INT); 
+            $stmtLink->bindValue(':correspondant', 1, PDO::PARAM_INT); 
             
             if (!$stmtLink->execute()) {
                 throw new Exception("Erreur lors de la liaison auteur-publication");
             }
 
-            // ---------------------------------------------------------
-            // ÉTAPE D : Valider la transaction
-            // ---------------------------------------------------------
+          
             $this->conn->commit();
             
-            return $newPublicationId; // On retourne l'ID pour l'utiliser si besoin
+            return $newPublicationId; 
 
         } catch (Exception $e) {
-            // En cas d'erreur, on annule tout (Rollback)
             $this->conn->rollBack();
             error_log("Erreur création publication : " . $e->getMessage());
             return false;
         }
     }
     
-    /**
-     * Mettre à jour une publication
-     */
+  
     public function update() {
         $query = "UPDATE " . $this->table . " 
                   SET titre = :titre, 
@@ -139,45 +119,27 @@ class Publication extends Model {
         return $this->countByStatus('valide');
     }
     
-    /**
-     * Compter les publications en attente de validation
-     */
+  
     public function countPending() {
         return $this->countByStatus('en_attente');
     }
-    
-    /**
-     * Récupérer les publications par type
-     * @param string $type - 'article', 'rapport', 'these', 'communication'
-     */
+  
     public function getByType($type, $limit = null) {
         return $this->getByColumn('type', $type, 'date_publication', 'DESC', $limit);
     }
-    
-    /**
-     * Récupérer les publications par domaine
-     */
     public function getByDomain($domaine, $limit = null) {
         return $this->getByColumn('domaine', $domaine, 'date_publication', 'DESC', $limit);
     }
-    
-    /**
-     * Récupérer les publications par statut de validation
-     */
+   
     public function getByValidationStatus($statut, $limit = null) {
         return $this->getByColumn('statut_validation', $statut, 'date_soumission', 'DESC', $limit);
     }
     
-    /**
-     * Récupérer les publications soumises par un utilisateur
-     */
+ 
     public function getByUser($userId, $limit = null) {
         return $this->getByColumn('soumis_par', $userId, 'date_soumission', 'DESC', $limit);
     }
-    
-    /**
-     * Compter les publications par année
-     */
+  
     public function countByYear($year) {
         $query = "SELECT COUNT(*) as total FROM " . $this->table . " 
                   WHERE YEAR(date_publication) = :year 
@@ -200,9 +162,7 @@ class Publication extends Model {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Valider une publication
-     */
+   
     public function validate($id) {
         $query = "UPDATE " . $this->table . " 
                   SET statut_validation = 'valide' 
@@ -212,9 +172,7 @@ class Publication extends Model {
         return $stmt->execute();
     }
     
-    /**
-     * Rejeter une publication
-     */
+   
     public function reject($id) {
         $query = "UPDATE " . $this->table . " 
                   SET statut_validation = 'rejete' 
@@ -224,15 +182,14 @@ class Publication extends Model {
         return $stmt->execute();
     }
     
-    /**
-     * Rechercher des publications par mot-clé (titre, resume, domaine)
-     */
-    public function search($keyword, $limit = null) {
-        $keyword = '%' . $keyword . '%';
+   
+   public function search($keyword, $limit = null) {
+        $term = '%' . $keyword . '%';
+        
         $query = "SELECT * FROM " . $this->table . " 
-                  WHERE (titre LIKE :keyword 
-                        OR resume LIKE :keyword 
-                        OR domaine LIKE :keyword)
+                  WHERE (titre LIKE :k1 
+                        OR resume LIKE :k2 
+                        OR domaine LIKE :k3)
                   AND statut_validation = 'valide'
                   ORDER BY date_publication DESC";
         
@@ -241,19 +198,21 @@ class Publication extends Model {
         }
         
         $stmt = $this->conn->prepare($query);
-        $stmt->bindValue(':keyword', $keyword);
+        
+        $stmt->bindValue(':k1', $term);
+        $stmt->bindValue(':k2', $term);
+        $stmt->bindValue(':k3', $term);
         
         if ($limit !== null) {
-            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
         }
         
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
     
-    /**
-     * Obtenir les statistiques des publications par type
-     */
+   
     public function getStatsByType() {
         $query = "SELECT type, COUNT(*) as total 
                   FROM " . $this->table . " 
@@ -266,9 +225,7 @@ class Publication extends Model {
     }
     
 
-    /**
-     * NOUVELLE MÉTHODE: Obtenir les domaines distincts
-     */
+ 
     public function getDistinctDomains() {
         try {
             $query = "SELECT DISTINCT domaine FROM publications 
@@ -284,9 +241,7 @@ class Publication extends Model {
         }
     }
     
-    /**
-     * NOUVELLE MÉTHODE: Obtenir les années distinctes
-     */
+  
     public function getDistinctYears() {
         try {
             $query = "SELECT DISTINCT YEAR(date_publication) as year 
@@ -302,10 +257,7 @@ class Publication extends Model {
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
-    
-    /**
-     * Obtenir les statistiques des publications par domaine
-     */
+  
     public function getStatsByDomain() {
         $query = "SELECT domaine, COUNT(*) as total 
                   FROM " . $this->table . " 
@@ -321,7 +273,6 @@ class Publication extends Model {
         $conditions = [];
         $params = [];
         
-        // Construire les conditions WHERE
         if (!empty($filters['type'])) {
             $conditions[] = "type = :type";
             $params[':type'] = $filters['type'];
@@ -351,12 +302,10 @@ class Publication extends Model {
         
         $stmt = $this->conn->prepare($query);
         
-        // Bind des paramètres de filtres
         foreach ($params as $key => $value) {
             $stmt->bindValue($key, $value);
         }
         
-        // Bind pagination
         $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         
@@ -364,9 +313,7 @@ class Publication extends Model {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Compter les publications filtrées
-     */
+  
     public function countFiltered($filters = []) {
         $conditions = [];
         $params = [];

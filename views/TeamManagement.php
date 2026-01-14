@@ -9,16 +9,11 @@ require_once __DIR__ . '/../views/Table.php';
 
 class TeamAdminView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
     public function render() {
-        // Extraction des données globales
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         $pageTitle = $this->data['title'] ?? 'Gestion des Équipes';
 
-        // CSS spécifiques
         $customCss = [
             'views/admin_dashboard.css',
             'views/organigramme.css',
@@ -27,32 +22,24 @@ class TeamAdminView extends View {
             'views/landingPage.css'
         ];
 
-        // 1. Rendu du Header
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu Principal
         echo '<main style="width: 100%; padding: 40px 20px; box-sizing: border-box; background-color: #f8f9fc; min-height: 80vh;">';
         echo $this->content();
         echo '</main>';
 
-        // 3. Rendu du Footer
-        $footer = new UIFooter($config, $menuData);
-        echo $footer->render();
+       
     }
 
-    /**
-     * Contenu spécifique : Stats, Organigramme, Tableau, Modale, JS
-     */
+   
     protected function content() {
-        // Extraction des données métier
         $teams = $this->data['teams'] ?? [];
         $users = $this->data['users'] ?? [];
         $projects = $this->data['projects'] ?? [];
         $publicationData = $this->data['publicationData'] ?? ['total' => 0];
         $organigrammeData = $this->data['organigramme'] ?? [];
 
-        // Préparation des données pour le tableau (adapté de votre code original)
         $teamsForTable = [];
         foreach ($teams as $team) {
             // Gestion des structures parfois différentes (array plat ou nested 'info')
@@ -61,7 +48,6 @@ class TeamAdminView extends View {
             $domaine = $team['info']['domaine_recherche'] ?? $team['domaine_recherche'];
             $desc = $team['info']['description'] ?? $team['description'];
             
-            // Gestion du chef
             $chefNom = '';
             if (isset($team['leader'])) {
                 $chefNom = ($team['leader']['prenom'] ?? '') . ' ' . ($team['leader']['nom'] ?? '');
@@ -81,9 +67,7 @@ class TeamAdminView extends View {
         ob_start();
         ?>
         
-        <!-- Styles internes -->
         <style>
-            /* Ajustements Layout */
             .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
             .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 4px solid #ddd; }
             .stat-card:nth-child(1) { border-color: #4e73df; }
@@ -91,18 +75,15 @@ class TeamAdminView extends View {
             .stat-card:nth-child(3) { border-color: #36b9cc; }
             .stat-card .number { font-size: 2em; font-weight: bold; margin-top: 10px; }
             
-            /* Table Section */
             .content-section { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-top: 30px; }
             .content-section h2 { margin-top: 0; color: #2e384d; border-bottom: 2px solid #f8f9fc; padding-bottom: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
             
-            /* Modale */
             .modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
             .modal.active { display: flex; align-items: center; justify-content: center; }
             .modal-content { background:white; padding:30px; border-radius:10px; max-height:90vh; overflow-y:auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 90%; max-width: 600px; }
             .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
             .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #aaa; }
             
-            /* Formulaires */
             .form-group { margin-bottom: 15px; }
             .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
             .btn-primary { background: #4e73df; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
@@ -110,7 +91,6 @@ class TeamAdminView extends View {
             .required { color: #e74a3b; }
         </style>
 
-        <!-- Top Bar Interne -->
         <div class="top-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
             <div>
                 <h1 style="margin: 0; color: #2c3e50;">Gestion des Équipes de Recherche</h1>
@@ -118,7 +98,6 @@ class TeamAdminView extends View {
             </div>
         </div>
         
-        <!-- Stats Grid -->
         <div class="stats-grid">
             <div class="stat-card">
                 <h3>Total Équipes</h3>
@@ -138,7 +117,6 @@ class TeamAdminView extends View {
         
       
         
-        <!-- Tableau des Équipes -->
         <div class="content-section">
             <h2>
                 <span>Gestion des Équipes</span>
@@ -147,11 +125,10 @@ class TeamAdminView extends View {
                 </button>
             </h2>
             <?php
-            // Utilisation du composant Table
             $teamTable = new Table([
                 'id' => 'TeamsTable',
                 'headers' => ['ID', 'Nom de l\'équipe', 'Chef d\'équipe', 'Domaine', 'Description'],
-                'data' => $teamsForTable, // On utilise les données formatées
+                'data' => $teamsForTable,
                 'columns' => [
                     ['key' => 'id'],
                     ['key' => 'nom'],
@@ -190,7 +167,6 @@ class TeamAdminView extends View {
             ?>
         </div>
     
-        <!-- Modal Ajouter/Modifier Équipe -->
         <div id="teamModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -239,9 +215,6 @@ class TeamAdminView extends View {
         </div>
 
         <script>
-        // ============================================
-        // GESTION DU MODAL
-        // ============================================
 
         function openModal(editMode = false, teamId = null) {
             const modal = document.getElementById('teamModal');
@@ -270,20 +243,16 @@ class TeamAdminView extends View {
             if(alertContainer) alertContainer.innerHTML = '';
         }
 
-        // Fermer avec clic extérieur
         window.onclick = function(event) {
             const modal = document.getElementById('teamModal');
             if (event.target == modal) closeModal();
         }
 
-        // Fermer avec Échap
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') closeModal();
         });
 
-        // ============================================
-        // CRUD ÉQUIPES
-        // ============================================
+      
 
         function saveTeam() {
             const form = document.getElementById('teamForm');
@@ -370,9 +339,7 @@ class TeamAdminView extends View {
             openModal(true, id);
         }
 
-        // ============================================
-        // UTILITAIRES
-        // ============================================
+      
 
         function ucfirst(str) {
             if (!str) return '';

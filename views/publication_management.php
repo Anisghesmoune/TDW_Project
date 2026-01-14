@@ -6,16 +6,12 @@ require_once __DIR__ . '/../views/public/components/UIFooter.php';
 
 class PublicationAdminView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
+   
     public function render() {
-        // Extraction des données globales
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         $pageTitle = $this->data['title'] ?? 'Gestion des Publications';
 
-        // CSS spécifiques
         $customCss = [
             'views/admin_dashboard.css',
             'views/modelAddUser.css',
@@ -23,47 +19,35 @@ class PublicationAdminView extends View {
             'views/landingPage.css',
         ];
 
-        // 1. Rendu du Header (Remplace la Sidebar)
-        // Note: Si votre UIHeader ne gère pas les scripts JS dans $customCss, il faudra l'ajouter manuellement dans content()
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu Principal
         echo '<main style="width: 100%; padding: 40px 20px; box-sizing: border-box; background-color: #f8f9fc; min-height: 80vh;">';
         
-        // Ajout manuel du script Chart.js si le header ne le gère pas comme <script>
         echo '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>';
         
         echo $this->content();
         echo '</main>';
 
-        // 3. Rendu du Footer
-        $footer = new UIFooter($config, $menuData);
-        echo $footer->render();
+       
     }
 
-    /**
-     * Contenu spécifique : Stats, Tableau, Modales, JS
-     */
+   
     protected function content() {
         ob_start();
         ?>
         
-        <!-- Styles internes -->
         <style>
-            /* Ajustements Layout sans Sidebar */
             .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
             .stat-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; }
             .stat-card .number { font-size: 2em; font-weight: bold; margin-top: 10px; }
             
-            /* Modale */
             .modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
             .modal.active { display: flex; align-items: center; justify-content: center; }
             .modal-content { background:white; padding:30px; border-radius:10px; max-height:90vh; overflow-y:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 90%; max-width: 900px; }
             .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
             .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #aaa; }
             
-            /* Formulaires */
             .form-group { margin-bottom: 15px; }
             .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
             .btn-primary { background: #4e73df; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; transition: 0.2s; }
@@ -71,7 +55,6 @@ class PublicationAdminView extends View {
             .required { color: #e74a3b; }
         </style>
 
-        <!-- Top Bar Interne -->
         <div class="top-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
             <div>
                 <h1 style="margin: 0; color: #2c3e50;">Gestion des Publications</h1>
@@ -79,7 +62,6 @@ class PublicationAdminView extends View {
             </div>
         </div>
         
-        <!-- Statistiques -->
         <div class="stats-grid">
             <div class="stat-card" style="border-bottom: 4px solid #4e73df;">
                 <h3>Total Publications</h3>
@@ -102,7 +84,6 @@ class PublicationAdminView extends View {
             </div>
         </div>
 
-        <!-- Filtres et recherche -->
         <div class="content-section" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 30px;">
             <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
                 <input type="text" id="searchInput" placeholder="🔍 Rechercher un titre, auteur, domaine..." 
@@ -145,7 +126,6 @@ class PublicationAdminView extends View {
             </div>
         </div>
         
-        <!-- Tableau des publications -->
         <div class="content-section" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
             <h2 style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f8f9fa; padding-bottom: 20px; margin-bottom: 20px;">
                 <span>Liste des Publications</span>
@@ -176,13 +156,11 @@ class PublicationAdminView extends View {
                     </tbody>
                 </table>
                 
-                <!-- Pagination -->
                 <div id="paginationContainer" style="margin-top: 20px; text-align: center; display: flex; justify-content: center; gap: 5px;">
                 </div>
             </div>
         </div>
 
-        <!-- Statistiques par type et domaine -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;">
             <div class="content-section" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
                 <h2 style="margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px;">📊 Publications par Type</h2>
@@ -199,7 +177,6 @@ class PublicationAdminView extends View {
             </div>
         </div>
     
-        <!-- Modal Ajouter/Modifier Publication -->
         <div id="publicationModal" class="modal">
             <div class="modal-content" style="max-width: 900px;">
                 <div class="modal-header">
@@ -279,7 +256,6 @@ class PublicationAdminView extends View {
             </div>
         </div>
 
-        <!-- Modal Validation -->
         <div id="validationModal" class="modal">
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
@@ -290,7 +266,6 @@ class PublicationAdminView extends View {
                     <input type="hidden" id="validationPublicationId">
                     
                     <div id="publicationDetails" style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <!-- Détails chargés dynamiquement -->
                     </div>
 
                     <div class="form-group">
@@ -307,7 +282,6 @@ class PublicationAdminView extends View {
             </div>
         </div>
 
-        <!-- Modal Rapport Bibliographique -->
         <div id="reportModal" class="modal">
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
@@ -356,9 +330,7 @@ class PublicationAdminView extends View {
         </div>
 
         <script>
-        // ============================================
-        // VARIABLES GLOBALES
-        // ============================================
+    
         let allPublications = [];
         let currentPage = 1;
         let perPage = 10;
@@ -367,9 +339,6 @@ class PublicationAdminView extends View {
         let typeChart = null;
         let domainChart = null;
 
-        // ============================================
-        // CHARGEMENT INITIAL
-        // ============================================
 
         document.addEventListener('DOMContentLoaded', () => {
             loadInitialData();
@@ -500,7 +469,6 @@ class PublicationAdminView extends View {
             } catch (e) { console.error(e); }
         }
 
-        // --- TABLEAU ---
         function renderPublicationTable(publications) {
             const tbody = document.getElementById('publicationTableBody');
             tbody.innerHTML = '';
@@ -565,7 +533,6 @@ class PublicationAdminView extends View {
             container.innerHTML = html;
         }
 
-        // --- MODALS & CRUD ---
         function openModal(edit=false, id=null) {
             const m = document.getElementById('publicationModal');
             if(edit && id) {
@@ -659,7 +626,6 @@ class PublicationAdminView extends View {
             loadStats();
         }
 
-        // --- FILTRES ---
         function setupSearchDebounce() {
             let timeout;
             document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -686,7 +652,6 @@ class PublicationAdminView extends View {
             loadPublications(1);
         }
 
-        // --- RAPPORT ---
         function setupReportTypeChange() {
             document.getElementById('reportType').addEventListener('change', (e) => {
                 document.getElementById('yearSelection').style.display = e.target.value === 'year' ? 'block' : 'none';
@@ -700,7 +665,6 @@ class PublicationAdminView extends View {
             const type = document.getElementById('reportType').value;
             const format = document.getElementById('reportFormat').value;
             
-            // Construction de l'URL pour un appel direct (GET)
             let url = `../controllers/api.php?action=generateReport&type=${type}&format=${format}`;
             
             const year = document.getElementById('reportYear').value;
@@ -709,11 +673,9 @@ class PublicationAdminView extends View {
             if(type === 'year' && year) url += `&year=${year}`;
             if(type === 'author' && author) url += `&author=${author}`;
             
-            // Fermer le modal
             closeReportModal();
             
-            // Ouvrir dans un nouvel onglet pour déclencher le téléchargement
-            // Cela permet au navigateur de gérer le flux binaire PDF
+            
             window.open(url, '_blank');
         }
 

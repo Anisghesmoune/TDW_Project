@@ -8,11 +8,7 @@ abstract class Model {
         $this->conn = Database::getInstance()->getConnection();
     }
     
-    /**
-     * Récupérer tous les enregistrements
-     * @param string $orderBy - Colonne pour le tri (défaut: 'id')
-     * @param string $order - Type d'ordre: 'ASC' ou 'DESC' (défaut: 'DESC')
-     */
+
    public function getAll($orderBy = 'id', $order = 'DESC', $limit = null) {
         $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
         $query = "SELECT * FROM " . $this->table . " ORDER BY " . $orderBy . " " . $order;
@@ -31,9 +27,7 @@ abstract class Model {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Récupérer un enregistrement par ID
-     */
+
     public function getById($id) {
         $query = "SELECT * FROM " . $this->table . " WHERE id = :id";
         $stmt = $this->conn->prepare($query);
@@ -42,9 +36,7 @@ abstract class Model {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Compter le nombre total d'enregistrements
-     */
+  
     public function count() {
         $query = "SELECT COUNT(*) as total FROM " . $this->table;
         $stmt = $this->conn->prepare($query);
@@ -53,13 +45,7 @@ abstract class Model {
         return $row['total'];
     }
     
-    /**
-     * Récupérer les enregistrements avec pagination
-     * @param int $page - Numéro de la page
-     * @param int $perPage - Nombre d'éléments par page
-     * @param string $orderBy - Colonne pour le tri (défaut: 'id')
-     * @param string $order - Type d'ordre: 'ASC' ou 'DESC' (défaut: 'DESC')
-     */
+  
     public function getPaginated($page = 1, $perPage = 10, $orderBy = 'id', $order = 'DESC') {
         $offset = ($page - 1) * $perPage;
         $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
@@ -72,9 +58,7 @@ abstract class Model {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Supprimer un enregistrement par ID
-     */
+   
     public function delete($id) {
         $query = "DELETE FROM " . $this->table . " WHERE id = :id";
         $stmt = $this->conn->prepare($query);
@@ -82,9 +66,7 @@ abstract class Model {
         return $stmt->execute();
     }
     
-    /**
-     * Vérifier si un enregistrement existe
-     */
+    
     public function exists($id) {
         $query = "SELECT COUNT(*) as count FROM " . $this->table . " WHERE id = :id";
         $stmt = $this->conn->prepare($query);

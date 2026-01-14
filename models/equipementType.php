@@ -2,9 +2,7 @@
 class EquipmentType extends Model {
     protected $table = 'equipment_types';
     
-    /**
-     * Create a new equipment type
-     */
+  
     public function create($data) {
         $query = "INSERT INTO " . $this->table . " 
                   (nom, description, icone) 
@@ -21,9 +19,7 @@ class EquipmentType extends Model {
         return false;
     }
     
-    /**
-     * Update equipment type
-     */
+
     public function update($id, $data) {
         $query = "UPDATE " . $this->table . " 
                   SET nom = :nom, 
@@ -40,9 +36,7 @@ class EquipmentType extends Model {
         return $stmt->execute();
     }
     
-    /**
-     * Get equipment type with equipment count
-     */
+   
     public function getWithEquipmentCount($id) {
         $query = "SELECT et.*, COUNT(e.id) as equipment_count 
                   FROM " . $this->table . " et 
@@ -56,9 +50,7 @@ class EquipmentType extends Model {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Get all equipment types with equipment counts
-     */
+ 
     public function getAllWithCounts($orderBy = 'nom', $order = 'ASC') {
         $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
         $query = "SELECT et.*, COUNT(e.id) as equipment_count 
@@ -72,9 +64,7 @@ class EquipmentType extends Model {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Check if type name already exists
-     */
+   
     public function nameExists($nom, $excludeId = null) {
         $query = "SELECT COUNT(*) as count FROM " . $this->table . " 
                   WHERE nom = :nom";
@@ -95,9 +85,7 @@ class EquipmentType extends Model {
         return $row['count'] > 0;
     }
     
-    /**
-     * Check if type can be deleted (no associated equipment)
-     */
+  
     public function canDelete($id) {
         $query = "SELECT COUNT(*) as count FROM equipment WHERE id_type = :id";
         $stmt = $this->conn->prepare($query);
@@ -107,9 +95,7 @@ class EquipmentType extends Model {
         return $row['count'] == 0;
     }
     
-    /**
-     * Get equipment by type ID
-     */
+  
     public function getEquipmentByType($id, $orderBy = 'nom', $order = 'ASC') {
         $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
         $query = "SELECT * FROM equipment 
@@ -122,9 +108,7 @@ class EquipmentType extends Model {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Search equipment types by name or description
-     */
+   
     public function search($searchTerm, $orderBy = 'nom', $order = 'ASC') {
         $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
         $query = "SELECT et.*, COUNT(e.id) as equipment_count 
@@ -141,9 +125,7 @@ class EquipmentType extends Model {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Get statistics for a specific type
-     */
+    
     public function getTypeStats($id) {
         $query = "SELECT 
                     COUNT(*) as total_equipment,
@@ -159,9 +141,7 @@ class EquipmentType extends Model {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Get types with available equipment
-     */
+   
     public function getTypesWithAvailableEquipment($orderBy = 'nom', $order = 'ASC') {
         $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
         $query = "SELECT DISTINCT et.* 
@@ -175,10 +155,7 @@ class EquipmentType extends Model {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Get most used equipment types (by reservation count)
-     * Note: This assumes you have a reservations table
-     */
+   
     public function getMostUsedTypes($limit = 5) {
         $query = "SELECT et.*, COUNT(r.id) as reservation_count 
                   FROM " . $this->table . " et 
@@ -194,9 +171,7 @@ class EquipmentType extends Model {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Duplicate a type (useful for creating similar types)
-     */
+   
     public function duplicate($id, $newName) {
         $original = $this->getById($id);
         
@@ -213,9 +188,7 @@ class EquipmentType extends Model {
         return $this->create($data);
     }
     
-    /**
-     * Get paginated types with counts
-     */
+   
     public function getPaginatedWithCounts($page = 1, $perPage = 10, $orderBy = 'nom', $order = 'ASC') {
         $offset = ($page - 1) * $perPage;
         $order = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
@@ -234,15 +207,12 @@ class EquipmentType extends Model {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    /**
-     * Delete type and optionally reassign equipment
-     */
+   
     public function deleteAndReassign($id, $newTypeId = null) {
         try {
             $this->conn->beginTransaction();
             
             if ($newTypeId !== null) {
-                // Reassign equipment to new type
                 $query = "UPDATE equipment SET id_type = :newTypeId WHERE id_type = :oldId";
                 $stmt = $this->conn->prepare($query);
                 $stmt->bindParam(':newTypeId', $newTypeId, PDO::PARAM_INT);
@@ -250,7 +220,7 @@ class EquipmentType extends Model {
                 $stmt->execute();
             }
             
-            // Delete the type
+         
             $result = $this->delete($id);
             
             $this->conn->commit();

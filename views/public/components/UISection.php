@@ -1,7 +1,7 @@
 <?php
 class UISection extends Component {
     private $title;
-    private $components = []; // Tableau de composants (cartes)
+    private $components = []; 
     private $bgColor;
 
     public function __construct($title, $bgColor = 'transparent') {

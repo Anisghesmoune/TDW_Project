@@ -23,8 +23,7 @@ class PartnerAdminView extends View {
         echo $this->content();
         echo '</main>';
 
-        $footer = new UIFooter($config, $menuData);
-        echo $footer->render();
+       
     }
 
     protected function content() {

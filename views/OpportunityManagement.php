@@ -23,8 +23,7 @@ class OpportunityAdminView extends View {
         echo $this->content();
         echo '</main>';
 
-        $footer = new UIFooter($config, $menuData);
-        echo $footer->render();
+       
     }
 
     protected function content() {
@@ -214,7 +213,6 @@ class OpportunityAdminView extends View {
                 const tbody = document.getElementById('tableBody');
                 tbody.innerHTML = '';
                 
-                // Filtres JS
                 const search = document.getElementById('searchInput').value.toLowerCase();
                 const typeFilter = document.getElementById('filterType').value;
                 const statusFilter = document.getElementById('filterStatut').value;

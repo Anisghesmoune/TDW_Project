@@ -21,58 +21,41 @@ class EquipmentController {
         $this->menuModel = new Menu();
     }
     
-    /**
-     * Display equipment dashboard
-     */
+  
    public function index() {
-        // 1. Mise à jour automatique des statuts
         $this->reservationModel->autoUpdateStatuses();         
 
-        // 2. RÉCUPÉRATION DES DONNÉES GLOBALES (Header/Footer)
-        // ----------------------------------------------------
-        $config = $this->settingsModel->getAllSettings(); // Logo, Couleurs, etc.
-        $menu = $this->menuModel->getMenuTree();          // Menu de navigation
+        $config = $this->settingsModel->getAllSettings(); 
+        $menu = $this->menuModel->getMenuTree();         
 
-        // 3. RÉCUPÉRATION DES DONNÉES SPÉCIFIQUES (Équipements)
-        // -----------------------------------------------------
+        
         $statusStats = $this->equipmentModel->getStatsByStatus();
         $typeStats = $this->equipmentModel->getStatsByType();
         $maintenanceNeeded = $this->equipmentModel->getMaintenanceNeeded(30);
         
-        // Équipements récents
         $recentEquipment = $this->equipmentModel->getAll('id', 'DESC', 10);
         
-        // Stats réservations
         $reservationStats = $this->reservationModel->getStats();
         
-        // 4. PRÉPARATION DES DONNÉES POUR LA VUE
-        // --------------------------------------
+       
         $data = [
-            // Données structurelles (Header/Footer)
             'title' => 'Tableau de Bord - Équipements',
             'config' => $config,
             'menu' => $menu,
             
-            // Données métier (Page actuelle)
             'statusStats' => $statusStats,
             'typeStats' => $typeStats,
             'maintenanceNeeded' => $maintenanceNeeded,
             'recentEquipment' => $recentEquipment,
             'reservationStats' => $reservationStats
         ];
-        
-        // 5. CHARGEMENT ET RENDU DE LA VUE
-        // --------------------------------
+       
         require_once __DIR__ . '/../views/public/EquipementView.php';
         
-        // On instancie la classe de vue et on appelle render()
         $view = new EquipementView($data);
         $view->render();
     }
-    
-    /**
-     * List all equipment with reservation status
-     */
+  
     public function list() {
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $perPage = 20;
@@ -93,11 +76,9 @@ class EquipmentController {
             $total = count($equipment);
         } 
          else {
-            // Get equipment with reservation status
             $equipment = $this->equipmentModel->getAllWithReservationStatus('id', 'DESC');
             $total = count($equipment);
             
-            // Apply pagination
             $equipment = array_slice($equipment, ($page - 1) * $perPage, $perPage);
         }
         
@@ -116,9 +97,7 @@ class EquipmentController {
         return $data;
     }
     
-    /**
-     * Show create form
-     */
+   
     public function create() {
         $types = $this->equipmentTypeModel->getAll('nom', 'ASC');
         
@@ -130,9 +109,7 @@ class EquipmentController {
         require_once __DIR__ . 'views/equipment/create.php';
     }
     
-    /**
-     * Store new equipment
-     */
+  
     public function store() {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /equipment/create');
@@ -149,7 +126,6 @@ class EquipmentController {
             'prochaine_maintenance' => !empty($_POST['prochaine_maintenance']) ? trim($_POST['prochaine_maintenance']) : null
         ];
         
-        // Validation
         if (empty($data['nom'])) {
             $_SESSION['error'] = 'Le nom de l\'équipement est requis.';
             header('Location: /equipment/create');
@@ -173,9 +149,7 @@ class EquipmentController {
         }
     }
     
-    /**
-     * Show edit form
-     */
+   
     public function edit($id) {
         $equipment = $this->equipmentModel->getById($id);
         
@@ -195,9 +169,7 @@ class EquipmentController {
         
     }
     
-    /**
-     * Update equipment
-     */
+  
     public function update($id) {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /equipment/edit/' . $id);
@@ -214,14 +186,12 @@ class EquipmentController {
             'prochaine_maintenance' => !empty($_POST['prochaine_maintenance']) ? trim($_POST['prochaine_maintenance']) : null
         ];
         
-        // Validation
         if (empty($data['nom'])) {
             $_SESSION['error'] = 'Le nom de l\'équipement est requis.';
             header('Location: /equipment/edit/' . $id);
             exit;
         }
         
-        // Check if equipment is reserved before changing status
         if ($data['etat'] === 'en_maintenance') {
             $activeReservations = $this->reservationModel->getByEquipment($id);
             $hasActive = false;
@@ -250,11 +220,8 @@ class EquipmentController {
         }
     }
     
-    /**
-     * Delete equipment
-     */
+  
     public function delete($id) {
-        // Check if equipment has active reservations
         $activeReservations = $this->reservationModel->getByEquipment($id);
         $hasActive = false;
         foreach ($activeReservations as $res) {
@@ -278,9 +245,7 @@ class EquipmentController {
         exit;
     }
     
-    /**
-     * Update equipment status (AJAX)
-     */
+  
    public function updateStatus() {
         header('Content-Type: application/json');
         
@@ -292,7 +257,6 @@ class EquipmentController {
         $id = (int)($_POST['id'] ?? 0);
         $etat = trim($_POST['etat'] ?? '');
         
-        // 1. INTERDIRE LE PASSAGE MANUEL À "RÉSERVÉ"
         if ($etat === 'réserve') {
             echo json_encode([
                 'success' => false, 
@@ -301,9 +265,7 @@ class EquipmentController {
             exit;
         }
         
-        // 2. GESTION DE LA MAINTENANCE
         if ($etat === 'en_maintenance') {
-            // On vérifie s'il y a une réservation en cours
             $activeRes = $this->reservationModel->getCurrentReservationForEquipment($id);
             if ($activeRes) {
                 echo json_encode([
@@ -314,9 +276,7 @@ class EquipmentController {
             }
         }
 
-        // 3. GESTION DU RETOUR À "LIBRE" (Fin de maintenance)
         if ($etat === 'libre') {
-            // On revérifie au cas où une réservation aurait commencé entre temps
             $activeRes = $this->reservationModel->getCurrentReservationForEquipment($id);
             if ($activeRes) {
                 echo json_encode([
@@ -327,7 +287,6 @@ class EquipmentController {
             }
         }
         
-        // Exécution de la mise à jour
         if ($this->equipmentModel->updateStatus($id, $etat)) {
             echo json_encode(['success' => true, 'message' => 'Statut mis à jour avec succès']);
         } else {
@@ -335,9 +294,7 @@ class EquipmentController {
         }
         exit;
     }
-    /**
-     * Maintenance page
-     */
+  
     public function maintenance() {
         $maintenanceNeeded = $this->equipmentModel->getMaintenanceNeeded(30);
         $inMaintenance = $this->equipmentModel->getByStatus('en_maintenance');
@@ -351,9 +308,7 @@ class EquipmentController {
         require_once __DIR__ . 'views/equipment/maintenance.php';
     }
     
-    /**
-     * Update maintenance dates
-     */
+   
     public function updateMaintenance($id) {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: /equipment/maintenance');
@@ -364,7 +319,6 @@ class EquipmentController {
         $prochaine = !empty($_POST['prochaine_maintenance']) ? trim($_POST['prochaine_maintenance']) : null;
         
         if ($this->equipmentModel->updateMaintenance($id, $derniere, $prochaine)) {
-            // Also update status to libre if it was in maintenance
             $this->equipmentModel->updateStatus($id, 'libre');
             $_SESSION['success'] = 'Maintenance mise à jour avec succès.';
         } else {
@@ -375,9 +329,7 @@ class EquipmentController {
         exit;
     }
     
-    /**
-     * View equipment details with reservations
-     */
+   
     public function view($id) {
         $equipment = $this->equipmentModel->getWithReservationStatus($id);
         
@@ -387,13 +339,10 @@ class EquipmentController {
             exit;
         }
         
-        // Get type information
         $type = $this->equipmentTypeModel->getById($equipment['id_type']);
         
-        // Get all reservations for this equipment
         $reservations = $this->reservationModel->getByEquipment($id);
         
-        // Get upcoming reservations
         $upcomingReservations = array_filter($reservations, function($res) {
             return in_array($res['statut'], ['confirmée', 'en_attente']) && 
                    $res['date_debut'] >= date('Y-m-d');
@@ -410,9 +359,7 @@ class EquipmentController {
         require_once __DIR__ . 'views/equipment/view.php';
     }
     
-    /**
-     * Check equipment availability for a period (AJAX)
-     */
+
     public function checkAvailability() {
         header('Content-Type: application/json');
         
@@ -440,9 +387,7 @@ class EquipmentController {
         exit;
     }
     
-    /**
-     * Get equipment availability calendar (AJAX)
-     */
+ 
     public function getAvailabilityCalendar() {
         header('Content-Type: application/json');
         
@@ -464,7 +409,6 @@ class EquipmentController {
         exit;
     }
      public function indexEquipementAdmin() {
-        // 1. Vérification Session & Admin
         if (session_status() === PHP_SESSION_NONE) session_start();
         
         if (!isset($_SESSION['user_id'])) {
@@ -472,28 +416,18 @@ class EquipmentController {
             exit;
         }
 
-        // Vérification rôle (Admin ou Directeur)
-        // $isAdmin = isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'directeur');
-        // if (!$isAdmin) {
-        //     header('Location: index.php?route=dashboard-user'); 
-        //     exit;
-        // }
-
-        // 2. Mise à jour auto des réservations
+     
         $this->reservationModel->autoUpdateStatuses();         
         
-        // 3. Récupération des données globales (Header/Footer)
         $config = $this->settingsModel->getAllSettings();
         $menu = $this->menuModel->getMenuTree();
 
-        // 4. Récupération des données métier
         $statusStats = $this->equipmentModel->getStatsByStatus();
         $typeStats = $this->equipmentModel->getStatsByType();
         $maintenanceNeeded = $this->equipmentModel->getMaintenanceNeeded(30);
         $recentEquipment = $this->equipmentModel->getAll('id', 'DESC', 10);
         $reservationStats = $this->reservationModel->getStats();
         
-        // 5. Préparation des données pour la vue
         $data = [
             'title' => 'Administration - Équipements',
             'config' => $config,
@@ -505,7 +439,6 @@ class EquipmentController {
             'reservationStats' => $reservationStats
         ];
         
-        // 6. Chargement de la Vue Classe
         require_once __DIR__ . '/../views/equipement_management.php';
         $view = new EquipementAdminView($data);
         $view->render();

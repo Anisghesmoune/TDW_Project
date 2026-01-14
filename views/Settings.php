@@ -6,41 +6,30 @@ require_once __DIR__ . '/../views/public/components/UIFooter.php';
 
 class SettingsAdminView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
+  
     public function render() {
-        // Extraction des données globales
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         $pageTitle = $this->data['title'] ?? 'Paramètres du Site';
 
-        // CSS spécifiques
         $customCss = [
             'views/admin_dashboard.css',
             'views/settings.css',
             'views/landingPage.css'
         ];
 
-        // 1. Rendu du Header
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu Principal
         echo '<main style="width: 100%; padding: 40px 20px; box-sizing: border-box; background-color: #f8f9fc; min-height: 80vh;">';
         echo $this->content();
         echo '</main>';
 
-        // 3. Rendu du Footer
-        $footer = new UIFooter($config, $menuData);
-        echo $footer->render();
+       
     }
 
-    /**
-     * Contenu spécifique : Formulaire de paramètres, Menu, Backup
-     */
+   
     protected function content() {
-        // Extraction des données métier
         $settings = $this->data['settings'] ?? [];
         $menuItems = $this->data['menuItems'] ?? [];
 
@@ -176,7 +165,6 @@ class SettingsAdminView extends View {
             }
         </style>
 
-        <!-- Top Bar Interne -->
         <div class="top-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
             <div>
                 <h1 style="margin: 0; color: #2c3e50;">Configuration de l'Application</h1>
@@ -184,13 +172,10 @@ class SettingsAdminView extends View {
             </div>
         </div>
 
-        <!-- FORMULAIRE PRINCIPAL -->
         <form id="styleForm" enctype="multipart/form-data"> 
             <div class="settings-grid">
                 
-                <!-- COLONNE GAUCHE -->
                 <div>
-                    <!-- 1. APPARENCE -->
                     <div class="card">
                         <h2>🎨 Apparence & Graphisme</h2>
                         <div class="form-group">
@@ -221,9 +206,8 @@ class SettingsAdminView extends View {
                         </div>
                     </div>
 
-                    <!-- 3. INFORMATIONS DU LABO -->
                     <div class="card">
-                        <h2>ℹ️ Informations & Contact</h2>
+                        <h2> Informations & Contact</h2>
                         <div class="form-group">
                             <label>Description du Laboratoire</label>
                             <textarea name="lab_description" id="lab_description" rows="4" class="form-control" 
@@ -250,9 +234,7 @@ class SettingsAdminView extends View {
                     </div>
                 </div>
 
-                <!-- COLONNE DROITE -->
                 <div>
-                    <!-- 4. RÉSEAUX SOCIAUX -->
                     <div class="card">
                         <h2>🌐 Réseaux Sociaux & Liens</h2>
                         <div class="form-group">
@@ -281,9 +263,8 @@ class SettingsAdminView extends View {
                         </div>
                     </div>
 
-                    <!-- 5. GESTION DU MENU -->
                     <div class="card">
-                        <h2>🔗 Gestion du Menu Principal</h2>
+                        <h2> Gestion du Menu Principal</h2>
                         <p style="font-size:0.85em; color:#666; margin-bottom:10px;">
                             Format Route : <code>Controller/method</code> (ex: <em>Projects/index</em>)
                         </p>
@@ -298,15 +279,13 @@ class SettingsAdminView extends View {
                                 </tr>
                             </thead>
                             <tbody id="menuListBody">
-                                <!-- Rempli par JS -->
                             </tbody>
                         </table>
                         <button type="button" class="btn-add" onclick="addMenuItem()">+ Ajouter un lien</button>
                     </div>
 
-                    <!-- 2. BASE DE DONNÉES -->
                     <div class="card">
-                        <h2>💾 Sauvegarde & Restauration</h2>
+                        <h2>Sauvegarde & Restauration</h2>
                         <div style="text-align: center; margin-bottom: 20px;">
                             <button type="button" onclick="downloadBackup()" class="btn-backup">
                                 <i class="fas fa-download"></i> Télécharger une Sauvegarde
@@ -314,7 +293,7 @@ class SettingsAdminView extends View {
                         </div>
                         <div class="divider"></div>
                         <div style="background: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin-bottom: 15px; font-size:0.9em;">
-                            <strong>⚠️ Zone de danger :</strong> Restauration BDD.
+                            <strong> Zone de danger :</strong> Restauration BDD.
                         </div>
                         <div class="form-group">
                             <input type="file" id="backupFileVisible" accept=".sql" class="form-control">
@@ -326,13 +305,11 @@ class SettingsAdminView extends View {
                 </div>
             </div>
             
-            <!-- BOUTON SAUVEGARDE GLOBAL -->
             <button type="button" onclick="saveAll()" class="btn-save-all">
                 💾 ENREGISTRER TOUTES LES MODIFICATIONS
             </button>
         </form>
 
-        <!-- SCRIPT JS -->
         <script>
             let menuItems = <?php echo json_encode($menuItems); ?>;
 
@@ -341,14 +318,12 @@ class SettingsAdminView extends View {
                 renderMenuTable();
             });
 
-            // --- CHARGEMENT ---
             async function loadSettings() {
                 try {
                     const res = await fetch('../controllers/api.php?action=getSettings');
                     const json = await res.json();
                     if(json.success) {
                         const s = json.data;
-                        // Apparence & Infos
                         if(s.site_name) document.getElementById('site_name').value = s.site_name;
                         if(s.primary_color) document.getElementById('primary_color').value = s.primary_color;
                         if(s.sidebar_color) document.getElementById('sidebar_color').value = s.sidebar_color;
@@ -357,7 +332,6 @@ class SettingsAdminView extends View {
                         if(s.lab_email) document.getElementById('lab_email').value = s.lab_email;
                         if(s.lab_phone) document.getElementById('lab_phone').value = s.lab_phone;
                         if(s.lab_address) document.getElementById('lab_address').value = s.lab_address;
-                        // Réseaux Sociaux
                         if(s.social_facebook) document.getElementById('social_facebook').value = s.social_facebook;
                         if(s.social_instagram) document.getElementById('social_instagram').value = s.social_instagram;
                         if(s.social_linkedin) document.getElementById('social_linkedin').value = s.social_linkedin;
@@ -366,7 +340,6 @@ class SettingsAdminView extends View {
                 } catch(e) { console.error("Erreur settings", e); }
             }
 
-            // --- GESTION MENU ---
             function renderMenuTable() {
                 const tbody = document.getElementById('menuListBody');
                 tbody.innerHTML = '';
@@ -387,7 +360,6 @@ class SettingsAdminView extends View {
                 renderMenuTable();
             }
 
-            // Fonction pour appeler l'API de suppression
             async function deleteItem(id) {
                 const res = await fetch('../index.php?route=api-delete-menu', {
                     method: 'POST',
@@ -400,18 +372,15 @@ class SettingsAdminView extends View {
                 return await res.json();
             }
 
-            // Fonction appelée par le bouton poubelle
             async function removeMenuItem(index) {
                 if(!confirm('Voulez-vous vraiment supprimer ce lien ?')) return;
 
                 const item = menuItems[index];
 
-                // Si l'élément a un ID (il existe en base de données)
                 if (item.id) {
                     try {
                         const result = await deleteItem(item.id);
                         if (result.success) {
-                            // Suppression visuelle seulement si la BDD a validé
                             menuItems.splice(index, 1);
                             renderMenuTable();
                         } else {
@@ -422,7 +391,6 @@ class SettingsAdminView extends View {
                         alert("Erreur de communication avec le serveur.");
                     }
                 } else {
-                    // C'est un nouvel élément (pas encore en BDD), on le supprime juste de la liste visuelle
                     menuItems.splice(index, 1);
                     renderMenuTable();
                 }
@@ -432,14 +400,12 @@ class SettingsAdminView extends View {
                 menuItems[index][field] = value;
             }
 
-            // --- SAUVEGARDE GLOBALE ---
             async function saveAll() {
                 const btn = document.querySelector('.btn-save-all');
                 btn.disabled = true;
                 btn.innerHTML = "⏳ Enregistrement...";
 
                 try {
-                    // 1. Sauvegarde Settings
                     const form = document.getElementById('styleForm');
                     const formData = new FormData(form);
                     const resSettings = await fetch('../controllers/api.php?action=updateSettings', {
@@ -447,7 +413,6 @@ class SettingsAdminView extends View {
                         body: formData
                     });
                     
-                    // 2. Sauvegarde Menu
                     const resMenu = await fetch('../controllers/api.php?action=updateMenu', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
@@ -458,10 +423,10 @@ class SettingsAdminView extends View {
                     const jsonM = await resMenu.json();
 
                     if(jsonS.success && jsonM.success) {
-                        alert("✅ Tout a été enregistré avec succès !");
+                        alert(" Tout a été enregistré avec succès !");
                         location.reload();
                     } else {
-                        alert("⚠️ Erreur partielle : " + (jsonS.message || jsonM.message));
+                        alert("Erreur partielle : " + (jsonS.message || jsonM.message));
                     }
                 } catch(e) {
                     console.error(e);
@@ -472,7 +437,6 @@ class SettingsAdminView extends View {
                 }
             }
 
-            // --- BACKUP / RESTORE ---
             function downloadBackup() {
                 window.location.href = '../controllers/api.php?action=downloadBackup';
             }

@@ -8,14 +8,12 @@ class ContactModel extends Model {
         parent::__construct();
     }
 
-    // Enregistrer un nouveau message
     public function create($data) {
         $query = "INSERT INTO " . $this->table . " (nom, email, sujet, message) 
                   VALUES (:nom, :email, :sujet, :message)";
         
         $stmt = $this->conn->prepare($query);
         
-        // Nettoyage basique
         $nom = htmlspecialchars(strip_tags($data['nom']));
         $email = htmlspecialchars(strip_tags($data['email']));
         $sujet = htmlspecialchars(strip_tags($data['sujet']));
@@ -29,7 +27,6 @@ class ContactModel extends Model {
         return $stmt->execute();
     }
 
-    // Récupérer les messages (Pour l'admin plus tard)
     public function getAllMessages() {
         return $this->getAll('date_envoi', 'DESC');
     }

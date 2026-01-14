@@ -9,10 +9,8 @@ class UISlider extends Component {
         $slidesHtml = '';
         $dotsHtml = '';
         
-        // Génération des slides
         foreach ($this->data as $index => $slide) {
             $activeClass = ($index === 0) ? 'active' : '';
-            // Gestion image par défaut si manquante
             $img = !empty($slide['image']) ? $slide['image'] : 'assets/default-slide.jpg';
             
             $slidesHtml .= "
@@ -24,18 +22,15 @@ class UISlider extends Component {
                 </div>
             </div>";
 
-            // Génération des points (dots)
             $dotsHtml .= "<span class='dot $activeClass' onclick='currentSlide($index)'></span>";
         }
 
-        // Retourne le HTML complet + le Script JS encapsulé
         return <<<HTML
         <div class="hero-slider">
             <div class="slider-container">
                 $slidesHtml
             </div>
             
-            <!-- Contrôles -->
             <button class="slider-prev" onclick="changeSlide(-1)">❮</button>
             <button class="slider-next" onclick="changeSlide(1)">❯</button>
             
@@ -83,7 +78,6 @@ class UISlider extends Component {
                 }, 5000);
             }
 
-            // Démarrage automatique si des slides existent
             if(slides.length > 0) startTimer();
         </script>
 HTML;

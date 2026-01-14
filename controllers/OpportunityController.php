@@ -15,9 +15,7 @@ class OpportunityController {
         $this->menuModel = new Menu();
     }
 
-    /**
-     * Page d'administration (Vue)
-     */
+ 
     public function indexAdmin() {
         if (session_status() === PHP_SESSION_NONE) session_start();
         
@@ -26,18 +24,9 @@ class OpportunityController {
             exit;
         }
 
-        // Vérification Admin
-        // $isAdmin = isset($_SESSION['is_admin']) && ($_SESSION['is_admin'] === 1);
-        // if (!$isAdmin) {
-        //     header('Location: index.php?route=dashboard-user'); 
-        //     exit;
-        // }
-
-        // Données Globales
         $config = $this->settingsModel->getAllSettings();
         $menu = $this->menuModel->getMenuTree();
         
-        // Stats initiales
         $stats = $this->opportunityModel->getStats();
 
         $data = [
@@ -52,7 +41,6 @@ class OpportunityController {
         $view->render();
     }
 
-    // --- MÉTHODES API ---
 
     public function apiGetAll() {
         $data = $this->opportunityModel->getAllOpportunities();
@@ -69,9 +57,8 @@ class OpportunityController {
             return ['success' => false, 'message' => 'Champs obligatoires manquants'];
         }
 
-        // Ajout de l'ID utilisateur connecté
         if (session_status() === PHP_SESSION_NONE) session_start();
-        $data['publie_par'] = $_SESSION['user_id'] ?? 1; // Fallback ID 1 si pas de session (dev)
+        $data['publie_par'] = $_SESSION['user_id'] ?? 1; 
 
         if ($this->opportunityModel->createOpportunity($data)) {
             return ['success' => true, 'message' => 'Offre créée avec succès'];
@@ -93,7 +80,6 @@ class OpportunityController {
         return ['success' => false, 'message' => 'Erreur lors de la suppression'];
     }
      public function indexPublic() {
-        // Chargement des dépendances
         $config = $this->settingsModel->getAllSettings();
         $menu = $this->menuModel->getMenuTree();
         

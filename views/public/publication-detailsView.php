@@ -6,19 +6,14 @@ require_once __DIR__ . '/../../views/public/components/UIFooter.php';
 
 class PublicationDetailsView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
+   
     public function render() {
-        // Extraction des données
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         
-        // Récupération de la publication pour le titre de la page
         $pub = $this->data['publication'] ?? [];
         $pageTitle = $pub['titre'] ?? 'Détails Publication';
 
-        // CSS spécifiques
         $customCss = [
             'views/admin_dashboard.css',
             'views/teamManagement.css',
@@ -27,39 +22,32 @@ class PublicationDetailsView extends View {
             'assets/css/public.css'          
         ];
 
-        // 1. Rendu du Header
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu Principal
-        // On centre le contenu avec un max-width pour la lisibilité
+        
         echo '<main style="width: 100%; padding: 40px 20px; box-sizing: border-box; background-color: #f8f9fc; min-height: 80vh;">';
         echo $this->content();
         echo '</main>';
 
-        // 3. Rendu du Footer
         $footer = new UIFooter($config, $menuData);
         echo $footer->render();
     }
 
-    /**
-     * Contenu spécifique de la fiche publication
-     */
+   
     protected function content() {
         $pub = $this->data['publication'];
 
-        // Calcul de la couleur du badge statut
-        $badgeColor = '#6c757d'; // Gris par défaut
+        $badgeColor = '#6c757d'; 
         if(isset($pub['statut_validation'])) {
-            if($pub['statut_validation'] == 'valide') $badgeColor = '#1cc88a'; // Vert
-            if($pub['statut_validation'] == 'en_attente') $badgeColor = '#f6c23e'; // Jaune
-            if($pub['statut_validation'] == 'rejete') $badgeColor = '#e74a3b'; // Rouge
+            if($pub['statut_validation'] == 'valide') $badgeColor = '#1cc88a'; 
+            if($pub['statut_validation'] == 'en_attente') $badgeColor = '#f6c23e'; 
+            if($pub['statut_validation'] == 'rejete') $badgeColor = '#e74a3b'; 
         }
 
         ob_start();
         ?>
         
-        <!-- Styles internes pour ajuster l'affichage sans sidebar -->
         <style>
             .details-container {
                 max-width: 900px;
@@ -116,16 +104,13 @@ class PublicationDetailsView extends View {
             }
         </style>
 
-        <!-- Navigation du haut -->
         <div class="top-navigation">
             <a href="index.php?route=publications" class="btn btn-secondary" style="text-decoration: none; color: #666;">
                 ← Retour à la liste
             </a>
-            <!-- Le bouton Logout est géré par le Header, on peut afficher l'utilisateur ici si on veut -->
         </div>
 
         <div class="details-container">
-            <!-- En-tête de la fiche -->
             <div class="header-section">
                 <span class="pub-type"><?= htmlspecialchars($pub['type'] ?? 'Publication') ?></span>
                 <h1><?= htmlspecialchars($pub['titre']) ?></h1>
@@ -137,7 +122,6 @@ class PublicationDetailsView extends View {
                 <?php endif; ?>
             </div>
 
-            <!-- Métadonnées -->
             <div class="meta-grid">
                 <div class="label">Auteurs :</div>
                 <div class="value"><strong><?= htmlspecialchars($pub['auteurs_noms'] ?? 'Non spécifié') ?></strong></div>
@@ -160,7 +144,6 @@ class PublicationDetailsView extends View {
                 <div class="value"><?= htmlspecialchars($pub['soumis_par_nom'] ?? 'Inconnu') ?></div>
             </div>
 
-            <!-- Résumé -->
             <?php if(!empty($pub['resume'])): ?>
                 <h3 style="color: #2c3e50; margin-bottom: 15px;">Résumé</h3>
                 <div class="resume-box">
@@ -168,7 +151,6 @@ class PublicationDetailsView extends View {
                 </div>
             <?php endif; ?>
 
-            <!-- Boutons d'action -->
             <div class="actions-bar">
                 <button onclick="window.print()" class="btn btn-secondary" style="padding: 10px 20px; cursor: pointer; border: 1px solid #ddd; background: #f8f9fa; border-radius: 5px;">
                     🖨️ Imprimer la fiche

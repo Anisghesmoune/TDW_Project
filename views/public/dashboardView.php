@@ -6,59 +6,45 @@ require_once __DIR__ . '/../../views/public/components/UIFooter.php';
 
 class DashboardUserView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
+  
     public function render() {
-        // Récupération des données de configuration et de menu passées par le contrôleur
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         $pageTitle = $this->data['title'] ?? 'Mon Espace - Laboratoire';
 
-        // Définition des CSS spécifiques à cette vue
-        // Ces fichiers seront inclus dans le <head> via UIHeader
+       
         $customCss = [
-            'views/admin_dashboard.css', // Pour les styles de cartes et de grille
+            'views/admin_dashboard.css', 
             'views/landingPage.css',
-            'assets/css/public.css',
+           
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
         ];
 
-        // 1. Rendu du Header
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu principal
-        // On utilise un padding pour espacer le contenu du header/footer
         echo '<main class="main-content" style="margin-left: 0; width: 100%; padding: 40px; box-sizing: border-box; background-color: #f8f9fc;">';
         echo $this->content();
         echo '</main>';
 
-        // 3. Rendu du Footer
+       
         $footer = new UIFooter($config, $menuData);
         echo $footer->render();
     }
 
-    /**
-     * Contenu spécifique du Dashboard Utilisateur
-     */
+ 
     protected function content() {
-        // Extraction des variables ($user, $stats, $myProjects, $myPubs, $myRes)
         extract($this->data);
 
-        // Gestion de l'avatar par défaut
         $avatar = !empty($user['photo_profil']) ? $user['photo_profil'] : 'assets/img/default-avatar.png';
 
-        // Capture du buffer de sortie
         ob_start();
         ?>
         
-        <!-- Styles internes spécifiques pour l'ajustement responsive -->
         <style>
             @media (max-width: 900px) {
                 .dashboard-grid { grid-template-columns: 1fr !important; }
             }
-            /* Reset styles dashboard admin pour affichage pleine page */
             .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
             .stat-card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-left: 4px solid #4e73df; }
             .stat-card:nth-child(2) { border-left-color: #6f42c1; }
@@ -72,9 +58,7 @@ class DashboardUserView extends View {
 
         <div class="container" style="max-width: 1200px; margin: 0 auto;">
             
-            <!-- TOP BAR PERSONNALISÉE -->
             <div class="top-bar-user" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <!-- Profil Avatar + Nom -->
                 <div style="display:flex; align-items:center; gap:20px;">
                     <img src="<?= htmlspecialchars($avatar) ?>" alt="Profil" 
                          style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:3px solid #f8f9fc;">
@@ -85,12 +69,10 @@ class DashboardUserView extends View {
                     </div>
                 </div>
 
-                <!-- Actions -->
                 <div style="display:flex; gap:10px;">
                     <a href="index.php?route=profile-user" class="btn btn-secondary" style="text-decoration:none; padding:10px 20px; border-radius:5px; border:1px solid #e3e6f0; background:#fff; color: #4e73df; transition: all 0.2s;">
                         <i class="fas fa-user-circle"></i> Mon Profil
                     </a>
-                    <!-- Le bouton logout est optionnel si déjà présent dans le header, mais pratique ici -->
                     <a href="index.php?route=logout" class="btn btn-danger" style="text-decoration:none; padding:10px 20px; border-radius:5px; background:#e74a3b; color: white; border: none;">
                         <i class="fas fa-sign-out-alt"></i>
                     </a>
@@ -113,10 +95,8 @@ class DashboardUserView extends View {
                 </div>
             </div>
 
-            <!-- GRILLE DE CONTENU -->
             <div class="dashboard-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
                 
-                <!-- 1. LISTE MES PROJETS -->
                 <div class="content-section card" style="background:white; padding:25px; border-radius:10px; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);">
                     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #f8f9fc; padding-bottom:15px; margin-bottom:15px;">
                         <h2 style="margin:0; font-size:1.2em; color:#4e73df;"><i class="fas fa-folder-open"></i> Mes Projets</h2>
@@ -143,7 +123,6 @@ class DashboardUserView extends View {
                     <?php endif; ?>
                 </div>
 
-                <!-- 2. LISTE MES PUBLICATIONS -->
                 <div class="content-section card" style="background:white; padding:25px; border-radius:10px; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);">
                     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #f8f9fc; padding-bottom:15px; margin-bottom:15px;">
                         <h2 style="margin:0; font-size:1.2em; color:#6f42c1;"><i class="fas fa-file-alt"></i> Mes Publications</h2>
@@ -175,7 +154,6 @@ class DashboardUserView extends View {
                     <?php endif; ?>
                 </div>
 
-                <!-- 3. LISTE MES RÉSERVATIONS -->
                 <div class="content-section card" style="grid-column: 1 / -1; background:white; padding:25px; border-radius:10px; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);">
                     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #f8f9fc; padding-bottom:15px; margin-bottom:15px;">
                         <h2 style="margin:0; font-size:1.2em; color:#1cc88a;"><i class="fas fa-calendar-check"></i> Mes Équipements</h2>
@@ -222,7 +200,6 @@ class DashboardUserView extends View {
                                             ?>
                                         </td>
                                         <td style="padding:12px; text-align:right;">
-                                            <!-- Bouton placeholder pour de futures actions (annuler, voir) -->
                                             <a href="#" style="color:#d1d3e2;"><i class="fas fa-ellipsis-v"></i></a>
                                         </td>
                                     </tr>

@@ -1,9 +1,7 @@
 <?php
-/**
- * Classe Table - Composant générique pour afficher des tableaux
- */
+
 class Table {
-    private $id; // ✅ Ajout de la propriété ID
+    private $id; 
     private $headers;
     private $data;
     private $columns;
@@ -11,11 +9,9 @@ class Table {
     private $customClass;
     private $emptyMessage;
     
-    /**
-     * Constructeur
-     */
+ 
     public function __construct($options = []) {
-        $this->id = $options['id'] ?? ''; // ✅ Récupération de l'ID
+        $this->id = $options['id'] ?? ''; 
         $this->headers = $options['headers'] ?? [];
         $this->data = $options['data'] ?? [];
         $this->columns = $options['columns'] ?? [];
@@ -24,9 +20,7 @@ class Table {
         $this->emptyMessage = $options['emptyMessage'] ?? 'Aucune donnée disponible';
     }
     
-    /**
-     * Générer le HTML des en-têtes
-     */
+   
     private function renderHeaders() {
         if (empty($this->headers)) return '';
         
@@ -48,21 +42,16 @@ class Table {
 HTML;
     }
     
-    /**
-     * Formater une valeur selon son type
-     */
+   
     private function formatValue($value, $format = null) {
         if ($format === null) {
-            // On retourne la valeur brute pour permettre le HTML généré par les fonctions de callback
             return ($value ?? '');
         }
         
-        // Format personnalisé (callable)
         if (is_callable($format)) {
             return $format($value);
         }
         
-        // Format badge
         if (is_array($format) && isset($format['type']) && $format['type'] === 'badge') {
             $badgeClass = $format['class'] ?? 'badge';
             if (isset($format['conditions'])) {
@@ -73,16 +62,13 @@ HTML;
                     }
                 }
             }
-            // Ici, on échappe la valeur du texte pour la sécurité
             return '<span class="' . $badgeClass . '">' . htmlspecialchars(ucfirst($value)) . '</span>';
         }
         
         return htmlspecialchars($value ?? '');
     }
     
-    /**
-     * Générer le HTML des actions
-     */
+ 
     private function renderActions($row) {
         if (empty($this->actions)) return '';
         
@@ -91,14 +77,12 @@ HTML;
         foreach ($this->actions as $action) {
             $label = $action['label'] ?? '';
             
-            // Gestion des icônes dynamiques
             if (is_callable($action['icon'])) {
                 $icon = $action['icon']($row);
             } else {
                 $icon = $action['icon'] ?? '';
             }
             
-            // Gestion des classes dynamiques
             if (isset($action['class']) && is_callable($action['class'])) {
                 $class = $action['class']($row);
             } else {
@@ -107,7 +91,6 @@ HTML;
             
             $onclick = '';
             
-            // Gestion onclick
             if (isset($action['onclick'])) {
                 if (is_callable($action['onclick'])) {
                     $onclick = $action['onclick']($row);
@@ -117,7 +100,6 @@ HTML;
                 $onclick = 'onclick="' . htmlspecialchars($onclick) . '"';
             }
             
-            // Gestion href
             $href = '#';
             if (isset($action['href'])) {
                 if (is_callable($action['href'])) {
@@ -127,7 +109,6 @@ HTML;
                 }
             }
             
-            // Rendu Bouton ou Lien
             if (isset($action['href'])) {
                 $actionsHtml .= '<a href="' . htmlspecialchars($href) . '" class="' . htmlspecialchars($class) . '">' . $icon . $label . '</a>';
             } else {
@@ -139,9 +120,7 @@ HTML;
         return $actionsHtml;
     }
     
-    /**
-     * Générer le HTML des lignes de données
-     */
+  
     private function renderBody() {
         if (empty($this->data)) {
             $colSpan = count($this->headers) + (!empty($this->actions) ? 1 : 0);
@@ -185,14 +164,11 @@ HTML;
         return $bodyHtml;
     }
     
-    /**
-     * Générer le HTML complet du tableau
-     */
+   
     public function render() {
         $headersHtml = $this->renderHeaders();
         $bodyHtml = $this->renderBody();
         
-        // ✅ Ajout de l'attribut ID ici
         $idAttr = !empty($this->id) ? 'id="' . htmlspecialchars($this->id) . '"' : '';
         
         return <<<HTML
@@ -203,9 +179,7 @@ HTML;
 HTML;
     }
     
-    /**
-     * Afficher directement le tableau
-     */
+  
     public function display() {
         echo $this->render();
     }

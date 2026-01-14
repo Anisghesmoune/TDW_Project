@@ -1,22 +1,17 @@
 <?php
-// Imports des dépendances
 require_once __DIR__ . '/../../views/public/View.php';
 require_once __DIR__ . '/../../views/public/components/UIHeader.php';
 require_once __DIR__ . '/../../views/public/components/UIFooter.php';
 
 class EquipementView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
+  
     public function render() {
-        // Récupération des données de configuration et de menu
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         $pageTitle = $this->data['title'] ?? 'Gestion des Équipements';
 
-        // Définition des CSS spécifiques à cette vue
-        // Ces fichiers seront inclus dans le <head> via UIHeader
+     
           $customCss = [
             '../../views/landingPage.css',
             '../../views/organigramme.css',
@@ -24,32 +19,24 @@ class EquipementView extends View {
             
         ];
 
-        // 1. Rendu du Header
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu principal
         echo '<main class="main-content" style="margin-left: 0; width: 100%; padding: 20px; box-sizing: border-box;">';
         echo $this->content();
         echo '</main>';
 
-        // 3. Rendu du Footer
         $footer = new UIFooter($config, $menuData);
         echo $footer->render();
     }
 
-    /**
-     * Contenu spécifique de la page (Tableau de bord, Liste, Modals, Scripts)
-     */
+ 
     protected function content() {
-        // Extraction des données pour les rendre accessibles comme des variables simples ($statusStats, etc.)
         extract($this->data);
 
-        // Capture du buffer de sortie pour retourner le contenu sous forme de string
         ob_start();
         ?>
         
-        <!-- Styles internes spécifiques pour les badges et interacteurs -->
         <style>
             .reservation-badge {
                 display: inline-block;
@@ -125,16 +112,13 @@ class EquipementView extends View {
             .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         </style>
 
-        <!-- Début du contenu HTML -->
         <div class="equipment-dashboard-container">
             <div class="top-bar">
                 <div>
                     <h1>Gestion des Équipements</h1>
                     <p style="color: #666;">Suivi et gestion des ressources matérielles</p>
                 </div>
-                <!-- Le bouton logout peut être optionnel ici car le Header gère souvent la déconnexion, mais on le garde si besoin -->
-                <!-- <a href="logout.php" class="logout-btn">Déconnexion</a> -->
-            </div>
+                 </div>
             
             <div class="stats-grid">
                 <div class="stat-card">
@@ -166,7 +150,6 @@ class EquipementView extends View {
                 </div>
             </div>
 
-            <!-- Filtres et recherche -->
             <div class="content-section" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px;">
                 <div style="display: flex; gap: 15px; margin-bottom: 0; flex-wrap: wrap;">
                     <input type="text" id="searchInput" placeholder="🔍 Rechercher un équipement..." 
@@ -239,13 +222,11 @@ class EquipementView extends View {
                         <input type="hidden" id="reservationEquipmentId">
                         <input type="hidden" id="forceRequest" value="false">
                         
-                        <!-- Info Équipement -->
                         <div class="form-group" style="margin-bottom: 20px; background: #f3f4f6; padding: 10px; border-radius: 5px;">
                             <label style="font-weight: bold; color: #4b5563;">Équipement concerné :</label>
                             <div id="reservationEquipmentNameDisplay" style="font-size: 1.1em; color: #1f2937;"></div>
                         </div>
 
-                        <!-- Utilisateur bénéficiaire (prédéfini et verrouillé) -->
                         <div class="form-group">
                             <label for="reservationUserDisplay">Utilisateur bénéficiaire</label>
                             <input type="text" id="reservationUserDisplay" class="form-control" readonly 
@@ -267,7 +248,6 @@ class EquipementView extends View {
                             </div>
                         </div>
 
-                        <!-- Zone de conflit améliorée -->
                         <div id="conflictInfo" style="display: none;" class="conflict-info">
                             <strong>⚠️ Conflit détecté</strong>
                             <div id="conflictDetails"></div>
@@ -292,7 +272,6 @@ class EquipementView extends View {
             </div>
         </div>
 
-        <!-- Modal Voir Réservations -->
         <div id="viewReservationsModal" class="modal">
             <div class="modal-content" style="max-width: 900px;">
                 <div class="modal-header">
@@ -308,7 +287,6 @@ class EquipementView extends View {
             </div>
         </div>
 
-        <!-- Modal Statut -->
         <div id="statusModal" class="modal">
             <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header">
@@ -337,22 +315,15 @@ class EquipementView extends View {
         </div>
 
         <script>
-        // ============================================
-        // VARIABLES GLOBALES
-        // ============================================
         let allEquipments = [];
         let allTypes = [];
         let currentEquipmentReservations = [];
         let conflictDetected = false;
         
-        // Injection des données de session PHP vers JS
         const CURRENT_USER_ID = <?php echo isset($_SESSION['user_id']) ? json_encode($_SESSION['user_id']) : 'null'; ?>;
         const CURRENT_USER_NAME = "<?php echo isset($_SESSION['nom']) && isset($_SESSION['prenom']) ? htmlspecialchars($_SESSION['nom'] . ' ' . $_SESSION['prenom']) : 'Utilisateur'; ?>";
 
-        // ============================================
-        // CHARGEMENT INITIAL
-        // ============================================
-        function setMinDates() {
+      function setMinDates() {
             const today = new Date().toISOString().split('T')[0];
             const dateDebut = document.getElementById('reservation_date_debut');
             const dateFin = document.getElementById('reservation_date_fin');
@@ -365,7 +336,6 @@ class EquipementView extends View {
             loadInitialData();
             setMinDates();
             
-            // Préremplir l'utilisateur actuel
             const userDisplay = document.getElementById('reservationUserDisplay');
             const userId = document.getElementById('reservationUserId');
             
@@ -517,9 +487,7 @@ class EquipementView extends View {
             });
         }
 
-        // ============================================
-        // GESTION DES MODALS
-        // ============================================
+      
 
         function openStatusModal(equipmentId) {
             document.getElementById('statusEquipmentId').value = equipmentId;
@@ -636,9 +604,7 @@ class EquipementView extends View {
             container.appendChild(table);
         }
 
-        // ============================================
-        // ACTIONS STATUT
-        // ============================================
+      
 
         function updateStatus(id) {
             openStatusModal(id);
@@ -665,9 +631,7 @@ class EquipementView extends View {
             }
         }
 
-        // ============================================
-        // GESTION RÉSERVATIONS AVEC CONFLIT
-        // ============================================
+     
 
         const inputDateDebut = document.getElementById('reservation_date_debut');
         const inputDateFin = document.getElementById('reservation_date_fin');
@@ -751,9 +715,7 @@ class EquipementView extends View {
             }
         }
 
-        // ============================================
-        // FILTRES ET RECHERCHE
-        // ============================================
+        
 
         const searchInput = document.getElementById('searchInput');
         if(searchInput) {
@@ -789,9 +751,6 @@ class EquipementView extends View {
             renderEquipmentTable(allEquipments);
         }
 
-        // ============================================
-        // UTILITAIRES
-        // ============================================
 
         function showAlert(message, type = 'success', containerId = null) {
             if (containerId) {

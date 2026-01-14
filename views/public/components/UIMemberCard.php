@@ -2,7 +2,6 @@
 require_once 'Component.php';
 
 class UIMemberCard extends Component {
-    // $data attend : nom, prenom, photo_profil, grade, poste, id
     
     public function render() {
         $nom = htmlspecialchars($this->data['nom']);
@@ -12,7 +11,6 @@ class UIMemberCard extends Component {
         $poste = htmlspecialchars($this->data['poste'] ?? $this->data['role'] ?? '');
         $id = $this->data['id'];
 
-        // Si le poste est défini, on l'affiche, sinon on affiche le grade
         $subText = !empty($poste) ? "<div class='member-post'>$poste</div>" : "<div class='member-grade'>$grade</div>";
 
         return <<<HTML

@@ -1,54 +1,40 @@
 <?php
-// Imports des dépendances
 require_once __DIR__ . '/../../views/public/View.php';
 require_once __DIR__ . '/../../views/public/components/UIHeader.php';
 require_once __DIR__ . '/../../views/public/components/UIFooter.php';
 
 class ProjectDetailsView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
+   
     public function render() {
-        // Récupération des données globales
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         
-        // Titre de la page (Nom du projet ou défaut)
         $projectTitle = $this->data['project']['titre'] ?? 'Détails du projet';
 
-        // CSS Spécifiques
         $customCss = [
             'assets/css/public.css',
             'views/landingPage.css',
-            'assets/css/project-details.css', // Assurez-vous que ce fichier existe
-            'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
+            'assets/css/project-details.css', 
         ];
 
-        // 1. Rendu du Header
         $header = new UIHeader($projectTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu Principal
         echo '<main class="main-content" style="background-color: #f8f9fc; padding-bottom: 50px;">';
         echo $this->content();
         echo '</main>';
 
-        // 3. Rendu du Footer
         $footer = new UIFooter($config, $menuData);
         echo $footer->render();
     }
 
-    /**
-     * Contenu spécifique de la page Projet
-     */
+   
     protected function content() {
-        // Extraction des données spécifiques
         $project = $this->data['project'];
         $members = $this->data['members'] ?? [];
         $pubs = $this->data['publications'] ?? [];
 
-        // Sécurisation des thématiques (si c'est une chaine ou null, on convertit en tableau)
         $themes = $project['thematiques'];
         if (is_string($themes)) {
             $themes = explode(',', $themes);
@@ -59,7 +45,6 @@ class ProjectDetailsView extends View {
         ob_start();
         ?>
         
-        <!-- EN-TÊTE PROJET (HERO) -->
         <section class="project-hero" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); color: white; padding: 60px 0; margin-bottom: 40px;">
             <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
                 <a href="index.php?route=projects" class="back-link" style="color: rgba(255,255,255,0.8); text-decoration: none; display: inline-block; margin-bottom: 20px;">
@@ -74,7 +59,6 @@ class ProjectDetailsView extends View {
                     <?php endforeach; ?>
                     
                     <?php 
-                        // Style badge statut
                         $statutColor = 'rgba(255,255,255,0.2)';
                         if($project['statut'] == 'en_cours') $statutColor = '#1cc88a';
                         if($project['statut'] == 'termine') $statutColor = '#858796';
@@ -98,9 +82,7 @@ class ProjectDetailsView extends View {
 
         <div class="container project-content-grid" style="max-width: 1200px; margin: 0 auto; padding: 0 20px; display: grid; grid-template-columns: 2fr 1fr; gap: 40px;">
             
-            <!-- COLONNE GAUCHE : DESCRIPTION & PUBS -->
             <div class="content-left">
-                <!-- Description -->
                 <div class="content-block" style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px;">
                     <h2 style="border-bottom: 2px solid #f8f9fa; padding-bottom: 15px; margin-top: 0; color: #4e73df;">À propos du projet</h2>
                     <div class="description-text" style="line-height: 1.8; color: #5a5c69; text-align: justify;">
@@ -108,7 +90,6 @@ class ProjectDetailsView extends View {
                     </div>
                 </div>
 
-                <!-- Publications Associées -->
                 <div class="content-block" style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
                     <h2 style="border-bottom: 2px solid #f8f9fa; padding-bottom: 15px; margin-top: 0; color: #6f42c1;">📚 Publications Associées (<?= count($pubs) ?>)</h2>
                     
@@ -141,10 +122,8 @@ class ProjectDetailsView extends View {
                 </div>
             </div>
 
-            <!-- COLONNE DROITE : EQUIPE -->
             <div class="content-right">
                 
-                <!-- Responsable -->
                 <div class="content-block" style="background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px;">
                     <h3 style="margin-top: 0; color: #2e384d; border-bottom: 1px solid #eee; padding-bottom: 10px;">Responsable Scientifique</h3>
                     <div class="leader-card" style="display: flex; align-items: center; gap: 15px; margin-top: 15px;">
@@ -164,13 +143,11 @@ class ProjectDetailsView extends View {
                     </div>
                 </div>
 
-                <!-- Membres -->
                 <div class="content-block" style="background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
                     <h3 style="margin-top: 0; color: #2e384d; border-bottom: 1px solid #eee; padding-bottom: 10px;">Membres du projet</h3>
                     <?php if(!empty($members)): ?>
                         <div class="members-mini-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 15px; margin-top: 15px;">
                             <?php foreach($members as $m): ?>
-                                <!-- On exclut le responsable si déjà affiché au dessus -->
                                 <?php if($m['id'] != ($project['responsable_id'] ?? 0)): ?>
                                     <div class="mini-member" style="text-align: center;">
                                         <img src="<?= htmlspecialchars(!empty($m['photo_profil']) ? $m['photo_profil'] : 'assets/img/default-avatar.png') ?>" 
@@ -191,7 +168,6 @@ class ProjectDetailsView extends View {
             </div>
         </div>
 
-        <!-- Styles Responsive inline pour s'assurer que ça marche sans le fichier CSS externe -->
         <style>
             @media (max-width: 900px) {
                 .project-content-grid { grid-template-columns: 1fr !important; }

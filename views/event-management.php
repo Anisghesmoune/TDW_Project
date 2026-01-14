@@ -1,21 +1,16 @@
 <?php
-// Imports des dépendances
 require_once __DIR__ . '/../views/public/View.php';
 require_once __DIR__ . '/../views/public/components/UIHeader.php';
 require_once __DIR__ . '/../views/public/components/UIFooter.php';
 
 class EventAdminView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
+  
     public function render() {
-        // Extraction des données
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         $pageTitle = $this->data['title'] ?? 'Gestion des Événements';
 
-        // CSS spécifiques
         $customCss = [
             'views/admin_dashboard.css', 
             'views/modelAddUser.css',    
@@ -23,28 +18,21 @@ class EventAdminView extends View {
             'views/landingPage.css'      
         ];
 
-        // 1. Rendu du Header (Remplace la Sidebar)
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu Principal
         echo '<main style="width: 100%; padding: 40px 20px; box-sizing: border-box; background-color: #f8f9fc; min-height: 80vh;">';
         echo $this->content();
         echo '</main>';
 
-        // 3. Rendu du Footer
-        $footer = new UIFooter($config, $menuData);
-        echo $footer->render();
+       
     }
 
-    /**
-     * Contenu spécifique : Tableau, Modales, JS
-     */
+   
     protected function content() {
         ob_start();
         ?>
         
-        <!-- Styles internes -->
         <style>
             .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.85em; font-weight: bold; }
             .badge-publie { background: #d1fae5; color: #065f46; } /* programmé */
@@ -52,13 +40,10 @@ class EventAdminView extends View {
             .badge-termine { background: #f3f4f6; color: #374151; }
             .badge-annule { background: #fee2e2; color: #b91c1c; }
             
-            /* Style pour les selects */
             select.form-control { background-color: white; }
             
-            /* Ajustement Dashboard sans Sidebar */
             .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
             
-            /* Modale */
             .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; backdrop-filter: blur(2px); }
             .modal-content { background:white; width:600px; margin:50px auto; padding:30px; border-radius:10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
             
@@ -66,7 +51,6 @@ class EventAdminView extends View {
             .btn-sm:hover { background: #f8f9fa; }
         </style>
 
-        <!-- Top Bar Interne -->
         <div class="top-bar">
             <div>
                 <h1 style="margin: 0; color: #2c3e50;">Événements & Communications</h1>
@@ -112,7 +96,6 @@ class EventAdminView extends View {
             </div>
         </div>
 
-        <!-- MODAL ÉVÉNEMENT -->
         <div id="eventModal" class="modal">
             <div class="modal-content">
                 <h2 id="modalTitle" style="color: #4e73df; margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 15px;">Nouvel Événement</h2>
@@ -154,7 +137,6 @@ class EventAdminView extends View {
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom: 15px;">
                         <div>
                             <label style="display:block; margin-bottom:5px; font-weight:bold;">Type</label>
-                            <!-- Ce select est rempli dynamiquement par JS -->
                             <select name="id_type" id="id_type" class="form-control" style="width:100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;" required>
                                 <option value="">Chargement...</option>
                             </select>
@@ -177,7 +159,6 @@ class EventAdminView extends View {
             </div>
         </div>
 
-        <!-- MODAL PARTICIPANTS -->
         <div id="participantsModal" class="modal">
             <div class="modal-content" style="width: 700px;">
                 <h2 style="color: #4e73df; margin-top: 0;">Gestion des Inscriptions</h2>
@@ -216,12 +197,11 @@ class EventAdminView extends View {
             let currentEventId = null;
 
             document.addEventListener('DOMContentLoaded', () => {
-                loadEventTypes(); // Charger les types d'abord
-                loadEvents();     // Puis les événements
-                loadUsers();      // Charger les utilisateurs pour le modal participants
+                loadEventTypes(); 
+                loadEvents();     
+                loadUsers();      
             });
 
-            // 1. Charger les types d'événements pour le SELECT
             async function loadEventTypes() {
                 try {
                     const res = await fetch('../controllers/api.php?action=getEventTypes');
@@ -240,7 +220,6 @@ class EventAdminView extends View {
                 }
             }
 
-            // 2. Charger les événements (CRUD)
             async function loadEvents() {
                 try {
                     const res = await fetch('../controllers/api.php?action=getEvents');
@@ -248,13 +227,11 @@ class EventAdminView extends View {
                     const tbody = document.getElementById('eventTable');
                     tbody.innerHTML = '';
 
-                    // Filtres JS simples (barre recherche et statut)
                     const searchTerm = document.getElementById('search').value.toLowerCase();
                     const filterStatut = document.getElementById('filterStatut').value;
 
                     if(json.success && json.data) {
                         json.data.forEach(evt => {
-                            // Application des filtres
                             if (filterStatut && evt.statut !== filterStatut) return;
                             if (searchTerm && !evt.titre.toLowerCase().includes(searchTerm)) return;
 
@@ -262,7 +239,6 @@ class EventAdminView extends View {
                             if(evt.statut === 'terminé') badgeClass = 'badge-termine';
                             if(evt.statut === 'annulé') badgeClass = 'badge-annule';
 
-                            // AFFICHAGE DU NOM DU TYPE
                             const typeNom = evt.type_nom || 'Type Inconnu';
 
                             tbody.innerHTML += `
@@ -288,7 +264,6 @@ class EventAdminView extends View {
                 }
             }
 
-            // 3. Charger les utilisateurs pour le Select du Modal Participants
             async function loadUsers() {
                 try {
                     const res = await fetch('../controllers/api.php?action=getUsers');
@@ -309,7 +284,6 @@ class EventAdminView extends View {
                 }
             }
 
-            // --- FONCTIONS CRUD ---
 
             async function saveEvent() {
                 const form = document.getElementById('eventForm');
@@ -446,7 +420,6 @@ class EventAdminView extends View {
                 document.getElementById('modalTitle').innerText = "Nouvel Événement";
             }
             
-            // Fermeture si clic en dehors du modal
             window.onclick = function(event) {
                 if (event.target.classList.contains('modal')) {
                     event.target.style.display = "none";

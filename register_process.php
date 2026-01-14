@@ -5,16 +5,14 @@ require_once __DIR__ . '/controllers/AuthController.php';
 
 $authController = new AuthController();
 
-// Si l'utilisateur est déjà connecté, on le redirige
 if (AuthController::isLoggedIn()) {
-    $role = $_SESSION['role'];
+    $role = $_SESSION['is_admin'] == 1 ? 'admin' : 'user';
     if ($role === 'admin') {
-        header('Location: admin/dashboard.php');
+        header('Location: index.php?route=dashboard-admin');
     } else {
-        header('Location: user/dashboard.php');
+        header('Location: index.php?route=dashboard-user');
     }
     exit;
 }
 
-// Point d'entrée pour l'enregistrement
 $authController->register();

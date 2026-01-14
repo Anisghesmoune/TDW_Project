@@ -14,34 +14,26 @@ class ContactController {
         $this->menuModel = new Menu();
     }
 
-    // Afficher la page de contact
     public function index() {
-        // 1. Récupération de la configuration
         $config = $this->settingsModel->getAllSettings();
         
-        // 2. Récupération du menu
         $menu = $this->menuModel->getMenuTree();
 
-        // 3. Préparation des données pour la vue
         $data = [
             'config' => $config,
             'menu' => $menu
         ];
 
-        // 4. Chargement et AFFICHAGE de la vue
-        require_once __DIR__ . '/../views/public/contact.php'; // Contient la classe ContactView
+        require_once __DIR__ . '/../views/public/contact.php'; 
         
-        // --- C'EST CETTE PARTIE QUI MANQUAIT ---
         if (class_exists('ContactView')) {
             $view = new ContactView($data);
             $view->render();
         } else {
             die("Erreur : La classe ContactView est introuvable.");
         }
-        // ---------------------------------------
     }
 
-    // API : Traiter le formulaire
     public function sendMessage() {
         header('Content-Type: application/json');
 

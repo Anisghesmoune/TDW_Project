@@ -1,5 +1,4 @@
 <?php
-// Imports des dépendances
 require_once __DIR__ . '/../views/public/View.php';
 require_once __DIR__ . '/../views/public/components/UIHeader.php';
 require_once __DIR__ . '/../views/public/components/UIFooter.php';
@@ -7,16 +6,12 @@ require_once __DIR__ . '/../views/Table.php';
 
 class UpdateUserView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
+    
     public function render() {
-        // Extraction des données globales
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         $pageTitle = $this->data['title'] ?? 'Gestion des Utilisateurs';
 
-        // CSS spécifiques
         $customCss = [
             'views/admin_dashboard.css',
             'views/teamManagement.css',
@@ -24,29 +19,22 @@ class UpdateUserView extends View {
             'views/landingPage.css'
         ];
 
-        // 1. Rendu du Header
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu Principal
         echo '<main style="width: 100%; padding: 40px 20px; box-sizing: border-box; background-color: #f8f9fc; min-height: 80vh;">';
         echo $this->content();
         echo '</main>';
 
-        // 3. Rendu du Footer
         $footer = new UIFooter($config, $menuData);
         echo $footer->render();
     }
 
-    /**
-     * Contenu spécifique : Stats, Tableau, Modale, JS
-     */
+   
     protected function content() {
-        // Extraction des données métier
         $users = $this->data['users'] ?? [];
         $teams = $this->data['teams'] ?? [];
         $roles=$users['role'] ?? ''  ;
-        // Préparation des données pour le tableau
         $usersForTable = [];
         foreach ($users as $user) {
             $usersForTable[] = [
@@ -63,9 +51,7 @@ class UpdateUserView extends View {
         ob_start();
         ?>
         
-        <!-- Styles internes -->
         <style>
-            /* Ajustements Layout */
             .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
             .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-bottom: 4px solid #ddd; }
             .stat-card:nth-child(1) { border-color: #4e73df; }
@@ -75,11 +61,9 @@ class UpdateUserView extends View {
             .stat-card .number { font-size: 2em; font-weight: bold; margin-top: 10px; color: #2e384d; }
             .stat-card h3 { margin: 0; color: #858796; font-size: 0.9em; text-transform: uppercase; }
             
-            /* Table Section */
             .content-section { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-top: 30px; }
             .content-section h2 { margin-top: 0; color: #2e384d; border-bottom: 2px solid #f8f9fc; padding-bottom: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
             
-            /* Modale */
             .modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
             .modal.active { display: flex; align-items: center; justify-content: center; }
             .modal-content { background:white; padding:30px; border-radius:10px; max-height:90vh; overflow-y:auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 90%; max-width: 600px; }
@@ -87,7 +71,6 @@ class UpdateUserView extends View {
             .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #aaa; transition: color 0.2s; }
             .close-btn:hover { color: #333; }
             
-            /* Formulaires */
             .form-group { margin-bottom: 15px; }
             .form-group label { display:block; margin-bottom:5px; font-weight:bold; color: #2e384d; }
             .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 0.95em; }
@@ -98,14 +81,12 @@ class UpdateUserView extends View {
             .btn-secondary:hover { background: #60616f; }
             .required { color: #e74a3b; }
             
-            /* Badges de rôles */
             .role-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.85em; font-weight: 500; }
             .role-admin { background: #e74a3b; color: white; }
             .role-chercheur { background: #4e73df; color: white; }
             .role-doctorant { background: #1cc88a; color: white; }
             .role-visiteur { background: #858796; color: white; }
             
-            /* Alertes */
             .alert { padding: 12px 15px; margin-bottom: 15px; border-radius: 5px; font-size: 0.9em; animation: slideIn 0.3s ease; }
             .alert-success { background: #d1fae5; color: #065f46; border-left: 4px solid #10b981; }
             .alert-error { background: #fee2e2; color: #b91c1c; border-left: 4px solid #ef4444; }
@@ -116,7 +97,6 @@ class UpdateUserView extends View {
             }
         </style>
 
-        <!-- Top Bar Interne -->
         <div class="top-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
             <div>
                 <h1 style="margin: 0; color: #2c3e50;">Gestion des Utilisateurs</h1>
@@ -124,7 +104,6 @@ class UpdateUserView extends View {
             </div>
         </div>
         
-        <!-- Stats Grid -->
         <div class="stats-grid">
             <div class="stat-card">
                 <h3>Total Utilisateurs</h3>
@@ -147,7 +126,6 @@ class UpdateUserView extends View {
             </div>
         </div>
         
-        <!-- Tableau des Utilisateurs -->
         <div class="content-section">
             <h2>
                 <span>Liste des Utilisateurs</span>
@@ -205,7 +183,6 @@ class UpdateUserView extends View {
             ?>
         </div>
     
-        <!-- Modal Ajouter/Modifier Utilisateur -->
         <div id="userModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -272,10 +249,7 @@ class UpdateUserView extends View {
         </div>
 
         <script>
-        // ============================================
-        // GESTION DU MODAL
-        // ============================================
-
+     
         function openModal(editMode = false, userId = null) {
             const modal = document.getElementById('userModal');
             const modalTitle = document.getElementById('modalTitle');
@@ -306,20 +280,15 @@ class UpdateUserView extends View {
             if(alertContainer) alertContainer.innerHTML = '';
         }
 
-        // Fermer avec clic extérieur
         window.onclick = function(event) {
             const modal = document.getElementById('userModal');
             if (event.target == modal) closeModal();
         }
 
-        // Fermer avec Échap
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') closeModal();
         });
 
-        // ============================================
-        // CRUD UTILISATEURS
-        // ============================================
 
         function saveUser() {
             const form = document.getElementById('userForm');
@@ -333,7 +302,6 @@ class UpdateUserView extends View {
             const data = Object.fromEntries(formData);
             const userId = document.getElementById('userId').value;
             
-            // Si modification et mot de passe vide, on le retire
             if (userId && !data.password) {
                 delete data.password;
             }
@@ -416,10 +384,7 @@ class UpdateUserView extends View {
             openModal(true, id);
         }
 
-        // ============================================
-        // UTILITAIRES
-        // ============================================
-
+        
         function showAlert(message, type = 'info') {
             const container = document.getElementById('alertContainer');
             

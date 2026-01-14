@@ -1,6 +1,4 @@
 <?php
-// ... inclusions des modèles
-
 require_once __DIR__ .  '/../models/Publications.php';
 require_once __DIR__ .  '/../models/ProjectModel.php';
 require_once __DIR__ .  '/../models/News.php';
@@ -10,16 +8,9 @@ require_once __DIR__ .  '/../models/organigrame.php';
 require_once __DIR__ .  '/../models/Menu.php';
 require_once __DIR__ . '/../models/Settings.php';
 require_once __DIR__ . '/../models/OpportunityModel.php'; 
-
-// Inclusion de la Vue (Même logique)
 require_once __DIR__ .  '/../views/public/HomeView.php';
 
-
-
-
-
 class HomeController {
-
 
     private $newsModel;
     private $eventModel;
@@ -31,8 +22,6 @@ class HomeController {
     private $projectModel;
     private $opportunityModel;
     
-
-    
     public function __construct() {
         $this->newsModel = new News();
         $this->eventModel = new Event();
@@ -40,140 +29,170 @@ class HomeController {
         $this->settingsModel = new Settings();
         $this->organigrammeModel = new OrganigrammeModel();
         $this->menuModel = new Menu();
-        $this->publicationModel =new Publication();
-        $this->projectModel=new Project();
+        $this->publicationModel = new Publication();
+        $this->projectModel = new Project();
         $this->opportunityModel = new OpportunityModel(); 
     }
+
     
- /**
-     * Méthode helper pour combiner Projets et Publications
-     * et les trier par date décroissante.
-     */
-    /**
-     * Méthode helper pour combiner Projets et Publications
-     * et les trier par date décroissante.
-     */
+    private function getMixedSliderContent($limit = 5) {
+        $slides = [];
+
+        $events = $this->eventModel->getAll($limit); 
+        if (is_array($events)) {
+            foreach ($events as $e) {
+                if (!isset($e['id'])) continue;
+
+                $slides[] = [
+                    'titre'       => $e['titre'] ?? 'Événement',
+                    'description' => $e['description'] ?? '',
+                    'image'       => !empty($e['image']) ? $e['image'] : 'assets/images/defaults/event-default.jpg',
+                    'date_sort'   => $e['date_debut'] ?? date('Y-m-d'),
+                    'lien_detail' => "index.php?route=eventsLists" 
+                ];
+            }
+        }
+
+        $projectsResult = $this->projectModel->getRecentProjects($limit);
+        $projects = $projectsResult['data'] ?? ($projectsResult ?: []); 
+        if (isset($projects['id'])) $projects = [$projects];
+
+        foreach ($projects as $p) {
+            if (!isset($p['id'])) continue;
+
+            $slides[] = [
+                'titre'       => $p['titre'] ?? 'Projet de Recherche',
+                'description' => $p['description'] ?? '',
+                'image'       => 'assets/images/defaults/project-default.jpg', // Image par défaut pour projets
+                'date_sort'   => $p['date_debut'] ?? date('Y-m-d'),
+                'lien_detail' => "index.php?route=project-details&id=" . $p['id']
+            ];
+        }
+
+        $pubs = $this->publicationModel->getRecent($limit);
+        if (isset($pubs['id'])) $pubs = [$pubs];
+
+        foreach ($pubs as $pub) {
+            if (!isset($pub['id'])) continue;
+
+            $slides[] = [
+                'titre'       => $pub['titre'] ?? 'Publication',
+                'description' => $pub['resume'] ?? 'Consultez cette publication...',
+                'image'       => 'assets/images/defaults/publication-default.jpg',
+                'date_sort'   => $pub['date_publication'] ?? date('Y-m-d'),
+                'lien_detail' => "index.php?route=publication-details&id=" . $pub['id']
+            ];
+        }
+
+        usort($slides, function($a, $b) {
+            return strtotime($b['date_sort']) - strtotime($a['date_sort']);
+        });
+
+        return array_slice($slides, 0, $limit);
+    }
+
     private function getCombinedNews($limit = 6) {
         $combined = [];
 
-        // 1. Récupérer les Projets récents
         $projectsResult = $this->projectModel->getRecentProjects($limit); 
+        
         $projects = $projectsResult['data'] ?? $projectsResult; 
 
-        // CORRECTION 1 : Vérification stricte du format
-        if (is_array($projects)) {
-            // Si c'est un tableau associatif simple (un seul projet), on le met dans un tableau
-            if (isset($projects['id'])) {
-                $projects = [$projects];
-            }
-
-            foreach ($projects as $p) {
-                // Sécurité : On s'assure que $p est bien un tableau (un projet)
-                if (!is_array($p)) {
-                    continue; 
-                }
-
-                $combined[] = [
-                    'id'          => $p['id'] ?? 0,
-                    'titre'       => $p['titre'] ?? 'Sans titre',
-                    'description' => $p['description'] ?? '',
-                    // CORRECTION 2 : Gestion des dates nulles
-                    'date_debut'  => !empty($p['date_debut']) ? $p['date_debut'] : date('Y-m-d'),
-                    'type'        => 'projet', 
-                    'lieu'        => 'Laboratoire',
-                    'source'      => 'project' 
-                ];
-            }
+        if (!is_array($projects)) {
+            $projects = [];
+        } elseif (isset($projects['id'])) { 
+            $projects = [$projects];
         }
 
-        // 2. Récupérer les Publications récentes
+        foreach ($projects as $p) {
+            $p = (array) $p;
+
+            if (empty($p['id'])) continue;
+
+            $combined[] = [
+                'id'          => $p['id'],
+                'titre'       => $p['titre'] ?? 'Projet sans titre',
+                'description' => $p['description'] ?? '', 
+                'date_debut'  => $p['date_debut'] ?? date('Y-m-d'),
+                'type'        => 'projet', 
+                'lieu'        => 'Laboratoire',
+                'source'      => 'project',
+                'image'       => 'assets/images/defaults/project-default.jpg' 
+            ];
+        }
+
         $pubs = $this->publicationModel->getRecent($limit);
         
-        if (is_array($pubs)) {
-            // Même vérification pour les publications si nécessaire
-            if (isset($pubs['id'])) {
-                $pubs = [$pubs];
-            }
-
-            foreach ($pubs as $pub) {
-                if (!is_array($pub)) {
-                    continue;
-                }
-
-                $combined[] = [
-                    'id'          => $pub['id'] ?? 0,
-                    'titre'       => $pub['titre'] ?? 'Sans titre',
-                    'description' => $pub['resume'] ?? '',
-                    // CORRECTION 2 : Gestion des dates nulles
-                    'date_debut'  => !empty($pub['date_publication']) ? $pub['date_publication'] : date('Y-m-d'),
-                    'type'        => $pub['type'] ?? 'publication', 
-                    'lieu'        => 'Bibliothèque', 
-                    'source'      => 'publication'
-                ];
-            }
+        if (!is_array($pubs)) {
+            $pubs = [];
+        } elseif (isset($pubs['id'])) {
+            $pubs = [$pubs];
         }
 
-        // 3. Trier le tout par date (du plus récent au plus vieux)
+        foreach ($pubs as $pub) {
+            $pub = (array) $pub;
+
+            if (empty($pub['id'])) continue;
+
+            $combined[] = [
+                'id'          => $pub['id'],
+                'titre'       => $pub['titre'] ?? 'Publication',
+                'description' => $pub['resume'] ?? '', 
+                'date_debut'  => $pub['date_publication'] ?? date('Y-m-d'),
+                'type'        => $pub['type'] ?? 'publication', 
+                'lieu'        => 'Bibliothèque', 
+                'source'      => 'publication',
+                'image'       => 'assets/images/defaults/publication-default.jpg'
+            ];
+        }
+
         usort($combined, function($a, $b) {
-            // CORRECTION 3 : Éviter l'erreur Deprecated strtotime(null)
-            $dateA = $a['date_debut'] ?? null;
-            $dateB = $b['date_debut'] ?? null;
-
-            $timeA = $dateA ? strtotime($dateA) : 0;
-            $timeB = $dateB ? strtotime($dateB) : 0;
-
+            $timeA = strtotime($a['date_debut']);
+            $timeB = strtotime($b['date_debut']);
             return $timeB - $timeA;
         });
 
-        // 4. Retourner seulement le nombre demandé
+        if (empty($combined)) {
+            error_log("Attention : getCombinedNews ne trouve aucune donnée dans Projets ou Publications.");
+        }
+
         return array_slice($combined, 0, $limit);
     }
-    public function index() {
-        // Récupérer les données pour le slider
-        $sliderNews = $this->newsModel->getForSlider();
 
-     $config = $this->settingsModel->getAllSettings(); // Logo, Couleurs
+    public function index() {
+       
+        $sliderData = $this->getMixedSliderContent(5);
         
-        // Récupérer les actualités récentes (3 dernières)
-        $recentNews = $this->getCombinedNews(6);         
-        // Récupérer les événements à venir
+       
+
+        $config = $this->settingsModel->getAllSettings(); 
+        $recentNews = $this->getCombinedNews(6);       
         $upcomingEvents = $this->eventModel->getAll(5);
-        
-        // Récupérer les partenaires
         $partners = $this->partnerModel->getAll();
         $opportunities = $this->opportunityModel->getAllOpportunities(); 
-         $opportunities = array_slice($opportunities, 0, 4);
-        // Organigramme
+        $opportunities = array_slice($opportunities, 0, 4);
+        
         $organigramme = [
             'director' => $this->organigrammeModel->getDirector(),
             'hierarchyTree' => $this->organigrammeModel->getHierarchyTree(),
             'stats' => $this->organigrammeModel->getStats()
         ];
         
-        // Menu complet en arbre
         $menu = $this->menuModel->getMenuTree();
         
-     
-        
-      $data = [
+        $data = [
             'config' => $config,       
             'menu' => $menu,           
-            'slides' => $sliderNews,
+            'slides' => $sliderData, 
             'news' => $recentNews,
             'events' => $upcomingEvents,
             'partners' => $partners,
             'organigramme' => $organigramme,
             'opportunities' => $opportunities 
-
         ];
         
-        // Charger la vue
-// require_once __DIR__ . 'views/landingPage.php';
-//         $view = new LandingPageView($data);
-//         $view->render();
-require_once __DIR__ .  '/../views/public/HomeView.php';
- $view = new HomeView($data);
+        $view = new HomeView($data);
         $view->render();
     }
 }
-
+?>

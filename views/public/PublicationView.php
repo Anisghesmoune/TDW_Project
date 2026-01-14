@@ -1,24 +1,18 @@
 <?php
-// Imports des dépendances
 require_once __DIR__ . '/../../views/public/View.php';
 require_once __DIR__ . '/../../views/public/components/UIHeader.php';
 require_once __DIR__ . '/../../views/public/components/UIFooter.php';
 
 class PublicationView extends View {
 
-    /**
-     * Méthode principale pour structurer la page
-     */
+  
     public function render() {
-        // Extraction des données
         $config = $this->data['config'] ?? [];
         $menuData = $this->data['menu'] ?? [];
         $pageTitle = $this->data['title'] ?? 'Gestion des Publications';
         
-      
         $currentUser = $this->data['currentUser'] ?? ['nom' => 'Utilisateur', 'prenom' => 'Inconnu'];
-
-        // CSS spécifiques
+        
         $customCss = [
             'views/admin_dashboard.css',
             'views/landingPage.css',
@@ -27,42 +21,35 @@ class PublicationView extends View {
             'assets/css/public.css'
         ];
 
-        // 1. Rendu du Header
+        // 1. Header
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);
         echo $header->render();
 
-        // 2. Contenu Principal
+        // 2. Corps de la page
         echo '<main style="width: 100%; padding: 40px 20px; box-sizing: border-box; background-color: #f8f9fc; min-height: 80vh;">';
-        
-        // On passe les infos utilisateur à la méthode content
         echo $this->content($currentUser);
-        
         echo '</main>';
 
-        // 3. Rendu du Footer
+        // 3. Footer
         $footer = new UIFooter($config, $menuData);
         echo $footer->render();
     }
 
-    /**
-     * Contenu spécifique
-     */
+ 
     protected function content($currentUser = []) {
-        // Sécurisation du nom de l'auteur pour le formulaire
         $auteurNomComplet = htmlspecialchars(($currentUser['nom'] ?? '') . ' ' . ($currentUser['prenom'] ?? ''));
+        $isLoggedIn = isset($currentUser['id']) && !empty($currentUser['id']);
         
         ob_start();
         ?>
         
-        <!-- En-tête Interne -->
         <div class="top-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
             <div>
-                <h1 style="margin:0; color: #2c3e50;">Gestion des Publications</h1>
-                <p style="color: #666; margin-top:5px;">Base documentaire et validation des publications scientifiques</p>
+                <h1 style="margin:0; color: #2c3e50;">Publications Scientifiques</h1>
+                <p style="color: #666; margin-top:5px;">Base documentaire et travaux de recherche du laboratoire</p>
             </div>
         </div>
         
-        <!-- Statistiques -->
         <div class="stats-grid">
             <div class="stat-card">
                 <h3>Total Publications</h3>
@@ -85,13 +72,12 @@ class PublicationView extends View {
             </div>
         </div>
 
-        <!-- Filtres et recherche -->
         <div class="content-section">
             <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
-                <input type="text" id="searchInput" placeholder="🔍 Rechercher un titre,  domaine..." 
+                <input type="text" id="searchInput" placeholder="🔍 Rechercher un titre, domaine, auteur..." 
                        style="flex: 1; min-width: 250px; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
                 
-                <select id="filterType" onchange="applyFilters()" 
+                <select id="filterType" onchange="loadPublications(1)" 
                         style="padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
                     <option value="">📄 Tous les types</option>
                     <option value="article">📰 Article</option>
@@ -100,20 +86,12 @@ class PublicationView extends View {
                     <option value="communication">🎤 Communication</option>
                 </select>
 
-                <select id="filterStatus" onchange="applyFilters()" 
-                        style="padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                    <option value="">📊 Tous les statuts</option>
-                    <option value="en_attente">⏳ En attente</option>
-                    <option value="valide">✅ Validée</option>
-                    <option value="rejete">❌ Rejetée</option>
-                </select>
-
-                <select id="filterDomain" onchange="applyFilters()" 
+                <select id="filterDomain" onchange="loadPublications(1)" 
                         style="padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
                     <option value="">🔬 Tous les domaines</option>
                 </select>
 
-                <select id="filterYear" onchange="applyFilters()" 
+                <select id="filterYear" onchange="loadPublications(1)" 
                         style="padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
                     <option value="">📅 Toutes les années</option>
                 </select>
@@ -124,13 +102,15 @@ class PublicationView extends View {
             </div>
         </div>
         
-        <!-- Tableau des publications -->
+        <!-- Tableau des Résultats -->
         <div class="content-section">
             <h2 style="display: flex; justify-content: space-between; align-items: center;">
-                <span>Liste des Publications</span>
+                <span>Liste des Publications Validées</span>
+                <?php if ($isLoggedIn): ?>
                 <button class="btn btn-primary" onclick="openPubModal()" style="padding: 10px 20px; background-color: #4e73df; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    ➕ Ajouter une publication
+                    ➕ Soumettre une publication
                 </button>
+                <?php endif; ?>
             </h2>
             
             <div id="loadingSpinner" style="display: flex; justify-content:center;">
@@ -154,13 +134,11 @@ class PublicationView extends View {
                     </tbody>
                 </table>
                 
-                <!-- Pagination -->
                 <div id="paginationContainer" style="margin-top: 20px; text-align: center;">
                 </div>
             </div>
         </div>
 
-        <!-- MODAL AJOUT PUBLICATION -->
         <div id="pubModal" class="modal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5);">
             <div class="modal-content" style="background:white; width:600px; margin:50px auto; padding:30px; border-radius:10px; max-height:90vh; overflow-y:auto; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
                 <div class="modal-header" style="border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
@@ -169,8 +147,6 @@ class PublicationView extends View {
                 </div>
 
                 <form id="pubForm" enctype="multipart/form-data">
-                    
-                    <!-- Champ Auteur Bloqué -->
                     <div class="form-group" style="margin-bottom:15px;">
                         <label style="display:block; font-weight:bold; margin-bottom:5px;">Auteur principal <span style="color:red">*</span></label>
                         <input type="text" value="<?= $auteurNomComplet ?>" class="form-control" style="width:100%; padding:8px; background-color: #e9ecef; cursor: not-allowed;" readonly>
@@ -222,19 +198,12 @@ class PublicationView extends View {
             </div>
         </div>
 
+        <!-- SCRIPTS JS -->
         <script>
-        // ============================================
-        // VARIABLES GLOBALES
-        // ============================================
         let allPublications = [];
         let currentPage = 1;
         let perPage = 10;
         let totalPages = 1;
-        let currentFilters = {};
-
-        // ============================================
-        // CHARGEMENT INITIAL
-        // ============================================
 
         document.addEventListener('DOMContentLoaded', () => {
             loadInitialData();
@@ -244,9 +213,8 @@ class PublicationView extends View {
         async function loadInitialData() {
             try {
                 await loadStats();
-                await loadPublications();
+                await loadPublications(); 
                 await loadFilterOptions();
-                
                 console.log('✅ Données chargées avec succès');
             } catch (error) {
                 console.error('❌ Erreur lors du chargement initial:', error);
@@ -269,111 +237,189 @@ class PublicationView extends View {
                     document.getElementById('currentYearCount').textContent = currentYearCount;
                 }
             } catch (error) {
-                console.error('❌ Erreur chargement stats:', error);
+                console.error('❌ Erreur stats:', error);
             }
         }
 
+
         async function loadPublications(page = 1) {
             try {
-                let url = `../../controllers/api.php?action=getPublications&page=${page}&perPage=${perPage}`;
+                document.getElementById('loadingSpinner').style.display = 'flex';
+                document.getElementById('publicationTableContainer').style.display = 'none';
+
+                const searchVal = document.getElementById('searchInput').value.trim();
+                const typeVal = document.getElementById('filterType').value;
+                const domainVal = document.getElementById('filterDomain').value;
+                const yearVal = document.getElementById('filterYear').value;
+
+                let url = '';
+                let isSearchMode = false;
+
+                if (searchVal.length > 0) {
                 
-                if (currentFilters.type) url += `&type=${currentFilters.type}`;
-                if (currentFilters.statut) url += `&statut=${currentFilters.statut}`;
-                if (currentFilters.domaine) url += `&domaine=${encodeURIComponent(currentFilters.domaine)}`;
-                if (currentFilters.year) url += `&year=${currentFilters.year}`;
-                if (currentFilters.search) url += `&q=${encodeURIComponent(currentFilters.search)}`;
+                    url = `../../controllers/api.php?action=searchPublications&q=${encodeURIComponent(searchVal)}&limit=50`;
+                    isSearchMode = true;
+                } else {
+                  
+                    url = `../../controllers/api.php?action=getPublications&page=${page}&perPage=${perPage}`;
+                    url += `&statut=valide`;
+
+                    if (typeVal) url += `&type=${encodeURIComponent(typeVal)}`;
+                    if (domainVal) url += `&domaine=${encodeURIComponent(domainVal)}`;
+                    if (yearVal) url += `&year=${encodeURIComponent(yearVal)}`;
+                }
                 
+                console.log("Fetching URL:", url); 
+
                 const response = await fetch(url);
                 const result = await response.json();
 
                 if (result.success && result.data) {
                     allPublications = result.data;
-                    totalPages = result.totalPages || 1;
-                    currentPage = page;
-                    
                     renderPublicationTable(allPublications);
-                    renderPagination();
+                    
+                    if (isSearchMode) {
+                        document.getElementById('paginationContainer').innerHTML = '<small style="color:#666;">Résultats de la recherche (Max 50)</small>';
+                    } else {
+                        totalPages = result.totalPages || 1;
+                        currentPage = page;
+                        renderPagination();
+                    }
                     
                     document.getElementById('loadingSpinner').style.display = 'none';
                     document.getElementById('publicationTableContainer').style.display = 'block';
+                } else {
+                    document.getElementById('publicationTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center">Erreur lors de la récupération</td></tr>';
                 }
             } catch (error) {
                 console.error('❌ Erreur:', error);
-                document.getElementById('loadingSpinner').innerHTML = '<p style="color: red;">❌ Erreur de chargement</p>';
+                document.getElementById('loadingSpinner').innerHTML = '<p style="color: red;">❌ Erreur de connexion au serveur</p>';
             }
         }
 
         async function loadFilterOptions() {
             try {
-                // Chargement des domaines
-                const domainsResponse = await fetch('../../controllers/api.php?action=getPublicationsByDomain');
-                const domainsResult = await domainsResponse.json();
-                
-                if (domainsResult.success && domainsResult.data) {
+                // Domaines
+                const dRes = await fetch('../../controllers/api.php?action=getPublicationsByDomain');
+                const dData = await dRes.json();
+                if (dData.success && dData.data) {
                     const filterDomain = document.getElementById('filterDomain');
                     filterDomain.innerHTML = '<option value="">🔬 Tous les domaines</option>';
-                    domainsResult.data.forEach(domain => {
-                        if (domain.domaine) {
-                            filterDomain.innerHTML += `<option value="${domain.domaine}">${domain.domaine}</option>`;
-                        }
+                    dData.data.forEach(d => {
+                        if (d.domaine) filterDomain.innerHTML += `<option value="${d.domaine}">${d.domaine}</option>`;
                     });
                 }
                 
-                // Chargement des années
-                const yearsResponse = await fetch('../../controllers/api.php?action=getDistinctYears');
-                const yearsResult = await yearsResponse.json();
-                
-                if (yearsResult.success && yearsResult.data) {
+                // Années
+                const yRes = await fetch('../../controllers/api.php?action=getDistinctYears');
+                const yData = await yRes.json();
+                if (yData.success && yData.data) {
                     const filterYear = document.getElementById('filterYear');
                     filterYear.innerHTML = '<option value="">📅 Toutes les années</option>';
-                    yearsResult.data.forEach(year => {
-                        if (year.year) {
-                            filterYear.innerHTML += `<option value="${year.year}">${year.year}</option>`;
-                        }
+                    yData.data.forEach(y => {
+                        if (y.year) filterYear.innerHTML += `<option value="${y.year}">${y.year}</option>`;
                     });
                 }
-            } catch (error) {
-                console.error('❌ Erreur chargement filtres:', error);
+            } catch (error) { console.error(error); }
+        }
+
+        function renderPublicationTable(publications) {
+            const tbody = document.getElementById('publicationTableBody');
+            tbody.innerHTML = '';
+            
+            if (!publications || publications.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">Aucune publication trouvée</td></tr>';
+                return;
             }
+            
+            publications.forEach(pub => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = "1px solid #eee";
+                
+                const statuts = {
+                    'en_attente': '<span class="badge" style="background:#fef3c7; color:#92400e; padding:4px 8px; border-radius:4px; font-size:12px;">⏳ En attente</span>',
+                    'valide': '<span class="badge" style="background:#d1fae5; color:#065f46; padding:4px 8px; border-radius:4px; font-size:12px;">✅ Validée</span>',
+                    'rejete': '<span class="badge" style="background:#fee2e2; color:#b91c1c; padding:4px 8px; border-radius:4px; font-size:12px;">❌ Rejetée</span>'
+                };
+                
+                const typeIcons = { 'article': '📰', 'rapport': '📊', 'these': '🎓', 'communication': '🎤' };
+                const icon = typeIcons[pub.type] || '📄';
+
+                tr.innerHTML = `
+                    <td style="padding:10px;">${pub.id}</td>
+                    <td style="font-weight:500;" title="${pub.titre}">
+                        ${pub.titre.length > 50 ? pub.titre.substring(0,50)+'...' : pub.titre}
+                    </td>
+                    <td>${icon} ${pub.type}</td>
+                    <td>${pub.domaine || '-'}</td>
+                    <td>${pub.date_publication ? new Date(pub.date_publication).toLocaleDateString('fr-FR') : '-'}</td>
+                    <td>${statuts[pub.statut_validation] || pub.statut_validation}</td>
+                    <td>
+                        <button onclick="window.location.href='index.php?route=publication-details&id=${pub.id}'" 
+                                style="background:#4e73df; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;" 
+                                title="Voir les détails">👁️</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderPagination() {
+            const container = document.getElementById('paginationContainer');
+            if (totalPages <= 1) { container.innerHTML = ''; return; }
+            
+            let html = '<div style="display: flex; gap: 5px; justify-content: center;">';
+            if (currentPage > 1) html += `<button class="btn-secondary" onclick="loadPublications(${currentPage - 1})">« Précédent</button>`;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === currentPage) html += `<button class="btn-primary" disabled style="background:#4e73df; color:white;">${i}</button>`;
+                else html += `<button class="btn-secondary" onclick="loadPublications(${i})">${i}</button>`;
+            }
+            if (currentPage < totalPages) html += `<button class="btn-secondary" onclick="loadPublications(${currentPage + 1})">Suivant »</button>`;
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function setupSearchDebounce() {
+            let timeout;
+            const input = document.getElementById('searchInput');
+            if(input) {
+                input.addEventListener('input', function(e) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        loadPublications(1); 
+                    }, 500);
+                });
+            }
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterType').value = '';
+            document.getElementById('filterDomain').value = '';
+            document.getElementById('filterYear').value = '';
+            loadPublications(1);
         }
 
         // --- GESTION MODALE ---
-        function openPubModal() {
-            document.getElementById('pubModal').style.display = 'block';
-        }
+        function openPubModal() { document.getElementById('pubModal').style.display = 'block'; }
+        function closePubModal() { document.getElementById('pubModal').style.display = 'none'; document.getElementById('pubForm').reset(); }
+        window.onclick = function(e) { if (e.target == document.getElementById('pubModal')) closePubModal(); }
 
-        function closePubModal() {
-            document.getElementById('pubModal').style.display = 'none';
-            document.getElementById('pubForm').reset();
-        }
-
-        window.onclick = function(event) {
-            if (event.target == document.getElementById('pubModal')) {
-                closePubModal();
-            }
-        }
-
-        // Soumission Formulaire
         document.getElementById('pubForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const formData = new FormData(this);
             const btn = this.querySelector('button[type="submit"]');
-            
-            btn.disabled = true;
-            btn.textContent = "Envoi...";
+            btn.disabled = true; btn.textContent = "Envoi...";
 
             try {
-                const res = await fetch('../../controllers/api.php?action=createPublication', {
-                    method: 'POST',
-                    body: formData
-                });
+                const res = await fetch('../../controllers/api.php?action=createPublication', { method: 'POST', body: formData });
                 const json = await res.json();
-
+                
                 if(json.success) {
                     showAlert("✅ Publication soumise avec succès !", 'success');
                     closePubModal();
-                    // Rafraichir la liste
-                    setTimeout(() => loadPublications(1), 500);
+                    loadPublications(1);
                     loadStats();
                 } else {
                     showAlert("❌ " + json.message, 'error');
@@ -387,121 +433,13 @@ class PublicationView extends View {
             }
         });
 
-        function renderPublicationTable(publications) {
-            const tbody = document.getElementById('publicationTableBody');
-            tbody.innerHTML = '';
-            
-            if (!publications || publications.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">Aucune publication trouvée</td></tr>';
-                return;
-            }
-            
-            publications.forEach(pub => {
-                const tr = document.createElement('tr');
-                tr.style.borderBottom = "1px solid #eee";
-                
-                // ID
-                const tdId = document.createElement('td'); tdId.textContent = pub.id; tdId.style.padding="10px"; tr.appendChild(tdId);
-                
-                // Titre
-                const tdTitre = document.createElement('td'); 
-                const titre = pub.titre || ''; 
-                tdTitre.textContent = titre.length > 40 ? titre.substring(0, 40) + '...' : titre; 
-                tdTitre.title = titre;
-                tdTitre.style.fontWeight = "500";
-                tr.appendChild(tdTitre);
-                
-                // Type
-                const tdType = document.createElement('td'); 
-                const types = { 'article': '📰 Article', 'rapport': '📊 Rapport', 'these': '🎓 Thèse', 'communication': '🎤 Communication' };
-                tdType.textContent = types[pub.type] || pub.type; 
-                tr.appendChild(tdType);
-                
-                // Auteurs (Correction ici : on affiche le nom et prénom)
-               
-                // Domaine
-                const tdDomaine = document.createElement('td'); tdDomaine.textContent = pub.domaine || '-'; tr.appendChild(tdDomaine);
-                
-                // Date
-                const tdDate = document.createElement('td'); 
-                tdDate.textContent = pub.date_publication ? new Date(pub.date_publication).toLocaleDateString('fr-FR') : '-';
-                tr.appendChild(tdDate);
-                
-                // Statut
-                const tdStatut = document.createElement('td'); 
-                const statuts = {
-                    'en_attente': '<span class="badge badge-warning" style="background:#fef3c7; color:#92400e; padding:4px 8px; border-radius:4px; font-size:12px;">⏳ En attente</span>',
-                    'valide': '<span class="badge badge-success" style="background:#d1fae5; color:#065f46; padding:4px 8px; border-radius:4px; font-size:12px;">✅ Validée</span>',
-                    'rejete': '<span class="badge badge-danger" style="background:#fee2e2; color:#b91c1c; padding:4px 8px; border-radius:4px; font-size:12px;">❌ Rejetée</span>'
-                };
-                tdStatut.innerHTML = statuts[pub.statut_validation] || pub.statut_validation; 
-                tr.appendChild(tdStatut);
-                
-                // Actions
-                const tdActions = document.createElement('td');
-                tdActions.innerHTML = `<button onclick="viewPublication(${pub.id})" style="background:#4e73df; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;" title="Voir">👁️</button>`;
-                tr.appendChild(tdActions);
-                
-                tbody.appendChild(tr);
-            });
-        }
-
-        function renderPagination() {
-            const container = document.getElementById('paginationContainer');
-            if (totalPages <= 1) { container.innerHTML = ''; return; }
-            
-            let html = '<div style="display: flex; gap: 5px; justify-content: center; align-items: center;">';
-            if (currentPage > 1) html += `<button class="btn-secondary" onclick="loadPublications(${currentPage - 1})">«</button>`;
-            
-            for (let i = 1; i <= totalPages; i++) {
-                if (i === currentPage) html += `<button class="btn-primary" disabled style="background:#4e73df; color:white;">${i}</button>`;
-                else html += `<button class="btn-secondary" onclick="loadPublications(${i})">${i}</button>`;
-            }
-            if (currentPage < totalPages) html += `<button class="btn-secondary" onclick="loadPublications(${currentPage + 1})">»</button>`;
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-        function viewPublication(id) {
-            window.location.href = `index.php?route=publication-details&id=${id}`;
-        }
-
-        function setupSearchDebounce() {
-            let timeout;
-            document.getElementById('searchInput')?.addEventListener('input', function(e) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => {
-                    currentFilters.search = e.target.value;
-                    loadPublications(1);
-                }, 500);
-            });
-        }
-
-        function applyFilters() {
-            currentFilters.type = document.getElementById('filterType').value;
-            currentFilters.statut = document.getElementById('filterStatus').value;
-            currentFilters.domaine = document.getElementById('filterDomain').value;
-            currentFilters.year = document.getElementById('filterYear').value;
-            loadPublications(1);
-        }
-
-        function resetFilters() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('filterType').value = '';
-            document.getElementById('filterStatus').value = '';
-            document.getElementById('filterDomain').value = '';
-            document.getElementById('filterYear').value = '';
-            currentFilters = {};
-            loadPublications(1);
-        }
-
         function showAlert(message, type = 'info') {
             const tempContainer = document.createElement('div');
             tempContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000;';
             document.body.appendChild(tempContainer);
             
             const alertDiv = document.createElement('div');
-            alertDiv.style.cssText = 'padding: 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+            alertDiv.style.cssText = 'padding: 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-weight:bold;';
             const colors = { 'success': '#10b981', 'error': '#ef4444', 'warning': '#f59e0b', 'info': '#3b82f6' };
             alertDiv.style.background = colors[type] || colors.info;
             alertDiv.style.color = 'white';

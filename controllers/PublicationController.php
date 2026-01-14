@@ -2,9 +2,7 @@
 
 require_once __DIR__ .  '/../models/Publications.php';
 
-// Imports des modèles
 require_once __DIR__ . '/../models/UserModel.php';
-// Ajout des modèles pour le Header/Footer
 require_once __DIR__ . '/../models/Settings.php';
 require_once __DIR__ . '/../models/Menu.php';
 
@@ -16,7 +14,6 @@ class PublicationController {
     private $menuModel;
 
     public function __construct() {
-        // Instanciation des modèles
         $this->publicationModel = new Publication();
         $this->userModel = new UserModel();
         $this->settingsModel = new Settings();
@@ -25,58 +22,47 @@ class PublicationController {
 
     public function index() {
        
-        // 2. Logique de filtrage (Votre code)
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $perPage = 10;
         
         $filters = [
             'type' => $_GET['type'] ?? null,
-            'statut' => $_GET['statut'] ?? 'en_attente', // Par défaut: publications en attente
+            'statut' => $_GET['statut'] ?? 'en_attente', 
             'domaine' => $_GET['domaine'] ?? null,
             'year' => $_GET['year'] ?? null
         ];
         
-        // Supprimer les filtres vides
         $filters = array_filter($filters);
         
-        // Récupérer les publications avec filtres (Côté Serveur)
         $publications = $this->publicationModel->getFiltered($page, $perPage, $filters);
         $totalPublications = $this->publicationModel->countFiltered($filters);
         $totalPages = ceil($totalPublications / $perPage);
         
-        // Récupérer les statistiques pour les filtres
         $statsByType = $this->publicationModel->getStatsByType();
         $statsByDomain = $this->publicationModel->getStatsByDomain();
         
-        // Vérification Admin
         $isAdmin = isset($_SESSION['isAdmin']) ;
          $user = $this->userModel->getById($_SESSION['user_id']);
-        // 3. Récupération des données globales pour Header/Footer
         $config = $this->settingsModel->getAllSettings();
         $menu = $this->menuModel->getMenuTree();
 
-        // 4. Préparation des données pour la vue
         $data = [
             'title' => 'Gestion des Publications',
             'isAdmin' => $isAdmin,
             'config' => $config,
             'menu' => $menu,
-            // On passe aussi les données PHP même si le JS va probablement les recharger via API
             'publications' => $publications,
             'totalPages' => $totalPages,
             'currentPage' => $page,
             'currentUser'=> $user,
         ];
 
-        // 5. Chargement de la Vue Classe
         require_once __DIR__ . '/../views/public/PublicationView.php';
         $view = new PublicationView($data);
         $view->render();
     }
 
-    /**
-     * Afficher une publication spécifique
-     */
+ 
     public function show($id) {
         $publication = $this->publicationModel->getById($id);
         
@@ -86,15 +72,11 @@ class PublicationController {
             exit;
         }
         
-        // Charger la vue
-        require_once __DIR__ . 'views/publications/show.php';
+      
     }
     
-    /**
-     * Afficher le formulaire de création
-     */
+    
     public function create() {
-        // Vérifier que l'utilisateur est connecté
         if (!isset($_SESSION['user_id'])) {
             header('Location: /login');
             exit;
@@ -104,15 +86,10 @@ class PublicationController {
             return $this->store();
         }
         
-        // Charger la vue du formulaire
-        require_once __DIR__ . 'views/publications/create.php';
     }
     
-    /**
-     * Enregistrer une nouvelle publication
-     */
+   
     private function store() {
-        // Validation des données
         $errors = $this->validatePublicationData($_POST);
         
         if (!empty($errors)) {
@@ -122,7 +99,6 @@ class PublicationController {
             exit;
         }
         
-        // Gérer l'upload du fichier
         $lienTelechargement = null;
         if (isset($_FILES['fichier']) && $_FILES['fichier']['error'] === UPLOAD_ERR_OK) {
             $lienTelechargement = $this->uploadFile($_FILES['fichier']);
@@ -135,7 +111,6 @@ class PublicationController {
             }
         }
         
-        // Créer la publication
         $this->publicationModel->titre = $_POST['titre'];
         $this->publicationModel->resume = $_POST['resume'] ?? null;
         $this->publicationModel->type = $_POST['type'];
@@ -158,11 +133,8 @@ class PublicationController {
         }
     }
     
-    /**
-     * Afficher le formulaire de modification
-     */
+   
     public function edit($id) {
-        // Vérifier que l'utilisateur est connecté
         if (!isset($_SESSION['user_id'])) {
             header('Location: /login');
             exit;
@@ -176,7 +148,6 @@ class PublicationController {
             exit;
         }
         
-        // Vérifier que l'utilisateur peut modifier (propriétaire ou admin)
         if ($publication['soumis_par'] != $_SESSION['user_id'] && $_SESSION['role'] !== 'admin') {
             $_SESSION['error'] = "Vous n'êtes pas autorisé à modifier cette publication.";
             header('Location: /publications');
@@ -187,33 +158,25 @@ class PublicationController {
             return $this->update($id);
         }
         
-        // Charger la vue du formulaire
-        require_once __DIR__ . 'views/publications/edit.php';
     }
     
-    /**
-     * Mettre à jour une publication
-     */
+   
     private function update($id) {
-        // Validation des données
         $errors = $this->validatePublicationData($_POST);
         
         if (!empty($errors)) {
             $_SESSION['errors'] = $errors;
             $_SESSION['old'] = $_POST;
-            header('Location: /publications/edit/' . $id);
             exit;
         }
         
         $publication = $this->publicationModel->getById($id);
         
-        // Gérer l'upload d'un nouveau fichier
         $lienTelechargement = $publication['lien_telechargement'];
         if (isset($_FILES['fichier']) && $_FILES['fichier']['error'] === UPLOAD_ERR_OK) {
             $newFile = $this->uploadFile($_FILES['fichier']);
             
             if ($newFile) {
-                // Supprimer l'ancien fichier si existant
                 if ($lienTelechargement && file_exists($lienTelechargement)) {
                     unlink($lienTelechargement);
                 }
@@ -221,7 +184,6 @@ class PublicationController {
             }
         }
         
-        // Mettre à jour la publication
         $this->publicationModel->id = $id;
         $this->publicationModel->titre = $_POST['titre'];
         $this->publicationModel->resume = $_POST['resume'] ?? null;
@@ -244,11 +206,8 @@ class PublicationController {
         }
     }
     
-    /**
-     * Supprimer une publication
-     */
+   
     public function delete($id) {
-        // Vérifier que l'utilisateur est admin
         if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
             $_SESSION['error'] = "Accès non autorisé.";
             header('Location: /publications');
@@ -263,7 +222,6 @@ class PublicationController {
             exit;
         }
         
-        // Supprimer le fichier associé
         if ($publication['lien_telechargement'] && file_exists($publication['lien_telechargement'])) {
             unlink($publication['lien_telechargement']);
         }
@@ -274,15 +232,10 @@ class PublicationController {
             $_SESSION['error'] = "Erreur lors de la suppression de la publication.";
         }
         
-        header('Location: /publications');
         exit;
     }
-    
-    /**
-     * Valider une publication (Admin uniquement)
-     */
+   
     public function validate($id) {
-        // Vérifier que l'utilisateur est admin
         if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
             echo json_encode(['success' => false, 'message' => 'Accès non autorisé']);
             exit;
@@ -298,11 +251,8 @@ class PublicationController {
         exit;
     }
     
-    /**
-     * Rejeter une publication (Admin uniquement)
-     */
+   
     public function reject($id) {
-        // Vérifier que l'utilisateur est admin
         if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
             echo json_encode(['success' => false, 'message' => 'Accès non autorisé']);
             exit;
@@ -318,9 +268,7 @@ class PublicationController {
         exit;
     }
     
-    /**
-     * Rechercher des publications
-     */
+   
     public function search() {
         $keyword = $_GET['q'] ?? '';
         $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
@@ -331,15 +279,10 @@ class PublicationController {
             $publications = $this->publicationModel->search($keyword, $limit);
         }
         
-        // Charger la vue
-        require_once __DIR__ . 'views/publications/search.php';
     }
     
-    /**
-     * Afficher les publications d'un utilisateur
-     */
+   
     public function myPublications() {
-        // Vérifier que l'utilisateur est connecté
         if (!isset($_SESSION['user_id'])) {
             header('Location: /login');
             exit;
@@ -350,15 +293,11 @@ class PublicationController {
         
         $publications = $this->publicationModel->getByUser($_SESSION['user_id']);
         
-        // Charger la vue
         require_once __DIR__ . 'views/publications/my-publications.php';
     }
     
-    /**
-     * Panel admin: Gérer les publications en attente
-     */
+  
     public function pending() {
-        // Vérifier que l'utilisateur est admin
         if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
             $_SESSION['error'] = "Accès non autorisé.";
             header('Location: /');
@@ -367,24 +306,19 @@ class PublicationController {
         
         $publications = $this->publicationModel->getByValidationStatus('en_attente');
         
-        // Charger la vue
         require_once __DIR__ . 'views/admin/publications-pending.php';
     }
     
-    /**
-     * Valider les données de publication
-     */
+   
     private function validatePublicationData($data) {
         $errors = [];
         
-        // Validation du titre
         if (empty($data['titre'])) {
             $errors['titre'] = "Le titre est obligatoire.";
         } elseif (strlen($data['titre']) > 255) {
             $errors['titre'] = "Le titre ne peut pas dépasser 255 caractères.";
         }
         
-        // Validation du type
         $typesValides = ['article', 'rapport', 'these', 'communication'];
         if (empty($data['type'])) {
             $errors['type'] = "Le type est obligatoire.";
@@ -392,7 +326,6 @@ class PublicationController {
             $errors['type'] = "Type invalide.";
         }
         
-        // Validation de la date de publication
         if (!empty($data['date_publication'])) {
             $date = DateTime::createFromFormat('Y-m-d', $data['date_publication']);
             if (!$date) {
@@ -400,7 +333,6 @@ class PublicationController {
             }
         }
         
-        // Validation du DOI (optionnel mais format vérifié si fourni)
         if (!empty($data['doi']) && strlen($data['doi']) > 100) {
             $errors['doi'] = "Le DOI ne peut pas dépasser 100 caractères.";
         }
@@ -408,36 +340,28 @@ class PublicationController {
         return $errors;
     }
     
-//     /**
-//      * Upload d'un fichier de publication
-//      */
+
     private function uploadFile($file) {
-        // Définir le dossier d'upload
         $uploadDir = 'uploads/publications/';
         
-        // Créer le dossier s'il n'existe pas
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
         
-        // Vérifier le type de fichier (PDF uniquement)
         $allowedTypes = ['application/pdf'];
         if (!in_array($file['type'], $allowedTypes)) {
             return false;
         }
         
-        // Vérifier la taille (max 10MB)
-        $maxSize = 10 * 1024 * 1024; // 10MB
+        $maxSize = 10 * 1024 * 1024; 
         if ($file['size'] > $maxSize) {
             return false;
         }
         
-        // Générer un nom de fichier unique
         $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
         $filename = uniqid() . '_' . time() . '.' . $extension;
         $destination = $uploadDir . $filename;
         
-        // Déplacer le fichier
         if (move_uploaded_file($file['tmp_name'], $destination)) {
             return $destination;
         }
@@ -445,36 +369,8 @@ class PublicationController {
         return false;
     }
     
-    /**
-     * Télécharger un fichier de publication
-     */
-    // public function download($id) {
-    //     $publication = $this->publicationModel->getById($id);
-        
-    //     if (!$publication || !$publication['lien_telechargement']) {
-    //         $_SESSION['error'] = "Fichier introuvable.";
-    //         header('Location: /publications');
-    //         exit;
-    //     }
-        
-    //     // Vérifier que le fichier existe
-    //     if (!file_exists($publication['lien_telechargement'])) {
-    //         $_SESSION['error'] = "Fichier introuvable sur le serveur.";
-    //         header('Location: /publications/' . $id);
-    //         exit;
-    //     }
-        
-    //     // Forcer le téléchargement
-    //     header('Content-Type: application/pdf');
-    //     header('Content-Disposition: attachment; filename="' . basename($publication['lien_telechargement']) . '"');
-    //     header('Content-Length: ' . filesize($publication['lien_telechargement']));
-    //     readfile($publication['lien_telechargement']);
-    //     exit;
-    // }
-    
-    /**
-     * API: Obtenir les statistiques des publications
-     */
+   
+   
     public function stats() {
        return $stats = [
             'total' => $this->publicationModel->count(),
@@ -485,7 +381,6 @@ class PublicationController {
             'par_annee' => []
         ];
         
-        // Statistiques par année (5 dernières années)
         $currentYear = date('Y');
         for ($i = 0; $i < 5; $i++) {
             $year = $currentYear - $i;
@@ -497,13 +392,7 @@ class PublicationController {
         exit;
     }
 
-// // ============================================
-// // MÉTHODES API À AJOUTER AU PublicationController
-// // ============================================
 
-// /**
-//  * API: Obtenir toutes les publications avec pagination et filtres
-//  */
 public function apiGetPublications() {
     $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
     $perPage = isset($_GET['perPage']) ? (int)$_GET['perPage'] : 10;
@@ -515,10 +404,8 @@ public function apiGetPublications() {
         'year' => $_GET['year'] ?? null
     ];
     
-    // Supprimer les filtres vides
     $filters = array_filter($filters);
     
-    // Recherche par mot-clé
     if (!empty($_GET['q'])) {
         $publications = $this->publicationModel->search($_GET['q'], 1000);
         $total = count($publications);
@@ -538,9 +425,7 @@ public function apiGetPublications() {
     ];
 }
 
-/**
- * API: Obtenir une publication par ID
- */
+
 public function apiGetPublicationById($id) {
     $publication = $this->publicationModel->getById($id);
     
@@ -551,14 +436,9 @@ public function apiGetPublicationById($id) {
     }
 }
 
-/**
- * API: Créer une nouvelle publication
- */
-/**
-     * API : Créer une publication
-     */
+
+
     public function apiCreatePublication($postData, $filesData) {
-        // 1. Vérification connexion
         if (session_status() === PHP_SESSION_NONE) session_start();
         if (!isset($_SESSION['user_id'])) {
             return ['success' => false, 'message' => 'Vous devez être connecté.'];
@@ -566,20 +446,17 @@ public function apiGetPublicationById($id) {
         
         $currentUserId = $_SESSION['user_id'];
 
-        // 2. Validation basique
         $errors = [];
         if (empty($postData['titre'])) $errors[] = 'Le titre est obligatoire';
         if (empty($postData['type'])) $errors[] = 'Le type est obligatoire';
         
         if (!empty($errors)) return ['success' => false, 'errors' => $errors];
         
-        // 3. Upload du Fichier PDF
         $lienTelechargement = null;
         if (isset($filesData['fichier']) && $filesData['fichier']['error'] === UPLOAD_ERR_OK) {
             $lienTelechargement = $this->uploadFile($filesData['fichier']);
         }
         
-        // 4. Préparation des données pour le Modèle
         $this->publicationModel->titre = $postData['titre'];
         $this->publicationModel->resume = $postData['resume'] ?? null;
         $this->publicationModel->type = $postData['type'];
@@ -589,10 +466,8 @@ public function apiGetPublicationById($id) {
         $this->publicationModel->domaine = $postData['domaine'] ?? null;
         $this->publicationModel->statut_validation = 'en_attente'; // Toujours en attente au début
         
-        // --- POINT CLÉ : LE CRÉATEUR EST L'UTILISATEUR CONNECTÉ ---
         $this->publicationModel->soumis_par = $currentUserId;
         
-        // 5. Insertion en base
         $newId = $this->publicationModel->create();
         
         if ($newId) {
@@ -603,21 +478,17 @@ public function apiGetPublicationById($id) {
         return ['success' => false, 'message' => 'Erreur SQL lors de l\'enregistrement.'];
     }
 
-/**
- * API: Mettre à jour une publication
- */
+
 public function apiUpdatePublication($id, $postData, $filesData) {
     $publication = $this->publicationModel->getById($id);
     if (!$publication) {
         return ['success' => false, 'message' => 'Publication introuvable'];
     }
     
-    // Vérifier les permissions
     if ($publication['soumis_par'] != $_SESSION['user_id'] && $_SESSION['role'] !== 'admin') {
         return ['success' => false, 'message' => 'Non autorisé à modifier cette publication'];
     }
     
-    // Validation
     $errors = [];
     
     if (empty($postData['titre'])) {
@@ -637,13 +508,11 @@ public function apiUpdatePublication($id, $postData, $filesData) {
         return ['success' => false, 'errors' => $errors];
     }
     
-    // Gérer l'upload d'un nouveau fichier
     $lienTelechargement = $publication['lien_telechargement'];
     if (isset($filesData['fichier']) && $filesData['fichier']['error'] === UPLOAD_ERR_OK) {
         $newFile = $this->uploadFile($filesData['fichier']);
         
         if ($newFile) {
-            // Supprimer l'ancien fichier
             if ($lienTelechargement && file_exists($lienTelechargement)) {
                 unlink($lienTelechargement);
             }
@@ -651,7 +520,6 @@ public function apiUpdatePublication($id, $postData, $filesData) {
         }
     }
     
-    // Mettre à jour
     $this->publicationModel->id = $id;
     $this->publicationModel->titre = $postData['titre'];
     $this->publicationModel->resume = $postData['resume'] ?? null;
@@ -669,9 +537,7 @@ public function apiUpdatePublication($id, $postData, $filesData) {
     }
 }
 
-/**
- * API: Valider une publication
- */
+
 public function apiValidatePublication($id) {
     if ($this->publicationModel->validate($id)) {
         return ['success' => true, 'message' => 'Publication validée avec succès'];
@@ -680,9 +546,7 @@ public function apiValidatePublication($id) {
     }
 }
 
-/**
- * API: Rejeter une publication
- */
+
 public function apiRejectPublication($id) {
     if ($this->publicationModel->reject($id)) {
         return ['success' => true, 'message' => 'Publication rejetée'];
@@ -691,16 +555,14 @@ public function apiRejectPublication($id) {
     }
 }
 
-/**
- * API: Supprimer une publication
- */
+
 public function apiDeletePublication($id) {
     $publication = $this->publicationModel->getById($id);
     if (!$publication) {
         return ['success' => false, 'message' => 'Publication introuvable'];
     }
     
-    // Supprimer le fichier associé
+  
     if ($publication['lien_telechargement'] && file_exists($publication['lien_telechargement'])) {
         unlink($publication['lien_telechargement']);
     }
@@ -713,14 +575,10 @@ public function apiDeletePublication($id) {
 }
 
 
-/**
- * API: Obtenir les statistiques (DÉJÀ EXISTANTE - Version corrigée)
- */
 
 
-/**
- * API: Rechercher des publications
- */
+
+
 public function apiSearchPublications($keyword, $limit = 20) {
     if (empty($keyword)) {
         return ['success' => false, 'message' => 'Le mot-clé de recherche est requis'];
@@ -735,9 +593,7 @@ public function apiSearchPublications($keyword, $limit = 20) {
     ];
 }
 
-/**
- * API: Obtenir les domaines disponibles
- */
+
 public function apiGetDomains() {
     $result = $this->publicationModel->getDistinctDomains();
     
@@ -754,9 +610,7 @@ public function apiGetDomains() {
     }
 }
 
-/**
- * API: Obtenir les années disponibles
- */
+
 public function apiGetYears() {
     $result = $this->publicationModel->getDistinctYears();
     
@@ -773,9 +627,7 @@ public function apiGetYears() {
     }
 }
 
-/**
- * API: Obtenir les publications de l'utilisateur connecté
- */
+
 public function apiGetMyPublications($userId) {
     $publications = $this->publicationModel->getByUser($userId);
     
@@ -786,9 +638,7 @@ public function apiGetMyPublications($userId) {
     ];
 }
 
-/**
- * API: Obtenir les publications récentes
- */
+
 public function apiGetRecentPublications($limit = 5) {
     $publications = $this->publicationModel->getRecent($limit);
     
@@ -799,9 +649,7 @@ public function apiGetRecentPublications($limit = 5) {
     ];
 }
 
-/**
- * API: Obtenir les publications en attente
- */
+
 public function apiGetPendingPublications() {
     $publications = $this->publicationModel->getByValidationStatus('en_attente');
     
@@ -812,9 +660,7 @@ public function apiGetPendingPublications() {
     ];
 }
 
-/**
- * API: Obtenir les publications par type
- */
+
 public function apiGetPublicationsByType($type, $limit = null) {
     $typesValides = ['article', 'rapport', 'these', 'communication'];
     
@@ -839,20 +685,16 @@ public function apiGetPublicationsByType($type, $limit = null) {
             exit;
         }
 
-        // 2. Récupération des données via le Modèle
         $pub = $this->publicationModel->getByIdWithDetails($id);
 
         if (!$pub) {
-            // Gestion erreur 404 ou redirection
             header('Location: index.php?route=publications');
             exit;
         }
 
-        // 3. Récupération des données globales pour Header/Footer
         $config = $this->settingsModel->getAllSettings();
         $menu = $this->menuModel->getMenuTree();
 
-        // 4. Préparation des données pour la vue
         $data = [
             'publication' => $pub,
             'config' => $config,
@@ -860,20 +702,15 @@ public function apiGetPublicationsByType($type, $limit = null) {
             'title' => $pub['titre'] // Pour le <title> HTML
         ];
 
-        // 5. Chargement de la Vue
         require_once __DIR__ . '/../views/public/publication-detailsView.php';
         $view = new PublicationDetailsView($data);
         $view->render();
     }
 
-    /**
-     * Action : Télécharger le PDF
-     */
     public function download($id) {
         $pub = $this->publicationModel->getById($id);
         
         if ($pub && !empty($pub['lien_telechargement']) && file_exists($pub['lien_telechargement'])) {
-            // Nettoyage du buffer de sortie pour éviter la corruption du PDF
             if (ob_get_length()) ob_clean();
             
             header('Content-Description: File Transfer');
@@ -890,11 +727,8 @@ public function apiGetPublicationsByType($type, $limit = null) {
     }
    
 
-    /**
-     * Génère et télécharge le rapport PDF
-     */
+ 
     public function generateReport() {
-        // Nettoyer le buffer de sortie pour éviter de corrompre le PDF
         if (ob_get_length()) ob_clean();
 
         require_once __DIR__ . '/../libs/PDFReport.php';
@@ -920,10 +754,8 @@ public function apiGetPublicationsByType($type, $limit = null) {
         $pdf->AliasNbPages();
         $pdf->AddPage();
         
-        // --- CORRECTION 1 : Encodage du titre ---
         $titre = "Rapport Bibliographique";
         if ($year) $titre .= " - Année $year";
-        // iconv remplace utf8_decode
         $pdf->setReportTitle(iconv('UTF-8', 'windows-1252', $titre));
         
         $dateInfo = "Généré le " . date('d/m/Y H:i');
@@ -946,16 +778,13 @@ public function apiGetPublicationsByType($type, $limit = null) {
         foreach ($grouped as $type => $pubs) {
             $pdf->Ln(5);
             
-            // En-tête de catégorie
             $pdf->SetFont('Arial', 'B', 12);
             $pdf->SetFillColor(230, 230, 230);
             
-            // --- CORRECTION 2 : Encodage du type ---
             $typeText = strtoupper($type);
             $pdf->Cell(0, 8, iconv('UTF-8', 'windows-1252', $typeText), 0, 1, 'L', true);
             $pdf->Ln(2);
 
-            // En-têtes Tableau
             $header = ['Titre', 'Auteurs', 'Date', 'Projet'];
             $w = [80, 50, 25, 35];
             
@@ -964,28 +793,22 @@ public function apiGetPublicationsByType($type, $limit = null) {
             $pdf->SetTextColor(255);
             
             foreach($header as $i => $col) {
-                // --- CORRECTION 3 : Encodage des en-têtes ---
                 $pdf->Cell($w[$i], 7, iconv('UTF-8', 'windows-1252', $col), 1, 0, 'C', true);
             }
             $pdf->Ln();
 
-            // Données
             $pdf->SetFont('Arial', '', 8);
             $pdf->SetTextColor(0);
             $pdf->SetFillColor(245, 245, 245);
             $fill = false;
 
             foreach ($pubs as $row) {
-                // --- CORRECTION 4 : Encodage des données ---
-                // On prépare les chaînes
-                $titreRaw = substr($row['titre'], 0, 50) . (strlen($row['titre']) > 50 ? '...' : '');
+               $titreRaw = substr($row['titre'], 0, 50) . (strlen($row['titre']) > 50 ? '...' : '');
                 $auteursRaw = substr($row['auteurs_noms'] ?? 'N/A', 0, 35) . '...';
                 $dateRaw = $row['date_publication'] ? date('d/m/Y', strtotime($row['date_publication'])) : '-';
                 $projetRaw = substr($row['projet_titre'] ?? '-', 0, 20);
 
-                // Conversion UTF-8 -> Windows-1252 (Latin)
-                // //TRANSLIT permet d'approximer les caractères inconnus au lieu de planter
-                $titre = iconv('UTF-8', 'windows-1252//TRANSLIT', $titreRaw);
+               $titre = iconv('UTF-8', 'windows-1252//TRANSLIT', $titreRaw);
                 $auteurs = iconv('UTF-8', 'windows-1252//TRANSLIT', $auteursRaw);
                 $date = iconv('UTF-8', 'windows-1252//TRANSLIT', $dateRaw);
                 $projet = iconv('UTF-8', 'windows-1252//TRANSLIT', $projetRaw);
@@ -1004,7 +827,6 @@ public function apiGetPublicationsByType($type, $limit = null) {
         exit;
     }
     public function indexAdmin() {
-        // 1. Vérification Session & Admin
         if (session_status() === PHP_SESSION_NONE) session_start();
         
         if (!isset($_SESSION['user_id'])) {
@@ -1012,21 +834,15 @@ public function apiGetPublicationsByType($type, $limit = null) {
             exit;
         }
 
-        // Vérification Rôle
-        // $isAdmin = isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'directeur');
-        // if (!$isAdmin) {
-        //     header('Location: index.php?route=dashboard-user'); 
-        //     exit;
-        // }
+   
 
         try {
             // 2. Récupération des données globales (Header/Footer)
             $config = $this->settingsModel->getAllSettings();
             $menu = $this->menuModel->getMenuTree();
 
-            $stats = $this->publicationModel->getAll(); // Supposons que cette méthode existe
+            $stats = $this->publicationModel->getAll(); 
 
-            // 4. Préparation des données pour la vue
             $data = [
                 'title' => 'Gestion des Publications',
                 'config' => $config,
@@ -1034,7 +850,6 @@ public function apiGetPublicationsByType($type, $limit = null) {
                 'stats' => $stats
             ];
 
-            // 5. Chargement de la Vue Classe
             require_once __DIR__ . '/../views/publication_management.php';
             $view = new PublicationAdminView($data);
             $view->render();

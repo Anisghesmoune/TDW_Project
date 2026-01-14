@@ -1,5 +1,4 @@
 <?php
-// views/View.php
 abstract class View {
     protected $data;
     protected $layout;
@@ -8,28 +7,21 @@ abstract class View {
         $this->data = $data;
     }
 
-    // Méthode magique pour accéder aux données ($this->data['titre'] devient $this->titre)
     public function __get($key) {
         return $this->data[$key] ?? null;
     }
 
-    // Chaque vue doit définir son contenu
     abstract protected function content();
 
-    // Méthode principale pour afficher la page complète
     public function render() {
-        // On inclut les composants nécessaires
         require_once __DIR__ . '/components/UIHeader.php';
         require_once __DIR__ . '/components/UIFooter.php';
 
-        // 1. Rendu du Header
         $header = new UIHeader($this->pageTitle ?? 'Accueil', $this->config, $this->menu);
         echo $header->render();
 
-        // 2. Rendu du Contenu (défini dans les classes filles)
         echo $this->content();
 
-        // 3. Rendu du Footer
         $footer = new UIFooter($this->config,$this->menu);
         echo $footer->render();
     }

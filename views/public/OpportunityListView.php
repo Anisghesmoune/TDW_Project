@@ -11,8 +11,7 @@ class OpportunityListView extends View {
         $pageTitle = "Offres et Opportunités";
 
         $customCss = [
-            'assets/css/public.css', // Assurez-vous d'avoir un CSS de base
-            'views/landingPage.css'  // Pour réutiliser les styles de grille
+            'views/landingPage.css'  
         ];
 
         $header = new UIHeader($pageTitle, $config, $menuData, $customCss);

@@ -8,8 +8,11 @@ class UIHeader extends Component {
     private $menuData;
     private $customCss; 
 
-    // Modification ici : regroupement dans un sous-menu
     private $adminKeys = [
+         [
+            'title' => 'Profile',
+            'url'   => 'index.php?route=admin-dashboard'
+        ],
         [
             'title' => 'Projets',
             'url'   => 'index.php?route=admin-projects'
@@ -22,10 +25,7 @@ class UIHeader extends Component {
             'title' => 'Équipements',
             'url'   => 'index.php?route=admin-equipement'
         ],
-        [
-            'title' => 'Historique',
-            'url'   => 'index.php?route=reservation-history'
-        ],
+       
         [
             'title' => 'Publications',
             'url'   => 'index.php?route=admin-publications'
@@ -35,7 +35,7 @@ class UIHeader extends Component {
             'url'   => 'index.php?route=admin-events'
         ],
         [
-            'title' => 'Administration', // Le ▾ indique un menu déroulant
+            'title' => 'Administration', 
             'url'   => '#', 
             'children' => [
                 [
@@ -49,10 +49,13 @@ class UIHeader extends Component {
                 [
                     'title' => 'Paramètres',
                     'url'   => 'index.php?route=admin-settings'
+                ],
+                [
+                    'title' => 'Déconnexion',
+                    'url'   => 'index.php?route=logout'
                 ]
             ]
         ]
-        // --- FIN DU SOUS-MENU ---
     ];
 
     public function __construct($pageTitle, $config, $menuData, $customCss = []) {
@@ -67,21 +70,34 @@ class UIHeader extends Component {
         $siteName = $this->config['site_name'] ?? 'Laboratoire';
         $logo = $this->config['logo_path'] ?? '../assets/img/logo_default.png';
         
-        // Vérification si l'utilisateur est admin
         $isAdmin = isset($_SESSION['is_admin']) && $_SESSION['is_admin'] == 1;
+        $isMember = isset($_SESSION['user_id']); 
         
-        // Génération du Menu
+        $menuHtml = '';
+
         if ($isAdmin) {
-            // Menu Admin Statique
             $menuComponent = new UIMenu($this->adminKeys);
             $menuHtml = $menuComponent->render();
         } else {
-            // Menu Public Dynamique
-            $menuComponent = new UIMenu($this->menuData);
+            $finalMenuData = [];
+            
+            foreach ($this->menuData as $item) {
+                if (!$isMember && ($item['title'] === 'Équipements' || $item['title'] === 'Déconnexion')) {
+                    continue;
+                }
+                
+                if ($isMember && $item['title'] === 'Connexion') {
+                    continue;
+                }
+
+                $finalMenuData[] = $item;
+                
+            }
+            
+            $menuComponent = new UIMenu($finalMenuData);
             $menuHtml = $menuComponent->render();
         }
         
-        // Génération des liens CSS dynamiques
         $cssLinks = '';
         $cssLinks .= '<link rel="stylesheet" href="../views/css/public.css">';
         $cssLinks .= '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">';
@@ -92,8 +108,6 @@ class UIHeader extends Component {
             }
         }
         
-        // J'ajoute un petit CSS inline ici pour gérer le survol du sous-menu
-        // (Idéalement, mettez cela dans votre fichier public.css)
         return <<<HTML
 <!DOCTYPE html>
 <html lang="fr">
@@ -101,12 +115,10 @@ class UIHeader extends Component {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{$this->pageTitle} - {$siteName}</title>
-    <!-- Injection des fichiers CSS -->
     {$cssLinks}
     <style>
         :root { --primary-color: {$pColor}; }
         
-        /* CSS pour le sous-menu (Dropdown) */
         .navbar ul li { position: relative; }
         .navbar ul li ul {
             display: none;

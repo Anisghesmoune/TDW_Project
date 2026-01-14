@@ -20,7 +20,6 @@ class Partner {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    // Récupérer par type
     public function getByType($type) {
         $query = "SELECT * FROM " . $this->table . " WHERE type = :type ORDER BY nom ASC";
         $stmt = $this->conn->prepare($query);
@@ -67,7 +66,6 @@ class Partner {
                 email_contact = :email_contact, 
                 date_partenariat = :date_partenariat";
         
-        // Si on met à jour le logo
         if (!empty($data['logo'])) {
             $sql .= ", logo = :logo";
         }

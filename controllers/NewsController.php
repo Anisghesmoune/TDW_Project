@@ -7,10 +7,7 @@ class NewsController {
     public function __construct() {
         $this->newsModel = new News();
     }
-    
-    /**
-     * Récupérer les actualités avec pagination (AJAX)
-     */
+ 
     public function getNews() {
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $perPage = isset($_GET['perPage']) ? (int)$_GET['perPage'] : 4;
@@ -28,9 +25,7 @@ class NewsController {
         exit;
     }
     
-    /**
-     * Afficher toutes les actualités (page dédiée)
-     */
+ 
     public function index() {
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $perPage = 9;
@@ -42,9 +37,7 @@ class NewsController {
         include 'views/news_list.php';
     }
     
-    /**
-     * Afficher le détail d'une actualité
-     */
+  
     public function show() {
         $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         
